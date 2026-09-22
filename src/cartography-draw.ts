@@ -1,28 +1,115 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Zephyrex Cartography — Draw: entry point.
+ * Zephyrex Cartography — Draw: Foundry entry / runtime seam.
  *
- * Registers the in-Foundry map-painting layer and its path tool. This scaffold
- * wires the module lifecycle and exposes the pure geometry API that the canvas
- * tools build on; the layer/tool registration is filled in against the live
- * Foundry v14 canvas API.
+ * All drawing logic lives in the pure, unit-tested modules (geometry, tools,
+ * canvas/controller, canvas/renderer). This file is the thin glue that wires the
+ * live Foundry canvas, scene, and PIXI into that logic and registers the
+ * scene-control tools. It is the module's single Foundry boundary.
  */
 import './styles/entry.css';
-import { catmullRom, offsetRibbon, simplify } from './geometry/spline';
+import { CartographyController } from './canvas/controller';
+import { GraphicsRibbonRenderer } from './canvas/renderer';
+import type { FoundryScene } from './foundry/boundary';
+import { createPixiSurface } from './foundry/pixi-surface';
+import { FoundrySceneStore } from './foundry/scene-store';
+import { FoundryWallEmitter } from './foundry/walls';
+import type { Point } from './geometry/spline';
+import type { PathKind } from './tools/path';
 
 export const MODULE_ID = 'dh-cartography-draw';
 
-/** Geometry helpers exposed for macros and the canvas draw tools. */
-export interface CartographyDrawApi {
-    readonly simplify: typeof simplify;
-    readonly catmullRom: typeof catmullRom;
-    readonly offsetRibbon: typeof offsetRibbon;
+interface DrawState {
+    controller: CartographyController;
+    container: PIXI.Container;
+    active: boolean;
 }
 
-export const api: CartographyDrawApi = { simplify, catmullRom, offsetRibbon };
+let state: DrawState | null = null;
 
-Hooks.once('init', () => {
-    // Canvas layer + scene-control tool registration lands here; `api` above is
-    // the seam the path tool consumes to turn click/freehand streams into
-    // smoothed, offset ribbons.
+/**
+ * Adapt the live scene to the narrow {@link FoundryScene} the boundary needs.
+ * Framework boundary: a Foundry `Scene` structurally provides getFlag / setFlag /
+ * createEmbeddedDocuments; we reinterpret it as our minimal, precisely-typed
+ * surface so the pure store/wall code never depends on fvtt-types flag generics.
+ */
+function activeScene(): FoundryScene | null {
+    const scene = canvas?.scene;
+    return scene ? (scene as FoundryScene) : null;
+}
+
+function localPoint(event: PIXI.FederatedPointerEvent, container: PIXI.Container): Point {
+    const p = event.getLocalPosition(container);
+    return { x: p.x, y: p.y };
+}
+
+function teardown(): void {
+    if (state) {
+        state.container.destroy({ children: true });
+        state = null;
+    }
+}
+
+Hooks.on('canvasReady', () => {
+    teardown();
+    if (!canvas?.stage) {
+        return;
+    }
+    const container = new PIXI.Container();
+    container.eventMode = 'static';
+    canvas.stage.addChild(container);
+
+    const renderer = new GraphicsRibbonRenderer(createPixiSurface(container));
+    const controller = new CartographyController(renderer, new FoundrySceneStore(activeScene), new FoundryWallEmitter(activeScene), () =>
+        foundry.utils.randomID(),
+    );
+    controller.load();
+
+    const st: DrawState = { controller, container, active: false };
+    state = st;
+
+    container.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
+        if (!st.active) {
+            return;
+        }
+        if (event.button === 2) {
+            void st.controller.commit();
+            return;
+        }
+        st.controller.addPoint(localPoint(event, container));
+    });
+});
+
+Hooks.on('getSceneControlButtons', (controls) => {
+    const st = state;
+    controls[MODULE_ID] = {
+        name: MODULE_ID,
+        order: 100,
+        title: 'DH-CARTOGRAPHY-DRAW.Controls.Group',
+        icon: 'fa-solid fa-map',
+        tools: {
+            road: { name: 'road', order: 0, title: 'DH-CARTOGRAPHY-DRAW.Tools.Road', icon: 'fa-solid fa-road' },
+            river: { name: 'river', order: 1, title: 'DH-CARTOGRAPHY-DRAW.Tools.River', icon: 'fa-solid fa-water' },
+        },
+        activeTool: 'road',
+        onChange: (_event, active): void => {
+            if (st && !active) {
+                st.active = false;
+                st.controller.cancel();
+            }
+        },
+        onToolChange: (_event, tool, active): void => {
+            if (!st) {
+                return;
+            }
+            const kind: PathKind | null = tool.name === 'road' ? 'road' : tool.name === 'river' ? 'river' : null;
+            if (active && kind) {
+                st.active = true;
+                st.controller.begin(kind, 'click');
+            } else {
+                st.active = false;
+                st.controller.cancel();
+            }
+        },
+    };
 });

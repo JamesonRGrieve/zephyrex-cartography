@@ -1,31 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": [
-    "src/cartography-draw.ts",
-    "scripts/*.mjs",
-    "tests/**/*.test.ts",
-    "src/**/*.test.ts",
-    "tests/e2e/**/*.spec.ts",
-    "vite.config.ts",
-    "vitest.config.ts",
-    "playwright.foundry.config.ts"
-  ],
-  "project": ["src/**/*.ts", "tests/**/*.ts"],
-  "ignore": ["foundry-overrides.d.ts", "dist/**"],
-  "ignoreBinaries": ["biome", "depcruise", "knip", "size-limit", "type-coverage", "playwright"],
-  "ignoreDependencies": [
-    "@total-typescript/ts-reset",
-    "@size-limit/preset-app",
-    "@vitest/coverage-v8",
-    "@vitest/eslint-plugin",
-    "@typhonjs-fvtt/eslint-config-foundry.js",
-    "autoprefixer",
-    "cssnano",
-    "postcss-import",
-    "postcss-nested",
-    "tailwindcss",
-    "husky",
-    "lint-staged"
-  ],
+  "entry": ["src/cartography-draw.ts", "scripts/*.mjs", "src/**/*.test.ts"],
+  "project": ["src/**/*.ts"],
+  "ignoreDependencies": ["lint-staged"],
   "vitest": { "config": "vitest.config.ts" }
 }
