@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Full green gate: lint (eslint+biome) + format + stylelint + typecheck (main +
+# tests) + vitest + type-coverage + knip + dependency-cruiser + build + size-limit.
+# The parallel ratchet fan-out (lint:ratchet / strict:ratchet / symmetry / …) is
+# wired in a follow-up; this runs the aggregate `check` until then.
+pnpm check

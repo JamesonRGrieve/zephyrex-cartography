@@ -1,0 +1,11 @@
+blockExoticSubdeps: false
+
+onlyBuiltDependencies:
+  - '@league-of-foundry-developers/foundry-vtt-types'
+  - esbuild
+  - unrs-resolver
+
+allowBuilds:
+  '@league-of-foundry-developers/foundry-vtt-types': true
+  esbuild: true
+  unrs-resolver: true

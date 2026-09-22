@@ -1,0 +1,15 @@
+{
+    "DH-CARTOGRAPHY-DRAW": {
+        "Controls": {
+            "Group": "Cartography",
+            "Path": "Draw Path"
+        },
+        "Tools": {
+            "Road": "Road",
+            "River": "River"
+        },
+        "Notifications": {
+            "PathCommitted": "Path committed."
+        }
+    }
+}
