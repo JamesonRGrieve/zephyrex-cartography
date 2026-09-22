@@ -8,6 +8,15 @@
             "Road": "Road",
             "River": "River"
         },
+        "Biomes": {
+            "Water": "Water",
+            "Grassland": "Grassland",
+            "Forest": "Forest",
+            "Sand": "Sand",
+            "Rock": "Rock",
+            "Snow": "Snow",
+            "Dirt": "Dirt"
+        },
         "Notifications": {
             "PathCommitted": "Path committed."
         }

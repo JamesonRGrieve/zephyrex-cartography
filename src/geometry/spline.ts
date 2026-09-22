@@ -132,6 +132,29 @@ export function catmullRom(points: readonly Point[], samplesPerSegment: number):
 }
 
 /**
+ * Catmull-Rom through a CLOSED loop of control points (wrapping around), for
+ * smoothed biome-region boundaries. Fewer than 3 points returns a copy.
+ */
+export function closedSpline(points: readonly Point[], samplesPerSegment: number): Point[] {
+    const n = points.length;
+    if (n < 3 || samplesPerSegment < 1) {
+        return [...points];
+    }
+    const at = (k: number): Point | undefined => points[((k % n) + n) % n];
+    const out: Point[] = [];
+    for (let i = 0; i < n; i++) {
+        const p0 = at(i - 1);
+        const p1 = at(i);
+        const p2 = at(i + 1);
+        const p3 = at(i + 2);
+        if (p0 && p1 && p2 && p3) {
+            out.push(...catmullRomSegment(p0, p1, p2, p3, samplesPerSegment));
+        }
+    }
+    return out;
+}
+
+/**
  * Offset a centerline by `halfWidth` on each side using averaged vertex normals,
  * producing the two rails of a textured ribbon (road/river). Degenerate inputs
  * (< 2 points) yield empty rails.

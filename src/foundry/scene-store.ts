@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/** Persists features on the active scene via its flags. */
+/** Persists features (paths + regions) on the active scene via its flags. */
 import type { SceneStore } from '../canvas/controller';
-import { FLAG_KEY, FLAG_SCOPE, parsePaths, type CartographyPath } from '../tools/path';
+import { parseFeatures, type Feature } from '../tools/feature';
+import { FLAG_KEY, FLAG_SCOPE } from '../tools/path';
 import type { FoundryScene } from './boundary';
 
 export class FoundrySceneStore implements SceneStore {
     constructor(private readonly getScene: () => FoundryScene | null) {}
 
-    load(): CartographyPath[] {
+    load(): Feature[] {
         const scene = this.getScene();
-        return scene ? parsePaths(scene.getFlag(FLAG_SCOPE, FLAG_KEY)) : [];
+        return scene ? parseFeatures(scene.getFlag(FLAG_SCOPE, FLAG_KEY)) : [];
     }
 
-    async save(paths: readonly CartographyPath[]): Promise<void> {
+    async save(features: readonly Feature[]): Promise<void> {
         const scene = this.getScene();
         if (scene) {
-            await scene.setFlag(FLAG_SCOPE, FLAG_KEY, paths);
+            await scene.setFlag(FLAG_SCOPE, FLAG_KEY, features);
         }
     }
 }

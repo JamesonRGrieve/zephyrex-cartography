@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import type { CartographyPath } from '../tools/path';
-import { GraphicsRibbonRenderer, STYLES, type DrawSurface } from './renderer';
+import type { Feature } from '../tools/feature';
+import { GraphicsFeatureRenderer, type DrawSurface } from './renderer';
 
 class FakeSurface implements DrawSurface {
     readonly filled: { id: string; n: number; color: number }[] = [];
@@ -18,7 +18,8 @@ class FakeSurface implements DrawSurface {
     }
 }
 
-const road: CartographyPath = {
+const road: Feature = {
+    type: 'path',
     id: 'a',
     kind: 'road',
     points: [
@@ -28,26 +29,36 @@ const road: CartographyPath = {
     halfWidths: [5, 5],
     walls: false,
 };
+const lake: Feature = {
+    type: 'region',
+    id: 'b',
+    biome: 'water',
+    points: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 },
+    ],
+};
 
-describe('GraphicsRibbonRenderer', () => {
-    it('fills a ribbon polygon for a path with the style colour', () => {
+describe('GraphicsFeatureRenderer', () => {
+    it('fills a ribbon polygon for a path', () => {
         const s = new FakeSurface();
-        new GraphicsRibbonRenderer(s).set('a', road, STYLES.road);
+        new GraphicsFeatureRenderer(s).set('a', road);
         expect(s.filled).toHaveLength(1);
-        expect(s.filled[0]?.color).toBe(STYLES.road.fill);
         expect(s.filled[0]?.n ?? 0).toBeGreaterThanOrEqual(6);
     });
 
-    it('removes rather than fills a degenerate (single-point) preview', () => {
+    it('fills a closed polygon for a biome region', () => {
         const s = new FakeSurface();
-        new GraphicsRibbonRenderer(s).setPreview([{ x: 0, y: 0 }], 5, STYLES.river);
-        expect(s.removed.length).toBeGreaterThanOrEqual(1);
-        expect(s.filled).toHaveLength(0);
+        new GraphicsFeatureRenderer(s).set('b', lake);
+        expect(s.filled).toHaveLength(1);
+        expect(s.filled[0]?.n ?? 0).toBeGreaterThanOrEqual(6);
     });
 
     it('clears the surface', () => {
         const s = new FakeSurface();
-        new GraphicsRibbonRenderer(s).clear();
+        new GraphicsFeatureRenderer(s).clear();
         expect(s.cleared).toBe(1);
     });
 });
