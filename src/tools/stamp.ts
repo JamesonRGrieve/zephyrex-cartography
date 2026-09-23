@@ -50,6 +50,8 @@ export interface StampFeature {
     /** Scene px per grid square the stamp was placed at; converts behaviour radii given in grid units. */
     readonly gridSize: number;
     readonly behaviour: PlacedBehaviour;
+    /** Traced outline loops as footprint fractions, for `alpha` occlusion; null when not traced. */
+    readonly silhouette: Point[][] | null;
     readonly docs: GeneratedDocs;
 }
 
@@ -110,6 +112,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         elevation: placement.elevation ?? 0,
         gridSize,
         behaviour: behaviourOf(stamp, variant),
+        silhouette: null,
         docs: NO_DOCS,
     };
 }
@@ -164,6 +167,15 @@ function parseBehaviour(v: unknown): PlacedBehaviour {
     return result.success ? result.data : NO_BEHAVIOUR;
 }
 
+// eslint-disable-next-line no-restricted-syntax -- boundary: validates a persisted silhouette (loops of points); anything unreadable means untraced
+function parseSilhouette(v: unknown): Point[][] | null {
+    if (!Array.isArray(v)) {
+        return null;
+    }
+    const loops = v.map((loop) => (Array.isArray(loop) ? loop.filter(isPoint).map((p) => ({ x: p.x, y: p.y })) : [])).filter((loop) => loop.length >= 3);
+    return loops.length > 0 ? loops : null;
+}
+
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses one untyped scene-flag entry, validating shape and returning a narrow StampFeature or null
 export function parseStamp(v: unknown): StampFeature | null {
     if (!isRecord(v) || v['type'] !== 'stamp' || typeof v['id'] !== 'string' || typeof v['stamp'] !== 'string' || typeof v['src'] !== 'string') {
@@ -189,6 +201,7 @@ export function parseStamp(v: unknown): StampFeature | null {
         elevation: numberOr(v['elevation'], 0),
         gridSize: numberOr(v['gridSize'], FALLBACK_GRID_SIZE),
         behaviour: parseBehaviour(v['behaviour']),
+        silhouette: parseSilhouette(v['silhouette']),
         docs: parseGeneratedDocs(v['docs']),
     };
 }

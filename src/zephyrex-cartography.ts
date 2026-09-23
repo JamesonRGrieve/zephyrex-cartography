@@ -16,6 +16,7 @@ import type { FoundryScene } from './foundry/boundary';
 import { FoundryDocumentSink } from './foundry/documents';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { FoundrySceneStore } from './foundry/scene-store';
+import { createSilhouetteSource } from './foundry/silhouette';
 import { registerStampRuntime } from './foundry/stamps-runtime';
 import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
@@ -45,6 +46,9 @@ interface DrawState {
 let state: DrawState | null = null;
 
 const stamps = registerStampRuntime(() => state?.controller ?? null);
+
+/** Shared across canvases so a stamp variant's silhouette is traced once per session. */
+const silhouettes = createSilhouetteSource();
 
 /** Scene-px radius within which a click grabs a control-point handle in edit mode. */
 const EDIT_PICK_TOL = 10;
@@ -226,9 +230,14 @@ function setupDrawLayer(): void {
     canvas.stage.addChild(container);
 
     const renderer = new GraphicsFeatureRenderer(createPixiSurface(container, activePack()));
-    const controller = new CartographyController(renderer, new FoundrySceneStore(activeScene), new FoundryDocumentSink(activeScene), stamps.catalog, () =>
-        foundry.utils.randomID(),
-    );
+    const controller = new CartographyController({
+        renderer,
+        store: new FoundrySceneStore(activeScene),
+        sink: new FoundryDocumentSink(activeScene),
+        catalog: stamps.catalog,
+        silhouettes,
+        makeId: () => foundry.utils.randomID(),
+    });
     const gridSize = canvas.grid?.size ?? 0;
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.load();

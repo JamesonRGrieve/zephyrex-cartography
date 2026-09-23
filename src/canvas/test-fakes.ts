@@ -4,6 +4,7 @@
  * tests. They record every call so tests assert on the declarative effects
  * (what was rendered, persisted, created, deleted) with no Foundry runtime.
  */
+import type { Point } from '../geometry/spline';
 import { type CatalogStamp, loadPacks } from '../stamps/catalog';
 import type { GeneratedDocs, LightDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
@@ -99,16 +100,32 @@ export interface Harness {
     readonly d: FakeSink;
 }
 
+/** A unit square traced from any image: the silhouette every fake stamp gets. */
+export const FAKE_SILHOUETTE: Point[][] = [
+    [
+        { x: 0.25, y: 0.25 },
+        { x: 0.75, y: 0.25 },
+        { x: 0.75, y: 0.75 },
+        { x: 0.25, y: 0.75 },
+    ],
+];
+
 /** A controller over fresh fakes and the given catalog stamps, issuing feature ids p1, p2, … */
-export function makeHarness(stamps: readonly CatalogStamp[] = []): Harness {
+export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[][] | null = FAKE_SILHOUETTE): Harness {
     const r = new FakeRenderer();
     const s = new FakeStore();
     const d = new FakeSink();
     let counter = 0;
-    const catalog = { get: (key: string): CatalogStamp | null => stamps.find((stamp) => stamp.key === key) ?? null };
-    const c = new CartographyController(r, s, d, catalog, () => {
-        counter += 1;
-        return `p${counter}`;
+    const c = new CartographyController({
+        renderer: r,
+        store: s,
+        sink: d,
+        catalog: { get: (key) => stamps.find((stamp) => stamp.key === key) ?? null },
+        silhouettes: { trace: async () => Promise.resolve(traced) },
+        makeId: () => {
+            counter += 1;
+            return `p${counter}`;
+        },
     });
     return { c, r, s, d };
 }

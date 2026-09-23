@@ -8,12 +8,13 @@
  */
 import { RIBBON_SAMPLES } from '../geometry/ribbon';
 import { catmullRom, type Point } from '../geometry/spline';
+import { perimeterSegments } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
-import { BLOCKS_ALL, type LightDoc, type TileDoc, type WallDoc, wallDocFromSpec } from './documents';
+import { BLOCKS_ALL, type LightDoc, type SenseBlock, type TileDoc, type WallDoc, wallDocFromSpec } from './documents';
 import type { Feature } from './feature';
 import type { CartographyPath } from './path';
 import { roomLight, roomWalls, type RoomFeature } from './room';
-import { stampCentre, stampPoint, type StampFeature } from './stamp';
+import { stampCentre, stampCorners, stampPoint, type StampFeature } from './stamp';
 
 export interface DocumentPlan {
     readonly walls: readonly WallDoc[];
@@ -90,9 +91,30 @@ function stampLight(stamp: StampFeature): LightDoc | null {
     };
 }
 
+/**
+ * Walls wrapping the stamp per its occlusion: its rotated footprint (`bounds`),
+ * or its traced silhouette (`alpha`, falling back to the footprint when the
+ * image could not be traced). Walls that block nothing are not created.
+ */
+function stampWalls(stamp: StampFeature): WallDoc[] {
+    const occlusion = stamp.behaviour.occlusion;
+    if (!occlusion || occlusion.shape === 'none') {
+        return [];
+    }
+    const blocks: SenseBlock = { sight: occlusion.sight, movement: occlusion.movement, light: occlusion.light, sound: occlusion.sound };
+    if (!blocks.sight && !blocks.movement && !blocks.light && !blocks.sound) {
+        return [];
+    }
+    const loops =
+        occlusion.shape === 'alpha' && stamp.silhouette ? stamp.silhouette.map((loop) => loop.map((f) => stampPoint(stamp, f))) : [stampCorners(stamp)];
+    return loops.flatMap((loop) =>
+        perimeterSegments(loop).map((s) => ({ a: s.a, b: s.b, door: 'none' as const, doorState: 'closed' as const, blocks, level: null })),
+    );
+}
+
 function stampPlan(stamp: StampFeature): DocumentPlan {
     const light = stampLight(stamp);
-    return { ...EMPTY_PLAN, tiles: [stampTile(stamp)], lights: light ? [light] : [] };
+    return { walls: stampWalls(stamp), tiles: [stampTile(stamp)], lights: light ? [light] : [] };
 }
 
 function roomPlan(room: RoomFeature): DocumentPlan {

@@ -20,7 +20,7 @@ import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
 import { planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
 import { makeRoom, withRoomDoors } from '../tools/room';
-import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampPlacement } from '../tools/stamp';
+import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { FeatureRenderer } from './renderer';
 
@@ -32,6 +32,21 @@ export interface SceneStore {
 /** Resolves a catalog key to its stamp across every loaded pack. */
 export interface StampCatalog {
     get: (key: string) => CatalogStamp | null;
+}
+
+/** Traces an image's opaque silhouette into closed loops of footprint fractions (0..1), or null if it cannot. */
+export interface SilhouetteSource {
+    trace: (src: string) => Promise<Point[][] | null>;
+}
+
+/** Everything the controller is injected with: rendering, persistence, document creation, packs, ids. */
+export interface ControllerPorts {
+    readonly renderer: FeatureRenderer;
+    readonly store: SceneStore;
+    readonly sink: DocumentSink;
+    readonly catalog: StampCatalog;
+    readonly silhouettes: SilhouetteSource;
+    readonly makeId: () => string;
 }
 
 /** A tile's frame as Foundry reports it: unrotated top-left, size, rotation about the centre. */
@@ -111,13 +126,29 @@ export class CartographyController {
     /** Whether committed paths also emit Foundry walls along their centerline. */
     emitWalls = false;
 
-    constructor(
-        private readonly renderer: FeatureRenderer,
-        private readonly store: SceneStore,
-        private readonly sink: DocumentSink,
-        private readonly catalog: StampCatalog,
-        private readonly makeId: () => string,
-    ) {}
+    private readonly renderer: FeatureRenderer;
+    private readonly store: SceneStore;
+    private readonly sink: DocumentSink;
+    private readonly catalog: StampCatalog;
+    private readonly silhouettes: SilhouetteSource;
+    private readonly makeId: () => string;
+
+    constructor(ports: ControllerPorts) {
+        this.renderer = ports.renderer;
+        this.store = ports.store;
+        this.sink = ports.sink;
+        this.catalog = ports.catalog;
+        this.silhouettes = ports.silhouettes;
+        this.makeId = ports.makeId;
+    }
+
+    /** Trace the stamp's silhouette when its occlusion asks for one; otherwise it carries none. */
+    private async withSilhouette(stamp: StampFeature): Promise<StampFeature> {
+        if (stamp.behaviour.occlusion?.shape !== 'alpha') {
+            return { ...stamp, silhouette: null };
+        }
+        return { ...stamp, silhouette: await this.silhouettes.trace(stamp.src) };
+    }
 
     /** Scene px per grid square for stamp footprints; a gridless scene uses the pack's own reference grid. */
     private stampGrid(stamp: CatalogStamp): number {
@@ -130,7 +161,7 @@ export class CartographyController {
         if (!stamp) {
             return null;
         }
-        const feature = makeStamp(this.makeId(), stamp, placement, this.stampGrid(stamp));
+        const feature = await this.withSilhouette(makeStamp(this.makeId(), stamp, placement, this.stampGrid(stamp)));
         await this.add(feature);
         return feature.id;
     }
@@ -142,7 +173,7 @@ export class CartographyController {
         if (feature?.type !== 'stamp' || !stamp) {
             return false;
         }
-        await this.replaceFeature(id, withStampVariant(feature, stamp, index, this.stampGrid(stamp)));
+        await this.replaceFeature(id, await this.withSilhouette(withStampVariant(feature, stamp, index, this.stampGrid(stamp))));
         return true;
     }
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { catalogStamps, makeHarness } from './test-fakes';
+import { catalogStamps, FAKE_SILHOUETTE, makeHarness } from './test-fakes';
 
 const stamps = catalogStamps([
     {
@@ -16,6 +16,89 @@ const stamps = catalogStamps([
         ],
     },
 ]);
+
+const walled = catalogStamps([
+    {
+        id: 'pillar',
+        name: 'Pillar',
+        category: 'Structural',
+        scale: 'interior',
+        perspective: 'top-down',
+        occlusion: { shape: 'bounds', sound: false },
+        variants: [{ state: 'whole', image: 'pillar.png', width: 100, height: 100 }],
+    },
+    {
+        id: 'statue',
+        name: 'Statue',
+        category: 'Decor',
+        scale: 'interior',
+        perspective: 'top-down',
+        occlusion: { shape: 'alpha' },
+        variants: [
+            { state: 'standing', image: 'standing.png', width: 100, height: 100 },
+            { state: 'rubble', image: 'rubble.png', width: 100, height: 100, occlusion: { shape: 'none' } },
+        ],
+    },
+]);
+
+describe('CartographyController stamp occlusion', () => {
+    it('wraps a bounds stamp in four walls blocking the declared senses', async () => {
+        const { c, d } = makeHarness(walled);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:pillar', x: 50, y: 50 });
+        const walls = d.walls[0] ?? [];
+        expect(walls.map((w) => [w.a, w.b])).toEqual([
+            [
+                { x: 0, y: 0 },
+                { x: 100, y: 0 },
+            ],
+            [
+                { x: 100, y: 0 },
+                { x: 100, y: 100 },
+            ],
+            [
+                { x: 100, y: 100 },
+                { x: 0, y: 100 },
+            ],
+            [
+                { x: 0, y: 100 },
+                { x: 0, y: 0 },
+            ],
+        ]);
+        expect(walls[0]?.blocks).toEqual({ sight: true, movement: true, light: true, sound: false });
+        expect(c.getFeature('p1')?.docs.walls).toEqual(['w0', 'w1', 'w2', 'w3']);
+    });
+
+    it('walls an alpha stamp along its traced silhouette, and drops them for a variant without occlusion', async () => {
+        const { c, d } = makeHarness(walled);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:statue', x: 50, y: 50 });
+        expect(d.walls[0]?.[0]).toMatchObject({ a: { x: 25, y: 25 }, b: { x: 75, y: 25 } });
+        const placed = c.getFeature('p1');
+        expect(placed?.type === 'stamp' ? placed.silhouette : null).toEqual(FAKE_SILHOUETTE);
+        await c.setStampVariant('p1', 1);
+        const rubble = c.getFeature('p1');
+        expect(rubble?.type === 'stamp' ? rubble.silhouette : 'x').toBeNull();
+        expect(rubble?.docs.walls).toEqual([]);
+        expect(d.deletedIds()).toEqual(['w0', 'w1', 'w2', 'w3']);
+    });
+
+    it('falls back to the footprint when the image cannot be traced', async () => {
+        const { c, d } = makeHarness(walled, null);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:statue', x: 50, y: 50 });
+        expect(d.walls[0]?.[0]).toMatchObject({ a: { x: 0, y: 0 }, b: { x: 100, y: 0 } });
+    });
+
+    it('moves the walls with the stamp', async () => {
+        const { c, d } = makeHarness(walled);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:pillar', x: 50, y: 50 });
+        await c.syncStampFrame('p1', { x: 200, y: 0, width: 100, height: 100, rotation: 0 });
+        expect(d.walls[1]?.[0]).toMatchObject({ a: { x: 200, y: 0 }, b: { x: 300, y: 0 } });
+        expect(c.getFeature('p1')?.docs.walls).toEqual(['w4', 'w5', 'w6', 'w7']);
+    });
+});
 
 describe('CartographyController stamps', () => {
     it('places a stamp as a tracked native tile and removes it with the feature', async () => {
