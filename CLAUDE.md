@@ -155,7 +155,7 @@ undo/redo, z-order, wall emission along paths.
 `WallDocument`s; wall re-sync on edit; doors (`WallDocument.door`) via a door
 tool; an auto `AmbientLightDocument` per room at its centroid.
 
-**Stamp engine [done, except containers]:**
+**Stamp engine [done]:**
 - **Pack schema** (versioned, owned here — see below) that every asset pack's
   stamp catalog must validate against. Pack modules are discovered by flag.
 - **Placement** as native `TileDocument`s from the browser (click, drag or
@@ -170,8 +170,11 @@ tool; an auto `AmbientLightDocument` per room at its centroid.
   variant's state and cuts collinear room walls; placing it snaps it onto the
   nearest room wall. A door opened in play switches the stamp's variant.
 - **Terrain texture sets** come from packs (world `textureSet` setting).
-- **[next] Item Piles containers** for `container` stamps. Stair and ladder
-  `transition` stamps belong to Levels.
+- **Containers:** with Item Piles active (optional, `recommends`), a
+  `container` stamp is backed by an Item Piles `container` pile over its
+  footprint. The pile is kept when emptied, follows the stamp, and is deleted
+  with it. The Item Piles API was verified against its v3.3 source.
+- Stair and ladder `transition` stamps belong to Levels.
 
 **Levels [done]:** native Foundry, no Levels module.
 - **Model.** A scene's floors are elevation bands (`tools/levels.ts`). Every

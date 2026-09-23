@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { describe, expect, it } from 'vitest';
+import { catalogStamps, makeHarness } from './test-fakes';
+
+const stamps = catalogStamps([
+    {
+        id: 'chest',
+        name: 'Iron Chest',
+        category: 'Storage',
+        scale: 'interior',
+        perspective: 'top-down',
+        container: true,
+        variants: [{ state: 'shut', image: 'chest.png', width: 100, height: 50 }],
+    },
+    {
+        id: 'rug',
+        name: 'Rug',
+        category: 'Decor',
+        scale: 'interior',
+        perspective: 'top-down',
+        variants: [{ state: 'x', image: 'rug.png', width: 100, height: 100 }],
+    },
+]);
+
+describe('CartographyController containers', () => {
+    it('backs a container stamp with a named Item Piles container over its footprint', async () => {
+        const { c, k } = makeHarness(stamps);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:chest', x: 250, y: 125, rotation: 90 });
+        expect(k.created).toEqual([
+            { spec: { x: 200, y: 100, width: 1, height: 0.5, rotation: 90, elevation: 0, src: 'modules/pack/chest.png' }, name: 'Iron Chest' },
+        ]);
+        const chest = c.getFeature('p1');
+        expect(chest?.type === 'stamp' ? chest.pile : null).toBe('pile1');
+    });
+
+    it('places the pile at the level floor', async () => {
+        const { c, k } = makeHarness(stamps);
+        await c.addLevel('above', 'Ground');
+        await c.addLevel('above', 'Upper');
+        await c.placeStamp({ stamp: 'pack:chest', x: 0, y: 0 });
+        expect(k.created[0]?.spec.elevation).toBe(10);
+    });
+
+    it('moves the pile with the stamp and removes it with the stamp', async () => {
+        const { c, k } = makeHarness(stamps);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:chest', x: 250, y: 125 });
+        await c.syncStampFrame('p1', { x: 500, y: 500, width: 100, height: 50, rotation: 0 });
+        expect(k.moved.map((m) => [m.pile, m.spec.x, m.spec.y])).toEqual([['pile1', 500, 500]]);
+        await c.remove('p1');
+        expect(k.removed).toEqual(['pile1']);
+    });
+
+    it('leaves plain stamps, and every stamp without Item Piles, alone', async () => {
+        const { c, k } = makeHarness(stamps);
+        await c.placeStamp({ stamp: 'pack:rug', x: 0, y: 0 });
+        k.active = false;
+        await c.placeStamp({ stamp: 'pack:chest', x: 0, y: 0 });
+        expect(k.created).toEqual([]);
+        await c.remove('p2');
+        expect(k.removed).toEqual([]);
+    });
+});

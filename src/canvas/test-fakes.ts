@@ -6,11 +6,20 @@
  */
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, loadPacks } from '../stamps/catalog';
+import type { PileSpec } from '../tools/containers';
 import type { GeneratedDocs, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
 import type { SceneFrame } from '../tools/submap';
-import { CartographyController, type DocumentSink, type LevelStore, type SceneStore, type TileUpdate, type WorldScenes } from './controller';
+import {
+    CartographyController,
+    type ContainerService,
+    type DocumentSink,
+    type LevelStore,
+    type SceneStore,
+    type TileUpdate,
+    type WorldScenes,
+} from './controller';
 import type { FeatureRenderer } from './renderer';
 
 class FakeRenderer implements FeatureRenderer {
@@ -161,6 +170,30 @@ class FakeScenes implements WorldScenes {
     }
 }
 
+/** Item Piles stand-in: available unless told otherwise, issuing pile UUIDs `pile1`, `pile2`, … */
+class FakeContainers implements ContainerService {
+    active = true;
+    readonly created: { spec: PileSpec; name: string }[] = [];
+    readonly moved: { pile: string; spec: PileSpec }[] = [];
+    readonly removed: string[] = [];
+    available(): boolean {
+        return this.active;
+    }
+    async create(spec: PileSpec, pileName: string): Promise<string> {
+        this.created.push({ spec, name: pileName });
+        await Promise.resolve();
+        return `pile${this.created.length}`;
+    }
+    async move(pile: string, spec: PileSpec): Promise<void> {
+        this.moved.push({ pile, spec });
+        await Promise.resolve();
+    }
+    async remove(pile: string): Promise<void> {
+        this.removed.push(pile);
+        await Promise.resolve();
+    }
+}
+
 export interface Harness {
     readonly c: CartographyController;
     readonly r: FakeRenderer;
@@ -168,6 +201,7 @@ export interface Harness {
     readonly d: FakeSink;
     readonly l: FakeLevels;
     readonly w: FakeScenes;
+    readonly k: FakeContainers;
 }
 
 /** A unit square traced from any image: the silhouette every fake stamp gets. */
@@ -187,6 +221,7 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
     const d = new FakeSink();
     const l = new FakeLevels();
     const w = new FakeScenes();
+    const k = new FakeContainers();
     let counter = 0;
     const c = new CartographyController({
         renderer: r,
@@ -194,6 +229,7 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
         sink: d,
         levels: l,
         scenes: w,
+        containers: k,
         catalog: { get: (key) => stamps.find((stamp) => stamp.key === key) ?? null },
         silhouettes: { trace: async () => Promise.resolve(traced) },
         makeId: () => {
@@ -201,7 +237,7 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
             return `p${counter}`;
         },
     });
-    return { c, r, s, d, l, w };
+    return { c, r, s, d, l, w, k };
 }
 
 /** One catalog stamp per definition, loaded through the real pack parser from module `pack`. */

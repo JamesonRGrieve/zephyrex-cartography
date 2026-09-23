@@ -1,7 +1,7 @@
 {
     "id": "zephyrex-cartography",
     "title": "Zephyrex Cartography",
-    "description": "Standalone scene authoring for Foundry VTT: paint terrain, draw roads and rivers, and build structures (rooms, walls, doors, lights) as native Foundry documents.",
+    "description": "Standalone scene authoring for Foundry VTT: paint terrain, draw roads and rivers, build structures, and place structure-aware stamps (walls, lights, doors, levels, interiors), all as native Foundry documents.",
     "version": "0.2.0",
     "authors": [
         {
@@ -25,6 +25,20 @@
             "path": "dist/lang/en.json"
         }
     ],
+    "relationships": {
+        "recommends": [
+            {
+                "id": "item-piles",
+                "type": "module",
+                "reason": "Container stamps become lootable Item Piles containers."
+            },
+            {
+                "id": "zephyrex-cartography-assets",
+                "type": "module",
+                "reason": "Stamp art and terrain texture sets."
+            }
+        ]
+    },
     "license": "AGPL-3.0-or-later",
     "url": "https://github.com/JamesonRGrieve/zephyrex-cartography",
     "flags": {}

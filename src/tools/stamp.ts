@@ -12,7 +12,7 @@ import type { Point } from '../geometry/spline';
 import { type CatalogStamp, clampVariantIndex, computeTilePlacement, effectiveProperties, resolveVariant } from '../stamps/catalog';
 import { type PlacedBehaviour, placedBehaviourSchema } from '../stamps/schema';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
-import { isPoint, isRecord, numberOr } from './guards';
+import { isPoint, isRecord, numberOr, stringOrNull } from './guards';
 import { parseSubmapLink, type SubmapLink } from './submap';
 
 /** A stamp placement request: everything a human or a generator states to place one. */
@@ -54,6 +54,8 @@ export interface StampFeature extends FeatureCommon {
     readonly silhouette: Point[][] | null;
     /** The interior scene an enterable stamp leads into, or null. */
     readonly submap: SubmapLink | null;
+    /** UUID of the Item Piles container token backing a container stamp, or null. */
+    readonly pile: string | null;
 }
 
 /** Grid size assumed for a persisted stamp that predates the field. */
@@ -115,6 +117,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         behaviour: behaviourOf(stamp, variant),
         silhouette: null,
         submap: null,
+        pile: null,
         ...NEW_FEATURE,
     };
 }
@@ -128,7 +131,15 @@ export function stampCentre(feature: StampFeature): Point {
 export function withStampVariant(feature: StampFeature, stamp: CatalogStamp, index: number, gridSize: number): StampFeature {
     const centre = stampCentre(feature);
     const placed = makeStamp(feature.id, stamp, { stamp: stamp.key, variant: index, x: centre.x, y: centre.y, scale: feature.scale }, gridSize);
-    return { ...placed, rotation: feature.rotation, elevation: feature.elevation, docs: feature.docs, level: feature.level, submap: feature.submap };
+    return {
+        ...placed,
+        rotation: feature.rotation,
+        elevation: feature.elevation,
+        docs: feature.docs,
+        level: feature.level,
+        submap: feature.submap,
+        pile: feature.pile,
+    };
 }
 
 /** Move, resize or rotate the footprint (e.g. after the GM edits the tile natively). */
@@ -212,6 +223,7 @@ export function parseStamp(v: unknown): StampFeature | null {
         behaviour: parseBehaviour(v['behaviour']),
         silhouette: parseSilhouette(v['silhouette']),
         submap: parseSubmapLink(v['submap']),
+        pile: stringOrNull(v['pile']),
         ...parseFeatureCommon(v),
     };
 }

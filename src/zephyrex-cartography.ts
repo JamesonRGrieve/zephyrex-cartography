@@ -13,6 +13,7 @@ import { type Brush, CartographyController } from './canvas/controller';
 import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
 import { FoundryDocumentSink } from './foundry/documents';
+import { createItemPilesContainers } from './foundry/item-piles';
 import { registerLevelRuntime, regionName } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
 import { registerPackRuntime } from './foundry/pack-runtime';
@@ -224,6 +225,7 @@ function setupDrawLayer(): void {
         sink: new FoundryDocumentSink(activeScene, { nativeLevels, makeId, regionName }),
         levels: createLevelStore(activeScene, nativeLevels, makeId),
         scenes: createWorldScenes({ nativeLevels, regionName }),
+        containers: createItemPilesContainers(() => activeScene()?.id ?? null),
         catalog: packs.catalog,
         silhouettes,
         makeId,

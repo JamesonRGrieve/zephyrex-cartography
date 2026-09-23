@@ -11,13 +11,14 @@ import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
+import { pileSpec, type PileSpec } from '../tools/containers';
 import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type LightDoc, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
-import { findLevel, type Level, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
+import { findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
 import { planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
@@ -66,13 +67,23 @@ export interface WorldScenes {
     deleteRegion: (sceneId: string, regionId: string) => Promise<void>;
 }
 
-/** Everything the controller is injected with: rendering, persistence, document creation, levels, scenes, packs, ids. */
+/** Item Piles containers backing container stamps; unavailable (and inert) when Item Piles is not active. */
+export interface ContainerService {
+    available: () => boolean;
+    /** Create a container pile named `name`; returns its token UUID. */
+    create: (spec: PileSpec, name: string) => Promise<string | null>;
+    move: (pile: string, spec: PileSpec) => Promise<void>;
+    remove: (pile: string) => Promise<void>;
+}
+
+/** Everything the controller is injected with: rendering, persistence, document creation, levels, scenes, containers, packs, ids. */
 export interface ControllerPorts {
     readonly renderer: FeatureRenderer;
     readonly store: SceneStore;
     readonly sink: DocumentSink;
     readonly levels: LevelStore;
     readonly scenes: WorldScenes;
+    readonly containers: ContainerService;
     readonly catalog: StampCatalog;
     readonly silhouettes: SilhouetteSource;
     readonly makeId: () => string;
@@ -165,6 +176,7 @@ export class CartographyController {
     private readonly sink: DocumentSink;
     private readonly levelStore: LevelStore;
     private readonly scenes: WorldScenes;
+    private readonly containers: ContainerService;
     private readonly catalog: StampCatalog;
     private readonly silhouettes: SilhouetteSource;
     private readonly makeId: () => string;
@@ -179,6 +191,7 @@ export class CartographyController {
         this.sink = ports.sink;
         this.levelStore = ports.levels;
         this.scenes = ports.scenes;
+        this.containers = ports.containers;
         this.catalog = ports.catalog;
         this.silhouettes = ports.silhouettes;
         this.makeId = ports.makeId;
@@ -361,8 +374,16 @@ export class CartographyController {
         const placed = makeStamp(this.makeId(), stamp, placement, this.stampGrid(stamp));
         // A door dropped near a room wall lands on it, so its axis cuts the wall cleanly.
         const feature = await this.withSilhouette(snapDoorToRooms(placed, this.features, placed.gridSize * DOOR_SNAP_SQUARES));
-        await this.add(feature);
+        await this.add(await this.withPile({ ...feature, level: feature.level ?? this.active }, stamp.name));
         return feature.id;
+    }
+
+    /** Back a container stamp with an Item Piles container, when Item Piles is available. */
+    private async withPile(stamp: StampFeature, pileName: string): Promise<StampFeature> {
+        if (!stamp.behaviour.container || !this.containers.available()) {
+            return stamp;
+        }
+        return { ...stamp, pile: await this.containers.create(pileSpec(stamp, levelElevation(this.levelList, stamp.level)), pileName) };
     }
 
     /**
@@ -508,6 +529,9 @@ export class CartographyController {
         // A linked stamp's exit lives in its interior scene; it goes with the stamp.
         if (target.type === 'stamp' && target.submap) {
             await this.scenes.deleteRegion(target.submap.scene, target.submap.exitRegion);
+        }
+        if (target.type === 'stamp' && target.pile !== null) {
+            await this.containers.remove(target.pile);
         }
         await this.resyncDependents(before, [target]);
     }
@@ -686,6 +710,10 @@ export class CartographyController {
         this.show(next);
         await this.store.save(this.features);
         await this.syncDocs(next);
+        if (next.type === 'stamp' && next.pile !== null) {
+            // The container token follows the stamp.
+            await this.containers.move(next.pile, pileSpec(next, levelElevation(this.levelList, next.level)));
+        }
         await this.resyncDependents(before, [old, next]);
     }
 
