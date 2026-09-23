@@ -96,7 +96,7 @@ run_bg "symmetry"       pnpm -s symmetry
 run_bg "size"           bash -c 'pnpm -s build && pnpm -s size-limit'
 
 # Storybook: the stories and their config must still build.
-run_bg "storybook"      pnpm -s build-storybook
+run_bg "storybook"      pnpm -s test:storybook
 
 wait_all
 [ "$FAILED" = "0" ] || exit 1

@@ -1,10 +1,21 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["fvtt-types", "vitest/globals"],
-    "noUnusedLocals": false,
-    "noUnusedParameters": false
-  },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "foundry-overrides.d.ts"],
-  "exclude": ["node_modules", "dist"]
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "rootDir": ".",
+        "types": [
+            "fvtt-types",
+            "vitest/globals"
+        ],
+        "noUnusedLocals": false,
+        "noUnusedParameters": false
+    },
+    "include": [
+        "src/**/*.ts",
+        "tests/**/*.ts",
+        "foundry-overrides.d.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
 }

@@ -11,10 +11,11 @@
         "watch": "vite build --watch",
         "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json",
         "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
-        "lint": "eslint src/ .storybook/ --ext .ts",
-        "lint:fix": "eslint src/ .storybook/ --ext .ts --fix",
+        "lint": "eslint src/ .storybook/ tests/ *.config.ts --ext .ts",
+        "lint:fix": "eslint src/ .storybook/ tests/ *.config.ts --ext .ts --fix",
         "storybook": "storybook dev -p 6006",
         "build-storybook": "storybook build --quiet",
+        "test:storybook": "storybook build --quiet && playwright test -c playwright.storybook.config.ts",
         "lint:biome": "biome lint src/",
         "format": "prettier --check 'src/**/*.{ts,json,css}'",
         "format:fix": "prettier --write 'src/**/*.{ts,json,css}'",
@@ -46,7 +47,7 @@
         "deps:ratchet": "node scripts/depcruise-ratchet.mjs",
         "lockfile:validate": "node scripts/lockfile-validate.mjs",
         "check": "pnpm lint && pnpm lint:biome && pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test && pnpm type-coverage && pnpm knip && pnpm deps:check && pnpm build && pnpm size-limit",
-        "gate": "pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test:coverage && pnpm coverage:ratchet && pnpm symmetry && pnpm schema:check && pnpm lint:ratchet && pnpm biome:ratchet && pnpm ts:ratchet && pnpm strict:ratchet && pnpm test:typecheck:ratchet && pnpm type-coverage:ratchet && pnpm knip:ratchet && pnpm deps:ratchet && pnpm lockfile:validate && pnpm build && pnpm size-limit && pnpm build-storybook",
+        "gate": "pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test:coverage && pnpm coverage:ratchet && pnpm symmetry && pnpm schema:check && pnpm lint:ratchet && pnpm biome:ratchet && pnpm ts:ratchet && pnpm strict:ratchet && pnpm test:typecheck:ratchet && pnpm type-coverage:ratchet && pnpm knip:ratchet && pnpm deps:ratchet && pnpm lockfile:validate && pnpm build && pnpm size-limit && pnpm test:storybook",
         "prepare": "husky"
     },
     "devDependencies": {

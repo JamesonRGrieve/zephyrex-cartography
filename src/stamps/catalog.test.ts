@@ -49,6 +49,12 @@ describe('moduleAssetUrl', () => {
         expect(moduleAssetUrl('assets', 'stamps/a.png')).toBe('modules/assets/stamps/a.png');
         expect(moduleAssetUrl('assets', './stamps/a.png')).toBe('modules/assets/stamps/a.png');
     });
+
+    it('passes an absolute URL through untouched', () => {
+        for (const url of ['data:image/svg+xml,%3Csvg%3E', 'https://cdn.example/a.png', 'blob:abc']) {
+            expect(moduleAssetUrl('assets', url)).toBe(url);
+        }
+    });
 });
 
 describe('loadPacks', () => {

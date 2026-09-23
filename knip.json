@@ -10,5 +10,9 @@
     ],
     "vitest": {
         "config": "vitest.config.ts"
+    },
+    "playwright": {
+        "config": "playwright.*.config.ts",
+        "entry": "tests/**/*.spec.ts"
     }
 }

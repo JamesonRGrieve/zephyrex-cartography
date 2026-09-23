@@ -73,7 +73,13 @@ Gate members (all wired into `gate` + pre-commit + CI):
 - **deps:ratchet** — dependency-cruiser layering (see Architecture)
 - **lockfile:validate** — lockfile resolves only to trusted hosts
 - **build** (Vite lib) + **size-limit** (JS bundle only)
-- **build-storybook**: the stories and their config must build
+- **test:storybook**: Storybook builds, and Playwright renders **every
+  story** in its `index.json` in a real browser. Each must mount with no page
+  or console errors or failed loads, and match its committed screenshot
+  (`tests/storybook/stories.spec.ts-snapshots/`, taken with the system
+  Chromium). CI uses Playwright's bundled Chromium and ignores snapshots.
+  Refresh baselines deliberately with `pnpm test:storybook --update-snapshots`,
+  then look at every changed PNG before committing it.
 
 ## UI views and Storybook
 
@@ -91,9 +97,9 @@ ApplicationV2 host in `foundry/` mounts them.
 - Foundry's CSS is not redistributable. `.storybook/chrome.css` stands in for
   the window chrome, and stories wrap views in `.zephyrex-cartography` so the
   `tw-` utilities apply.
-- A `*.stories.test.ts` mounts every story under vitest, so stories cannot
-  rot. `pnpm storybook` runs the dev server; `pnpm build-storybook` is in the
-  gate.
+- A co-located `*-view.test.ts` mounts every story under vitest, so stories
+  cannot rot, and `pnpm test:storybook` renders and screenshots every story
+  in a real browser (see the gate). `pnpm storybook` runs the dev server.
 - Tailwind's preflight is off: it is a global element reset and would restyle
   Foundry's own chrome.
 

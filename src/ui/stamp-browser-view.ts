@@ -192,7 +192,8 @@ function card(entry: CardEntry, view: BrowserView, labels: BrowserLabels, handle
 }
 
 function grid(view: BrowserView, labels: BrowserLabels, handlers: BrowserHandlers): HTMLElement {
-    const list = el('ul', 'tw-grid tw-grid-cols-4 tw-gap-1 tw-flex-1 tw-overflow-y-auto tw-p-0 tw-m-0');
+    // content-start: rows pack at the top instead of stretching to fill the panel.
+    const list = el('ul', 'tw-grid tw-grid-cols-4 tw-content-start tw-gap-1 tw-flex-1 tw-overflow-y-auto tw-p-0 tw-m-0');
     list.setAttribute('aria-label', labels.stamps);
     if (view.cards.length === 0) {
         list.append(el('li', 'tw-list-none tw-italic tw-text-xs', labels.empty));

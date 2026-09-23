@@ -23,7 +23,8 @@ body {
 
 .zc-story-window button,
 .zc-story-window input,
-.zc-story-window select {
+.zc-story-window select,
+.zc-story-window textarea {
     color: inherit;
     background: #2e2e36;
     border: 1px solid #55555f;

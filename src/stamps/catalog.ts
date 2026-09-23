@@ -53,9 +53,12 @@ export interface LoadedPacks {
     readonly errors: readonly PackError[];
 }
 
-/** The URL Foundry serves a module-relative file from. */
+/** A URL with a scheme (`data:`, `https:`, `blob:`): already absolute, never module-relative. */
+const HAS_SCHEME = /^[a-z][a-z\d+.-]*:/i;
+
+/** The URL Foundry serves a module-relative file from; an absolute URL passes through untouched. */
 export function moduleAssetUrl(moduleId: string, path: string): string {
-    return `modules/${moduleId}/${path.replace(/^\.?\//, '')}`;
+    return HAS_SCHEME.test(path) ? path : `modules/${moduleId}/${path.replace(/^\.?\//, '')}`;
 }
 
 /** Validate every source and merge the valid packs into one catalog. Invalid packs are reported in `errors`. */

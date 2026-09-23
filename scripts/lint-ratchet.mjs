@@ -52,7 +52,7 @@ function computeCounts() {
     let lintOutput;
     const lintOutputPath = resolve(tmpdir(), `wh40k-eslint-${process.pid}.json`);
     try {
-        execSync(`/bin/bash -lc './node_modules/.bin/eslint src/ .storybook/ --ext .ts --format json > "${lintOutputPath}"'`, {
+        execSync(`/bin/bash -lc './node_modules/.bin/eslint src/ .storybook/ tests/ *.config.ts --ext .ts --format json > "${lintOutputPath}"'`, {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'pipe'],
             maxBuffer: 64 * 1024 * 1024,
