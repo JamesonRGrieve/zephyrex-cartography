@@ -47,9 +47,14 @@ export interface StampFeature {
     readonly rotation: number;
     readonly scale: number;
     readonly elevation: number;
+    /** Scene px per grid square the stamp was placed at; converts behaviour radii given in grid units. */
+    readonly gridSize: number;
     readonly behaviour: PlacedBehaviour;
     readonly docs: GeneratedDocs;
 }
+
+/** Grid size assumed for a persisted stamp that predates the field. */
+const FALLBACK_GRID_SIZE = 100;
 
 const NO_BEHAVIOUR: PlacedBehaviour = {
     light: null,
@@ -103,6 +108,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         rotation: placement.rotation ?? 0,
         scale,
         elevation: placement.elevation ?? 0,
+        gridSize,
         behaviour: behaviourOf(stamp, variant),
         docs: NO_DOCS,
     };
@@ -128,21 +134,28 @@ export function withStampFrame(
     return { ...feature, points: [{ x: frame.centre.x, y: frame.centre.y }], width: frame.width, height: frame.height, rotation: frame.rotation };
 }
 
-/** The footprint's four corners, clockwise from top-left, with rotation applied about the centre. */
-export function stampCorners(feature: StampFeature): Point[] {
+/**
+ * A point given as fractions of the footprint (0,0 = top-left, 1,1 = bottom-right
+ * of the unrotated image) in world coordinates, with the stamp's rotation applied.
+ */
+export function stampPoint(feature: StampFeature, fraction: Point): Point {
     const c = stampCentre(feature);
     const rad = (feature.rotation * Math.PI) / 180;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
-    const hw = feature.width / 2;
-    const hh = feature.height / 2;
-    const local: Point[] = [
-        { x: -hw, y: -hh },
-        { x: hw, y: -hh },
-        { x: hw, y: hh },
-        { x: -hw, y: hh },
-    ];
-    return local.map((p) => ({ x: c.x + p.x * cos - p.y * sin, y: c.y + p.x * sin + p.y * cos }));
+    const lx = (fraction.x - 0.5) * feature.width;
+    const ly = (fraction.y - 0.5) * feature.height;
+    return { x: c.x + lx * cos - ly * sin, y: c.y + lx * sin + ly * cos };
+}
+
+/** The footprint's four corners, clockwise from top-left, with rotation applied about the centre. */
+export function stampCorners(feature: StampFeature): Point[] {
+    return [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+    ].map((f) => stampPoint(feature, f));
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: validates a persisted behaviour snapshot; an unreadable one degrades to inert rather than dropping the stamp (which would orphan its tile)
@@ -174,6 +187,7 @@ export function parseStamp(v: unknown): StampFeature | null {
         rotation: numberOr(v['rotation'], 0),
         scale: numberOr(v['scale'], 1),
         elevation: numberOr(v['elevation'], 0),
+        gridSize: numberOr(v['gridSize'], FALLBACK_GRID_SIZE),
         behaviour: parseBehaviour(v['behaviour']),
         docs: parseGeneratedDocs(v['docs']),
     };

@@ -4,7 +4,7 @@ import { catalogStamps } from '../canvas/test-fakes';
 import { deletePoint, movePoint } from './edit';
 import { featureHit } from './hit';
 import { planDocuments } from './plan';
-import { behaviourOf, makeStamp, parseStamp, stampCorners, withStampFrame, withStampVariant } from './stamp';
+import { behaviourOf, makeStamp, parseStamp, stampCorners, stampPoint, withStampFrame, withStampVariant } from './stamp';
 
 const [lamp, crate] = catalogStamps([
     {
@@ -110,7 +110,45 @@ describe('planDocuments for a stamp', () => {
     });
 });
 
+describe('planDocuments for a lit stamp', () => {
+    it('emits the variant light at the centre, radii in px, following elevation', () => {
+        const plan = planDocuments({ ...stampOf(lamp), elevation: 4 });
+        expect(plan.lights).toEqual([{ x: 500, y: 500, dim: 200, bright: 100, elevation: 4, level: null }]);
+    });
+
+    it('emits nothing for an unlit variant', () => {
+        expect(planDocuments(stampOf(lamp, { variant: 1 })).lights).toEqual([]);
+    });
+
+    it('places an offset cone with the stamp rotated, styled as authored', () => {
+        const s = {
+            ...stampOf(lamp, { rotation: 90 }),
+            behaviour: {
+                ...stampOf(lamp).behaviour,
+                light: { dim: 2, bright: 1, color: '#ff0000', alpha: 0.5, angle: 60, offset: { x: 1, y: 0.5 }, animation: { type: 'torch' } },
+            },
+        };
+        const [light] = planDocuments(s).lights;
+        // Offset to the right edge (+25 px); rotated 90° clockwise → straight down.
+        expect(light?.x).toBeCloseTo(500);
+        expect(light?.y).toBeCloseTo(525);
+        expect(light).toMatchObject({ dim: 100, bright: 50, color: '#ff0000', alpha: 0.5, angle: 60, rotation: 90, animation: { type: 'torch' } });
+    });
+});
+
+describe('stampPoint', () => {
+    it('maps footprint fractions to world points', () => {
+        expect(stampPoint(stampOf(lamp), { x: 0, y: 0 })).toEqual({ x: 475, y: 450 });
+        expect(stampPoint(stampOf(lamp), { x: 0.5, y: 0.5 })).toEqual({ x: 500, y: 500 });
+    });
+});
+
 describe('parseStamp', () => {
+    it('defaults the grid size of a stamp persisted without one', () => {
+        const { gridSize: _omitted, ...legacy } = stampOf(lamp);
+        expect(parseStamp(legacy)?.gridSize).toBe(100);
+    });
+
     it('round-trips a placed stamp through JSON', () => {
         const s = stampOf(lamp, { rotation: 15 });
         expect(parseStamp(JSON.parse(JSON.stringify(s)))).toEqual(s);
