@@ -1,52 +1,40 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Bundled terrain-texture mapping: which CC0 tile (from `assets/textures/`, see
- * that dir's CREDITS.md) fills each biome and path kind, and the multiply tint
- * applied to it. Water/ocean/river are `null` — water reads best as a
- * translucent tint, not a tiled photo, so those fall back to the flat fill.
- * Pure data + a tiny URL helper; unit-tested. The concrete PIXI tiling lives at
- * the Foundry boundary.
+ * Terrain texturing. Each biome and path kind fills with a texture *role*.
+ * Asset packs ship texture sets that map roles to images, and the GM picks one
+ * set. Water, ocean and river have no role: water reads best as a translucent
+ * tint, not a tiled photo. A role the active set lacks falls back to the flat
+ * biome colour. Pure data plus set resolution; unit-tested. The concrete PIXI
+ * tiling lives at the Foundry boundary.
  */
-import { MODULE_ID } from '../module-id';
 import type { PathKind } from './path';
 import type { BiomeKind } from './region';
 
-/** Foundry serves a module's files under this path; textures live beside the code. */
-const TEXTURE_BASE = `modules/${MODULE_ID}/assets/textures`;
-
-/** Bundled texture packs the GM can choose between (see assets/textures/PACKS.json). */
-export type TexturePack = 'polyhaven' | 'ambientcg';
-
-export const TEXTURE_PACKS: readonly TexturePack[] = ['polyhaven', 'ambientcg'];
-
-export const DEFAULT_PACK: TexturePack = 'polyhaven';
-
-/** Human-readable pack labels for the settings dropdown. */
-export const TEXTURE_PACK_LABELS: Record<TexturePack, string> = {
-    polyhaven: 'Poly Haven (CC0)',
-    ambientcg: 'ambientCG (CC0)',
-};
-
-// eslint-disable-next-line no-restricted-syntax -- boundary: validates an untyped Foundry setting value, narrowing it to TexturePack
-export function isTexturePack(v: unknown): v is TexturePack {
-    return typeof v === 'string' && (TEXTURE_PACKS as readonly string[]).includes(v);
+/** A pack texture set as the renderer needs it: role → module-served image URL. */
+export interface TextureSetRef {
+    readonly key: string;
+    readonly name: string;
+    readonly textures: Readonly<Record<string, string>>;
 }
 
-/** Bundled tile filename per biome, or null for an untextured (translucent) biome. */
+/** Resolves a texture role to an image URL, or null to use the flat colour. */
+export type TextureResolver = (role: string) => string | null;
+
+/** Texture role per biome, or null for an untextured (translucent) biome. */
 export const BIOME_TEXTURE: Record<BiomeKind, string | null> = {
     water: null,
     ocean: null,
-    grassland: 'grassland.jpg',
-    forest: 'forest.jpg',
-    sand: 'sand.jpg',
-    rock: 'rock.jpg',
-    snow: 'snow.jpg',
-    dirt: 'dirt.jpg',
-    lava: 'lava.jpg',
-    marsh: 'marsh.jpg',
-    ice: 'ice.jpg',
-    ash: 'ash.jpg',
-    tundra: 'tundra.jpg',
+    grassland: 'grassland',
+    forest: 'forest',
+    sand: 'sand',
+    rock: 'rock',
+    snow: 'snow',
+    dirt: 'dirt',
+    lava: 'lava',
+    marsh: 'marsh',
+    ice: 'ice',
+    ash: 'ash',
+    tundra: 'tundra',
 };
 
 /**
@@ -70,13 +58,23 @@ export const BIOME_TINT: Record<BiomeKind, number> = {
     tundra: 0xffffff,
 };
 
-/** Bundled tile filename per path kind, or null (rivers render as translucent water). */
+/** Texture role per path kind, or null (rivers render as translucent water). */
 export const PATH_TEXTURE: Record<PathKind, string | null> = {
-    road: 'road.jpg',
+    road: 'road',
     river: null,
 };
 
-/** Absolute (Foundry-served) URL for a bundled texture filename within a pack. */
-export function textureUrl(pack: TexturePack, file: string): string {
-    return `${TEXTURE_BASE}/${pack}/${file}`;
+/** The chosen texture set, or the first available when the choice is unset or no longer installed. */
+export function pickTextureSet(sets: readonly TextureSetRef[], chosen: string): TextureSetRef | null {
+    return sets.find((set) => set.key === chosen) ?? sets[0] ?? null;
+}
+
+/** A resolver over one texture set; with no set, everything renders as flat colour. */
+export function textureResolver(set: TextureSetRef | null): TextureResolver {
+    return (role) => set?.textures[role] ?? null;
+}
+
+/** Setting choices: texture set key → display name. */
+export function textureSetChoices(sets: readonly TextureSetRef[]): Record<string, string> {
+    return Object.fromEntries(sets.map((set) => [set.key, set.name]));
 }

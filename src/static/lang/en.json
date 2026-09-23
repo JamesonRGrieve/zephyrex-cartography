@@ -15,9 +15,9 @@
             "Stamp": "Stamps (click the canvas to place the selected stamp)"
         },
         "Settings": {
-            "TexturePack": {
-                "Name": "Terrain texture pack",
-                "Hint": "Which bundled texture pack fills biome regions, brush strokes, room floors, and roads."
+            "TextureSet": {
+                "Name": "Terrain texture set",
+                "Hint": "Which asset-pack texture set fills biome regions, brush strokes, room floors and roads. Terrain without a texture in the set uses a flat colour."
             },
             "StampSnap": {
                 "Name": "Snap placed stamps to the grid",

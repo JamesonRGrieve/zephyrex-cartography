@@ -9,7 +9,7 @@ import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import type { Feature } from '../tools/feature';
 import type { PathKind } from '../tools/path';
 import { BIOME_STYLES, regionOutline, type BiomeKind } from '../tools/region';
-import { BIOME_TEXTURE, BIOME_TINT, PATH_TEXTURE } from '../tools/texture';
+import { BIOME_TEXTURE, BIOME_TINT, PATH_TEXTURE, type TextureResolver } from '../tools/texture';
 
 /** Opacity for a textured fill — higher than a flat tint so the tile reads, but still blends. */
 const TEXTURE_ALPHA = 0.9;
@@ -32,8 +32,8 @@ const PREVIEW_STYLE: RibbonStyle = { fill: 0xff9c00, alpha: 0.4 };
 /** A keyed 2D fill surface: create-or-update / remove / clear filled polygons. */
 export interface DrawSurface {
     fill: (id: string, polygon: readonly number[], color: number, alpha: number, feather: boolean) => void;
-    /** Fill the polygon with a tiled texture (by filename), multiply-tinted. */
-    fillTextured: (id: string, polygon: readonly number[], textureFile: string, tint: number, alpha: number, feather: boolean) => void;
+    /** Fill the polygon with a tiled texture (by image URL), multiply-tinted. */
+    fillTextured: (id: string, polygon: readonly number[], textureUrl: string, tint: number, alpha: number, feather: boolean) => void;
     remove: (id: string) => void;
     clear: () => void;
 }
@@ -50,7 +50,7 @@ interface Filled {
     readonly outline: number[];
     readonly fill: number;
     readonly alpha: number;
-    /** Tiled texture filename, or null for a flat colour fill (water/river). */
+    /** Tiled texture URL, or null for a flat colour fill (water/river, or a role the texture set lacks). */
     readonly texture: string | null;
     /** Multiply tint for the texture (ignored when `texture` is null). */
     readonly tint: number;
@@ -59,9 +59,10 @@ interface Filled {
 }
 
 /** Fill descriptor for a biome area (region, brush stroke, or room floor) — textured, tinted. */
-function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean): Filled {
+function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean, resolve: TextureResolver): Filled {
     const style = BIOME_STYLES[biome];
-    const texture = BIOME_TEXTURE[biome];
+    const role = BIOME_TEXTURE[biome];
+    const texture = role === null ? null : resolve(role);
     return {
         outline,
         fill: style.fill,
@@ -75,23 +76,24 @@ function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean): Fil
 /** Nothing to draw: the feature is realised entirely as native documents (a stamp is its Tile). */
 const NOT_DRAWN: Filled = { outline: [], fill: 0, alpha: 0, texture: null, tint: NO_TINT, feather: false };
 
-function outlineAndStyle(feature: Feature): Filled {
+function outlineAndStyle(feature: Feature, resolve: TextureResolver): Filled {
     if (feature.type === 'stamp') {
         return NOT_DRAWN;
     }
     if (feature.type === 'region') {
-        return biomeFilled(feature.biome, regionOutline(feature.points), true);
+        return biomeFilled(feature.biome, regionOutline(feature.points), true, resolve);
     }
     if (feature.type === 'stroke') {
         const halfWidths = feature.points.map(() => feature.radius);
-        return biomeFilled(feature.biome, ribbonOutline(buildRibbon(feature.points, halfWidths, RIBBON_SAMPLES, false)), true);
+        return biomeFilled(feature.biome, ribbonOutline(buildRibbon(feature.points, halfWidths, RIBBON_SAMPLES, false)), true, resolve);
     }
     if (feature.type === 'room') {
-        // Crisp floor edge — walls (a later phase) cover the boundary.
-        return biomeFilled(feature.floor, regionOutline(feature.points), false);
+        // Crisp floor edge — the room's walls cover the boundary.
+        return biomeFilled(feature.floor, regionOutline(feature.points), false, resolve);
     }
     const pathStyle = STYLES[feature.kind];
-    const pathTexture = PATH_TEXTURE[feature.kind];
+    const pathRole = PATH_TEXTURE[feature.kind];
+    const pathTexture = pathRole === null ? null : resolve(pathRole);
     // Rivers taper to a point at each end; roads keep a constant carriageway.
     const taperEnds = feature.kind === 'river';
     return {
@@ -107,10 +109,10 @@ function outlineAndStyle(feature: Feature): Filled {
 const PREVIEW_ID = '__preview__';
 
 export class GraphicsFeatureRenderer implements FeatureRenderer {
-    constructor(private readonly surface: DrawSurface) {}
+    constructor(private readonly surface: DrawSurface, private readonly resolve: TextureResolver) {}
 
     set(id: string, feature: Feature): void {
-        const { outline, fill, alpha, texture, tint, feather } = outlineAndStyle(feature);
+        const { outline, fill, alpha, texture, tint, feather } = outlineAndStyle(feature, this.resolve);
         if (outline.length < 6) {
             this.surface.remove(id);
             return;
@@ -123,7 +125,7 @@ export class GraphicsFeatureRenderer implements FeatureRenderer {
     }
 
     preview(feature: Feature): void {
-        const { outline } = outlineAndStyle(feature);
+        const { outline } = outlineAndStyle(feature, this.resolve);
         if (outline.length >= 6) {
             this.surface.fill(PREVIEW_ID, outline, PREVIEW_STYLE.fill, PREVIEW_STYLE.alpha, false);
         } else {

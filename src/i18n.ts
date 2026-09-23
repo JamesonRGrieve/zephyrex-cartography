@@ -28,8 +28,8 @@ export const I18N = {
         stamp: key('Tools.Stamp'),
     },
     settings: {
-        texturePackName: key('Settings.TexturePack.Name'),
-        texturePackHint: key('Settings.TexturePack.Hint'),
+        textureSetName: key('Settings.TextureSet.Name'),
+        textureSetHint: key('Settings.TextureSet.Hint'),
         stampSnapName: key('Settings.StampSnap.Name'),
         stampSnapHint: key('Settings.StampSnap.Hint'),
         stampScaleName: key('Settings.StampScale.Name'),

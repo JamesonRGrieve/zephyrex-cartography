@@ -4,7 +4,11 @@ import { NO_DOCS } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { CartographyPath } from '../tools/path';
 import type { RegionFeature } from '../tools/region';
+import type { TextureResolver } from '../tools/texture';
 import { GraphicsFeatureRenderer, type DrawSurface } from './renderer';
+
+/** A texture set providing every role as `<role>.jpg`. */
+const RESOLVE: TextureResolver = (role) => `${role}.jpg`;
 
 class FakeSurface implements DrawSurface {
     readonly filled: { id: string; n: number; color: number; feather: boolean }[] = [];
@@ -79,7 +83,7 @@ const room: Feature = {
 describe('GraphicsFeatureRenderer', () => {
     it('textures a road ribbon (bundled tile)', () => {
         const s = new FakeSurface();
-        new GraphicsFeatureRenderer(s).set('a', road);
+        new GraphicsFeatureRenderer(s, RESOLVE).set('a', road);
         expect(s.textured).toHaveLength(1);
         expect(s.textured[0]?.textureFile).toBe('road.jpg');
         expect(s.textured[0]?.n ?? 0).toBeGreaterThanOrEqual(6);
@@ -87,14 +91,14 @@ describe('GraphicsFeatureRenderer', () => {
 
     it('renders a river as a flat translucent fill (water is untextured)', () => {
         const s = new FakeSurface();
-        new GraphicsFeatureRenderer(s).set('r', river);
+        new GraphicsFeatureRenderer(s, RESOLVE).set('r', river);
         expect(s.filled).toHaveLength(1);
         expect(s.textured).toHaveLength(0);
     });
 
     it('textures a land biome region and recolours nothing (white tint)', () => {
         const s = new FakeSurface();
-        new GraphicsFeatureRenderer(s).set('m', meadow);
+        new GraphicsFeatureRenderer(s, RESOLVE).set('m', meadow);
         expect(s.textured).toHaveLength(1);
         expect(s.textured[0]?.textureFile).toBe('grassland.jpg');
         expect(s.textured[0]?.tint).toBe(0xffffff);
@@ -102,7 +106,7 @@ describe('GraphicsFeatureRenderer', () => {
 
     it('fills a water region with a flat colour (untextured)', () => {
         const s = new FakeSurface();
-        new GraphicsFeatureRenderer(s).set('b', lake);
+        new GraphicsFeatureRenderer(s, RESOLVE).set('b', lake);
         expect(s.filled).toHaveLength(1);
         expect(s.textured).toHaveLength(0);
         expect(s.filled[0]?.n ?? 0).toBeGreaterThanOrEqual(6);
@@ -110,7 +114,7 @@ describe('GraphicsFeatureRenderer', () => {
 
     it('textures a brush stroke as a feathered biome swath', () => {
         const s = new FakeSurface();
-        new GraphicsFeatureRenderer(s).set('sw', swath);
+        new GraphicsFeatureRenderer(s, RESOLVE).set('sw', swath);
         expect(s.textured).toHaveLength(1);
         expect(s.textured[0]?.textureFile).toBe('forest.jpg');
         expect(s.textured[0]?.feather).toBe(true);
@@ -118,7 +122,7 @@ describe('GraphicsFeatureRenderer', () => {
 
     it('renders a room floor textured with a crisp (unfeathered) edge', () => {
         const s = new FakeSurface();
-        new GraphicsFeatureRenderer(s).set('rm', room);
+        new GraphicsFeatureRenderer(s, RESOLVE).set('rm', room);
         expect(s.textured).toHaveLength(1);
         expect(s.textured[0]?.textureFile).toBe('dirt.jpg');
         expect(s.textured[0]?.feather).toBe(false);
@@ -126,7 +130,7 @@ describe('GraphicsFeatureRenderer', () => {
 
     it('feathers region edges but keeps paths crisp', () => {
         const s = new FakeSurface();
-        const gr = new GraphicsFeatureRenderer(s);
+        const gr = new GraphicsFeatureRenderer(s, RESOLVE);
         gr.set('m', meadow); // textured land region
         gr.set('b', lake); // flat water region
         gr.set('a', road); // textured path
@@ -135,9 +139,18 @@ describe('GraphicsFeatureRenderer', () => {
         expect(s.textured.find((t) => t.id === 'a')?.feather).toBe(false);
     });
 
+    it('falls back to the flat biome colour for a role the texture set lacks', () => {
+        const s = new FakeSurface();
+        const gr = new GraphicsFeatureRenderer(s, (role) => (role === 'road' ? 'road.png' : null));
+        gr.set('m', meadow);
+        gr.set('a', road);
+        expect(s.filled.map((f) => f.id)).toEqual(['m']);
+        expect(s.textured.map((t) => t.textureFile)).toEqual(['road.png']);
+    });
+
     it('clears the surface', () => {
         const s = new FakeSurface();
-        new GraphicsFeatureRenderer(s).clear();
+        new GraphicsFeatureRenderer(s, RESOLVE).clear();
         expect(s.cleared).toBe(1);
     });
 });

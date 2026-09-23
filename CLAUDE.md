@@ -155,17 +155,23 @@ undo/redo, z-order, wall emission along paths.
 `WallDocument`s; wall re-sync on edit; doors (`WallDocument.door`) via a door
 tool; an auto `AmbientLightDocument` per room at its centroid.
 
-**Stamp engine [in progress]** — migrated from the former asset module:
+**Stamp engine [done, except containers]:**
 - **Pack schema** (versioned, owned here — see below) that every asset pack's
-  stamp catalog must validate against.
-- Placement as native `TileDocument`s, variant cycling, browser UI, optional
-  Item Piles containers.
-- **Occlusion walls:** a placed stamp is wrapped in native walls per its
-  schema (bounding box, then alpha-silhouette trace).
-- **Light emitters:** stamps declaring `light` emit a native light that follows
-  the stamp's variant (lit/unlit).
-- **Doors and transitions:** door stamps drive `WallDocument.door`; stair or
-  ladder stamps create level transitions.
+  stamp catalog must validate against. Pack modules are discovered by flag.
+- **Placement** as native `TileDocument`s from the browser (click, drag or
+  double-click). A placed stamp records its image, footprint and behaviour at
+  placement. Variants cycle in place from the Tile HUD, and GM edits to the tile
+  (move, resize, rotate, delete) flow back into the feature.
+- **Occlusion walls:** `bounds` wraps the rotated footprint; `alpha` traces the
+  image once per variant (marching squares), falling back to bounds.
+- **Light emitters:** `light` emits a native AmbientLight that follows the
+  variant (`light: null` = unlit), the stamp's position and its rotation.
+- **Doors:** a door stamp emits its door wall along its long axis in the
+  variant's state and cuts collinear room walls; placing it snaps it onto the
+  nearest room wall. A door opened in play switches the stamp's variant.
+- **Terrain texture sets** come from packs (world `textureSet` setting).
+- **[next] Item Piles containers** for `container` stamps. Stair and ladder
+  `transition` stamps belong to Levels.
 
 **Levels [next]:** Foundry **v13-native Scene Regions + elevation bands** (no
 Levels module). Rooms/structures carry an elevation band; stairs are Regions
@@ -236,22 +242,23 @@ they render as a translucent tint. Every other biome is a tiled texture.
 tests fail: `tools/region.ts` (`BiomeKind`, `BIOMES`, `BIOME_STYLES`) →
 `tools/texture.ts` (`BIOME_TEXTURE`, `BIOME_TINT`) → `i18n.ts`
 (`BIOME_TITLE_KEYS`) + `static/lang/en.json` → the entry (`BIOME_ICONS`).
-`region.test.ts`, `texture.test.ts` and `i18n.test.ts` enforce it. Textures for a
-new biome must be added to every texture pack.
+`region.test.ts`, `texture.test.ts` and `i18n.test.ts` enforce it. A new biome's
+texture *role* (its name) should be added to the packs' texture sets. A set
+lacking a role renders that terrain as flat colour.
 
 ---
 
 ## Textures and asset packs
 
-Terrain textures are FOSS packs (verified CC0: **Poly Haven**, **ambientCG**),
-selectable at runtime by world setting, with identical `<key>.jpg` naming across
-packs. **They are moving to `zephyrex-cartography-assets`** with the stamps; the
-engine resolves them from the asset module at runtime.
+This repo bundles **no art**. Terrain textures are **texture sets** inside asset
+packs (the `textureSets` of the pack manifest: role → image path, licence,
+credits). The GM picks one set with the world `textureSet` setting, whose choices
+fill in once packs load; an unset or uninstalled choice means the first loaded
+set. The renderer resolves each biome/path **role** through the active set.
+The stamp engine's own packs, `zephyrex-cartography-assets` (CC0 Poly Haven and
+ambientCG sets), own the fetch script and credits.
 
-- **Licence verified before bundling — never assumed.** Only sources whose
-  terms explicitly permit redistribution. Read the actual licence page.
-- **Cite every asset** (generated per-pack `CREDITS.md`).
-- **Reproducible** via the pack's fetch script from its manifest.
+- **Licence verified before bundling — never assumed** (in whichever pack ships it).
 - Assets are **static module files referenced by runtime URL**, never
   `import`ed into TS (that would inline them into the size-limited bundle).
 

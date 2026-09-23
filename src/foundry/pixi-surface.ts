@@ -6,7 +6,6 @@
  * the only module that touches PIXI directly.
  */
 import type { DrawSurface } from '../canvas/renderer';
-import { textureUrl, type TexturePack } from '../tools/texture';
 
 /** Blur strength (px) for a feathered (soft-edged) region boundary. */
 const FEATHER_BLUR = 6;
@@ -40,7 +39,7 @@ function bounds(polygon: readonly number[]): Bounds {
     return { x: minX, y: minY, w: Math.max(0, maxX - minX), h: Math.max(0, maxY - minY) };
 }
 
-export function createPixiSurface(container: PIXI.Container, pack: TexturePack): DrawSurface {
+export function createPixiSurface(container: PIXI.Container): DrawSurface {
     const nodes = new Map<string, PIXI.Container>();
 
     const drop = (id: string): void => {
@@ -63,11 +62,11 @@ export function createPixiSurface(container: PIXI.Container, pack: TexturePack):
             container.addChild(g);
             nodes.set(id, g);
         },
-        fillTextured(id, polygon, textureFile, tint, alpha, feather): void {
+        fillTextured(id, polygon, textureUrl, tint, alpha, feather): void {
             drop(id);
             const b = bounds(polygon);
             const wrap = new PIXI.Container();
-            const sprite = new PIXI.TilingSprite(PIXI.Texture.from(textureUrl(pack, textureFile)), b.w, b.h);
+            const sprite = new PIXI.TilingSprite(PIXI.Texture.from(textureUrl), b.w, b.h);
             sprite.x = b.x;
             sprite.y = b.y;
             sprite.tint = tint;

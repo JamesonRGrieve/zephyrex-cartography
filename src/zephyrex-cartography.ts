@@ -14,25 +14,14 @@ import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
 import type { FoundryScene } from './foundry/boundary';
 import { FoundryDocumentSink } from './foundry/documents';
+import { registerPackRuntime } from './foundry/pack-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { FoundrySceneStore } from './foundry/scene-store';
 import { createSilhouetteSource } from './foundry/silhouette';
-import { registerStampRuntime } from './foundry/stamps-runtime';
 import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
 import { MODULE_ID } from './module-id';
 import { BIOMES, type BiomeKind } from './tools/region';
-import { DEFAULT_PACK, isTexturePack, TEXTURE_PACK_LABELS, type TexturePack } from './tools/texture';
-
-const TEXTURE_PACK_SETTING = 'texturePack';
-
-declare global {
-    // Register the setting's type so `game.settings.get/register` are well-typed. The key must be the
-    // literal `${MODULE_ID}.${TEXTURE_PACK_SETTING}`; a mismatch fails typecheck at the get/register calls.
-    interface SettingConfig {
-        'zephyrex-cartography.texturePack': string;
-    }
-}
 
 interface DrawState {
     controller: CartographyController;
@@ -45,7 +34,14 @@ interface DrawState {
 
 let state: DrawState | null = null;
 
-const stamps = registerStampRuntime(() => state?.controller ?? null);
+const packs = registerPackRuntime(() => state?.controller ?? null);
+
+// Newly loaded packs or another texture set re-render the layer.
+packs.onChange(() => {
+    if (canvas?.ready === true) {
+        setupDrawLayer();
+    }
+});
 
 /** Shared across canvases so a stamp variant's silhouette is traced once per session. */
 const silhouettes = createSilhouetteSource();
@@ -105,11 +101,6 @@ function teardown(): void {
     }
 }
 
-function activePack(): TexturePack {
-    const raw = game.settings?.get(MODULE_ID, TEXTURE_PACK_SETTING);
-    return isTexturePack(raw) ? raw : DEFAULT_PACK;
-}
-
 /** Enter `mode`, dropping any in-flight gesture. */
 function enterMode(st: DrawState, mode: Mode): void {
     st.mode = mode;
@@ -136,7 +127,7 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
             return;
         case 'stamp':
             if (pointerEvent.button === PRIMARY_BUTTON) {
-                stamps.placeArmedAt(pt);
+                packs.placeArmedAt(pt);
             }
             return;
         case 'door': {
@@ -229,12 +220,12 @@ function setupDrawLayer(): void {
     container.eventMode = 'static';
     canvas.stage.addChild(container);
 
-    const renderer = new GraphicsFeatureRenderer(createPixiSurface(container, activePack()));
+    const renderer = new GraphicsFeatureRenderer(createPixiSurface(container), packs.textures());
     const controller = new CartographyController({
         renderer,
         store: new FoundrySceneStore(activeScene),
         sink: new FoundryDocumentSink(activeScene),
-        catalog: stamps.catalog,
+        catalog: packs.catalog,
         silhouettes,
         makeId: () => foundry.utils.randomID(),
     });
@@ -255,25 +246,6 @@ function setupDrawLayer(): void {
         onPointerUp(st, pointerEvent);
     });
 }
-
-Hooks.once('init', () => {
-    if (!game.settings) {
-        return;
-    }
-    const choices: Record<string, string> = { ...TEXTURE_PACK_LABELS };
-    game.settings.register(MODULE_ID, TEXTURE_PACK_SETTING, {
-        name: I18N.settings.texturePackName,
-        hint: I18N.settings.texturePackHint,
-        scope: 'world',
-        config: true,
-        type: String,
-        choices,
-        default: DEFAULT_PACK,
-        onChange: (): void => {
-            setupDrawLayer();
-        },
-    });
-});
 
 Hooks.on('canvasReady', () => {
     setupDrawLayer();
@@ -337,7 +309,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
             const mode = modeForTool(tool.name, active);
             enterMode(state, mode);
             if (mode.kind === 'stamp') {
-                stamps.openBrowser();
+                packs.openBrowser();
             }
         },
     };

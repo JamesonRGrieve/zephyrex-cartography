@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Foundry wiring for the stamp engine: pack loading, the stamp settings, the
- * browser window, canvas drops, the tile HUD variant bar, and adopting GM edits
- * to stamp tiles. Every decision is delegated to the controller and the pure
- * stamp core; this only translates Foundry events into controller calls.
+ * Foundry wiring for asset packs:
+ *
+ * - loading packs (stamps and terrain texture sets), and the texture-set and
+ *   stamp settings;
+ * - the stamp browser window, canvas drops, and the tile HUD variant bar;
+ * - adopting GM edits to stamp tiles, and door state changes made in play.
+ *
+ * Every decision is delegated to the controller and the pure core; this only
+ * translates Foundry events into controller calls.
  */
 import type { CartographyController, StampCatalog } from '../canvas/controller';
 import type { Point } from '../geometry/spline';
@@ -12,6 +17,7 @@ import { MODULE_ID } from '../module-id';
 import { type CatalogStamp, loadPacks, resolveVariant } from '../stamps/catalog';
 import { parseStampDrop } from '../stamps/drop';
 import { isRecord, stringOrNull } from '../tools/guards';
+import { pickTextureSet, textureResolver, textureSetChoices, type TextureResolver, type TextureSetRef } from '../tools/texture';
 import type { BrowserLabels } from '../ui/stamp-browser-view';
 import { fetchPacks } from './packs';
 import { type ArmedStamp, createStampBrowser } from './stamp-browser';
@@ -19,6 +25,7 @@ import { doorStateFromDs } from './translate';
 
 const SNAP_SETTING = 'stampSnap';
 const SCALE_SETTING = 'stampScale';
+const TEXTURE_SET_SETTING = 'textureSet';
 
 /** Range of the stamp scale setting slider. */
 const SCALE_RANGE = { min: 0.25, max: 4, step: 0.05 } as const;
@@ -27,15 +34,20 @@ declare global {
     interface SettingConfig {
         'zephyrex-cartography.stampSnap': boolean;
         'zephyrex-cartography.stampScale': number;
+        'zephyrex-cartography.textureSet': string;
     }
 }
 
-export interface StampRuntime {
+export interface PackRuntime {
     readonly catalog: StampCatalog;
     /** Open the stamp browser window. */
     readonly openBrowser: () => void;
     /** Place the stamp selected in the browser at a world point. */
     readonly placeArmedAt: (point: Point) => void;
+    /** Resolves texture roles against the GM's chosen texture set (flat colour until packs load). */
+    readonly textures: () => TextureResolver;
+    /** Run `listener` whenever the loaded packs or the chosen texture set change. */
+    readonly onChange: (listener: () => void) => void;
 }
 
 function localize(key: string): string {
@@ -106,9 +118,18 @@ function tileOwner(active: CartographyController, tile: { readonly id: string | 
     return flaggedFeatureId(tile.flags) ?? (tile.id === null ? null : active.featureForTile(tile.id));
 }
 
-export function registerStampRuntime(controller: () => CartographyController | null): StampRuntime {
+export function registerPackRuntime(controller: () => CartographyController | null): PackRuntime {
     let stamps: readonly CatalogStamp[] = [];
     let byKey = new Map<string, CatalogStamp>();
+    let textureSets: readonly TextureSetRef[] = [];
+    const listeners: (() => void)[] = [];
+    const notifyChange = (): void => {
+        for (const listener of listeners) {
+            listener();
+        }
+    };
+    // Foundry keeps a reference to this object; filling it once packs load populates the settings dropdown.
+    const textureChoices: Record<string, string> = {};
 
     const place = (armed: ArmedStamp, point: Point): void => {
         const active = controller();
@@ -136,6 +157,8 @@ export function registerStampRuntime(controller: () => CartographyController | n
         const loaded = loadPacks(fetched.sources);
         stamps = loaded.stamps;
         byKey = new Map(stamps.map((s) => [s.key, s]));
+        textureSets = loaded.textureSets;
+        Object.assign(textureChoices, textureSetChoices(textureSets));
         for (const failure of fetched.failures) {
             ui.notifications?.error(format(I18N.notifications.packFetchFailed, { module: failure.moduleId, message: failure.message }));
         }
@@ -143,7 +166,21 @@ export function registerStampRuntime(controller: () => CartographyController | n
             console.error(`${MODULE_ID} | stamp pack ${error.moduleId} is invalid`, error.issues);
             ui.notifications?.error(format(I18N.notifications.packInvalid, { module: error.moduleId, count: String(error.issues.length) }));
         }
+        notifyChange();
     };
+
+    Hooks.once('init', () => {
+        game.settings?.register(MODULE_ID, TEXTURE_SET_SETTING, {
+            name: I18N.settings.textureSetName,
+            hint: I18N.settings.textureSetHint,
+            scope: 'world',
+            config: true,
+            type: String,
+            choices: textureChoices,
+            default: '',
+            onChange: notifyChange,
+        });
+    });
 
     Hooks.once('ready', () => {
         void loadAllPacks();
@@ -234,6 +271,13 @@ export function registerStampRuntime(controller: () => CartographyController | n
     });
 
     return {
+        textures: () => {
+            const chosen = game.settings?.get(MODULE_ID, TEXTURE_SET_SETTING);
+            return textureResolver(pickTextureSet(textureSets, typeof chosen === 'string' ? chosen : ''));
+        },
+        onChange: (listener) => {
+            listeners.push(listener);
+        },
         catalog: { get: (key) => byKey.get(key) ?? null },
         openBrowser: browser.open,
         placeArmedAt: (point) => {
