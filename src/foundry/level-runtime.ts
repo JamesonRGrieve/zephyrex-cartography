@@ -2,7 +2,7 @@
 /**
  * Foundry wiring for levels: the levels panel window, the localised names of
  * generated transition regions, and re-reading levels when a GM edits native
- * Level documents directly (v14). The level logic itself is the controller's.
+ * Level documents directly. The level logic itself is the controller's.
  */
 import type { CartographyController } from '../canvas/controller';
 import { BIOME_TITLE_KEYS, I18N, TRANSITION_KIND_KEYS } from '../i18n';
@@ -89,7 +89,7 @@ export function registerLevelRuntime(controller: () => CartographyController | n
         },
     });
 
-    // A GM editing native Level documents directly (v14) changes the bands everything hangs off.
+    // A GM editing native Level documents directly changes the bands everything hangs off.
     const reload = (): void => {
         run(async (c) => c.reloadLevels());
     };

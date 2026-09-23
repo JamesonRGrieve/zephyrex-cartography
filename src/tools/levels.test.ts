@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { adjacentLevel, findLevel, levelElevation, levelPanel, nextLevelBand, onLevel, parseLevels, sortLevels, type Level } from './levels';
+import { adjacentLevel, findLevel, levelElevation, levelPanel, nextLevelBand, onLevel, sortLevels, type Level } from './levels';
 
 const levels: Level[] = [
     { id: 'upper', name: 'Upper', bottom: 10, top: 20 },
@@ -40,16 +40,6 @@ describe('levels', () => {
         expect(onLevel('ground', 'upper')).toBe(false);
         expect(onLevel(null, 'upper')).toBe(true);
         expect(onLevel('ground', null)).toBe(true);
-    });
-
-    it('parse the persisted list, dropping malformed or inverted entries', () => {
-        expect(
-            parseLevels([{ id: 'a', name: 'A', bottom: 5, top: 15 }, { id: 'b', name: 'B' }, { id: 'c', name: 'C', bottom: 3, top: 1 }, { name: 'no id' }, 7]),
-        ).toEqual([
-            { id: 'b', name: 'B', bottom: 0, top: 10 },
-            { id: 'a', name: 'A', bottom: 5, top: 15 },
-        ]);
-        expect(parseLevels(null)).toEqual([]);
     });
 
     it('present the panel top to bottom, only empty levels removable', () => {

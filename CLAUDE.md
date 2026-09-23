@@ -1,6 +1,6 @@
 # Zephyrex Cartography — Contributor & Agent Protocol
 
-`zephyrex-cartography` is an **AGPL** Foundry VTT v13+ module: a **standalone
+`zephyrex-cartography` is an **AGPL** Foundry VTT v14 module: a **standalone
 scene authoring tool**. It paints terrain, draws roads and rivers, builds
 structures (rooms, walls, doors, lights), and places **structure-aware stamps**,
 all as **native Foundry documents**. It is the open-source take on the best of
@@ -186,12 +186,9 @@ tool; an auto `AmbientLightDocument` per room at its centroid.
 - **Stairs.** `transition` stamps (stairs, ladder, lift, hatch; up, down or
   both) generate paired teleport Scene Regions between adjacent levels. Each end
   sits on its level's band and teleports to the other.
-- **v14.** Levels *are* the scene's native Level documents. Walls, tiles,
+- **Native.** Levels *are* the scene's native Level documents. Walls, tiles,
   lights and regions get `levels`, so vision is per floor, and teleports use
   `destinations`, `placement: relative` and a choice between two ends.
-- **v13.** Levels live in a scene flag. Tiles, lights and regions still take
-  the band's elevation, but walls apply on every level (v13 has no per-level
-  walls), and a teleport takes its first destination only.
 
 **Submaps [done]:** an enterable stamp (a building, a hab) gets an "Interior"
 button on its Tile HUD. The GM either creates a new interior scene (gridded like
@@ -203,7 +200,7 @@ the current one) or **links an existing one**, imported scenes included.
 - **Lifecycle.** The entrance follows the stamp (moves keep its id). The exit
   is deleted with the stamp or on unlink; the interior scene itself is always
   kept.
-- **v14.** An exit in a multi-level interior sits on that scene's initial
+- **Levels.** An exit in a multi-level interior sits on that scene's initial
   Level, as teleports require.
 
 **Undo/redo [done]** carries the scene with it. Features an undo or redo drops
@@ -345,7 +342,10 @@ ambientCG sets), own the fetch script and credits.
 
 ## Foundry packaging
 
-- `module.json` (id `zephyrex-cartography`, min v13 / verified v14):
+- **Targets v14 only** (`module.json` minimum and verified 14). Build on v14
+  APIs directly (native Levels, multi-destination teleports, per-level walls);
+  never add a fallback or version branch for v13 or earlier.
+- `module.json` (id `zephyrex-cartography`):
   `esmodules`→`dist/zephyrex-cartography.js`, `styles`→`dist/zephyrex-cartography.css`,
   `languages`→`dist/lang/en.json`.
 - Vite lib build → `dist/` (`src/static/` copied verbatim).

@@ -56,10 +56,7 @@ export interface SilhouetteSource {
     trace: (src: string) => Promise<Point[][] | null>;
 }
 
-/**
- * The scene's levels. On Foundry v14 these are the scene's native Level
- * documents; on v13 they are recorded in a scene flag.
- */
+/** The scene's levels: its native Level documents. */
 export interface LevelStore {
     load: () => Level[];
     create: (level: Omit<Level, 'id'>) => Promise<string | null>;

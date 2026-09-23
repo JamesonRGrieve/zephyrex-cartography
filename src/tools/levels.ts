@@ -4,10 +4,8 @@
  * units. Every feature sits on one level (or on none: shown on every level,
  * the single-floor default). Generated documents take their level's band, and
  * transition stamps (stairs, ladders, lifts, hatches) connect adjacent levels.
- * On Foundry v14 the levels are the scene's native Level documents; on v13
- * they are recorded in a scene flag. Pure and unit-tested.
+ * The levels are the scene's native Level documents. Pure and unit-tested.
  */
-import { isRecord, numberOr } from './guards';
 
 export interface Level {
     readonly id: string;
@@ -82,22 +80,4 @@ export function levelPanel(levels: readonly Level[], active: string | null, coun
             return { level, active: level.id === active, count, removable: count === 0 };
         });
     return { rows, allActive: active === null };
-}
-
-// eslint-disable-next-line no-restricted-syntax -- boundary: parses the persisted level list (v13 scene flag), dropping malformed entries
-export function parseLevels(raw: unknown): Level[] {
-    if (!Array.isArray(raw)) {
-        return [];
-    }
-    const levels: Level[] = [];
-    for (const entry of raw) {
-        if (isRecord(entry) && typeof entry['id'] === 'string' && typeof entry['name'] === 'string') {
-            const bottom = numberOr(entry['bottom'], 0);
-            const ceiling = numberOr(entry['top'], bottom + DEFAULT_LEVEL_HEIGHT);
-            if (ceiling > bottom) {
-                levels.push({ id: entry['id'], name: entry['name'], bottom, top: ceiling });
-            }
-        }
-    }
-    return sortLevels(levels);
 }

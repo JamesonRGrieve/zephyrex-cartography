@@ -5,7 +5,7 @@
  * the single place that adapts the live document to this shape.
  */
 
-/** Native Level membership (v14 only; absent means every level). */
+/** Native Level membership (absent means every level). */
 interface OnLevels {
     readonly levels?: readonly string[];
 }
@@ -51,10 +51,12 @@ interface TileUpdateData extends TileCreateData {
     readonly _id: string;
 }
 
-/** v14: several destinations, placement, choice. v13: one destination, choice. */
-type TeleportSystem =
-    | { readonly destinations: readonly string[]; readonly placement: string; readonly choice: boolean }
-    | { readonly destination: string; readonly choice: boolean };
+/** Teleport destinations (region UUIDs), where the token lands in them, and whether it chooses one. */
+interface TeleportSystem {
+    readonly destinations: readonly string[];
+    readonly placement: string;
+    readonly choice: boolean;
+}
 
 export interface RegionCreateData extends OnLevels {
     readonly _id: string;
@@ -84,7 +86,7 @@ export interface EmbeddedCollection {
     readonly has: (id: string) => boolean;
 }
 
-/** A v14 native Level document, as far as the level store reads it. */
+/** A native Level document, as far as the level store reads it. */
 export interface NativeLevel {
     readonly id: string | null;
     readonly name: string;
@@ -107,16 +109,15 @@ export interface FoundryScene {
     readonly name: string;
     /** The playable rectangle inside the padding, and the grid size, in px. */
     readonly dimensions: { readonly sceneX: number; readonly sceneY: number; readonly sceneWidth: number; readonly sceneHeight: number; readonly size: number };
-    /** v14: the Level a token lands on by default. */
-    readonly initialLevel?: { readonly id: string | null } | null;
+    /** The Level a token lands on by default. */
+    readonly initialLevel: { readonly id: string | null } | null;
     /** Grid size in px per square, and the scene distance units one square spans. */
     readonly grid: { readonly size: number; readonly distance: number };
     readonly walls: EmbeddedCollection;
     readonly lights: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
     readonly regions: EmbeddedCollection;
-    /** v14 native Levels; absent on v13. */
-    readonly levels?: { readonly contents: readonly NativeLevel[]; readonly size: number };
+    readonly levels: { readonly contents: readonly NativeLevel[]; readonly size: number };
     // eslint-disable-next-line no-restricted-syntax -- boundary: a Foundry flag value is arbitrary serialised JSON; getFlag returns unknown by contract and is narrowed at the parse boundary
     getFlag(scope: string, key: string): unknown;
     // eslint-disable-next-line no-restricted-syntax -- boundary: setFlag accepts an arbitrary serialisable flag value, exactly as the live Foundry Scene API does

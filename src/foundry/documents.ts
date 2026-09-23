@@ -9,7 +9,7 @@ import type { DocumentSink, TileUpdate } from '../canvas/controller';
 import type { GeneratedDocs, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
 import { isRecord } from '../tools/guards';
 import type { EmbeddedCollection, EmbeddedName, FoundryScene } from './boundary';
-import { lightCreateData, regionCreateData, tileCreateData, type TranslateOptions, wallCreateData } from './translate';
+import { lightCreateData, regionCreateData, tileCreateData, wallCreateData } from './translate';
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses Foundry's createEmbeddedDocuments result (an array of created documents) to collect their ids
 function extractIds(created: unknown): string[] {
@@ -25,7 +25,7 @@ function extractIds(created: unknown): string[] {
     return ids;
 }
 
-export interface SinkOptions extends TranslateOptions {
+export interface SinkOptions {
     /** A new document id (regions are created with ids chosen up front, so paired teleports can reference each other). */
     readonly makeId: () => string;
     /** The display name of a generated region. */
@@ -37,14 +37,7 @@ export class FoundryDocumentSink implements DocumentSink {
 
     async createWalls(walls: readonly WallDoc[]): Promise<string[]> {
         const scene = this.getScene();
-        return scene
-            ? extractIds(
-                  await scene.createEmbeddedDocuments(
-                      'Wall',
-                      walls.map((w) => wallCreateData(w, this.options)),
-                  ),
-              )
-            : [];
+        return scene ? extractIds(await scene.createEmbeddedDocuments('Wall', walls.map(wallCreateData))) : [];
     }
 
     async createLights(lights: readonly LightDoc[]): Promise<string[]> {
@@ -53,7 +46,7 @@ export class FoundryDocumentSink implements DocumentSink {
             ? extractIds(
                   await scene.createEmbeddedDocuments(
                       'AmbientLight',
-                      lights.map((l) => lightCreateData(l, scene.grid, this.options)),
+                      lights.map((l) => lightCreateData(l, scene.grid)),
                   ),
               )
             : [];
@@ -61,14 +54,7 @@ export class FoundryDocumentSink implements DocumentSink {
 
     async createTiles(tiles: readonly TileDoc[]): Promise<string[]> {
         const scene = this.getScene();
-        return scene
-            ? extractIds(
-                  await scene.createEmbeddedDocuments(
-                      'Tile',
-                      tiles.map((t) => tileCreateData(t, this.options)),
-                  ),
-              )
-            : [];
+        return scene ? extractIds(await scene.createEmbeddedDocuments('Tile', tiles.map(tileCreateData))) : [];
     }
 
     async updateTiles(updates: readonly TileUpdate[]): Promise<void> {
@@ -76,7 +62,7 @@ export class FoundryDocumentSink implements DocumentSink {
         if (scene && updates.length > 0) {
             await scene.updateEmbeddedDocuments(
                 'Tile',
-                updates.map(({ id, tile }) => ({ _id: id, ...tileCreateData(tile, this.options) })),
+                updates.map(({ id, tile }) => ({ _id: id, ...tileCreateData(tile) })),
             );
         }
     }
@@ -88,7 +74,7 @@ export class FoundryDocumentSink implements DocumentSink {
             return [];
         }
         const ids = regions.map((region) => region.id ?? this.options.makeId());
-        const data = regionCreateData(regions, ids, sceneId, this.options.regionName, this.options);
+        const data = regionCreateData(regions, ids, sceneId, this.options.regionName);
         return extractIds(await scene.createEmbeddedDocuments('Region', data, { keepId: true }));
     }
 

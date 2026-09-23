@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * The scene's levels. On Foundry v14 they are the scene's native Level
- * documents, so walls, tiles, lights and regions are assigned to real floors
- * and Foundry handles per-level vision. On v13, which has no Level documents,
- * the bands live in a scene flag; generated documents still take their band's
- * elevation, but walls apply on every level there.
+ * The scene's levels are its native Level documents, so walls, tiles, lights
+ * and regions are assigned to real floors and Foundry handles per-level
+ * vision.
  */
 import type { LevelStore } from '../canvas/controller';
-import { MODULE_ID } from '../module-id';
-import { DEFAULT_LEVEL_HEIGHT, type Level, parseLevels, sortLevels } from '../tools/levels';
+import { DEFAULT_LEVEL_HEIGHT, type Level, sortLevels } from '../tools/levels';
 import type { FoundryScene, NativeLevel } from './boundary';
-
-/** Scene-flag key (v13) holding the level list. */
-const LEVELS_FLAG_KEY = 'levels';
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses Foundry's createEmbeddedDocuments result to read the created Level's id
 function firstId(created: unknown): string | null {
@@ -29,9 +23,9 @@ function fromNative(level: NativeLevel): Level | null {
     return { id: level.id, name: level.name, bottom, top: level.elevation.top ?? bottom + DEFAULT_LEVEL_HEIGHT };
 }
 
-function nativeStore(getScene: () => FoundryScene | null): LevelStore {
+export function createLevelStore(getScene: () => FoundryScene | null): LevelStore {
     return {
-        load: () => sortLevels((getScene()?.levels?.contents ?? []).map(fromNative).filter((l): l is Level => l !== null)),
+        load: () => sortLevels((getScene()?.levels.contents ?? []).map(fromNative).filter((l): l is Level => l !== null)),
         create: async (level) => {
             const scene = getScene();
             return scene
@@ -40,7 +34,7 @@ function nativeStore(getScene: () => FoundryScene | null): LevelStore {
         },
         update: async (id, patch) => {
             const scene = getScene();
-            const current = scene?.levels?.contents.map(fromNative).find((l) => l?.id === id);
+            const current = scene?.levels.contents.map(fromNative).find((l) => l?.id === id);
             if (!scene || !current) {
                 return;
             }
@@ -51,33 +45,4 @@ function nativeStore(getScene: () => FoundryScene | null): LevelStore {
             await getScene()?.deleteEmbeddedDocuments('Level', [id]);
         },
     };
-}
-
-function flagStore(getScene: () => FoundryScene | null, makeId: () => string): LevelStore {
-    const read = (): Level[] => parseLevels(getScene()?.getFlag(MODULE_ID, LEVELS_FLAG_KEY));
-    const write = async (levels: readonly Level[]): Promise<void> => {
-        await getScene()?.setFlag(MODULE_ID, LEVELS_FLAG_KEY, sortLevels(levels));
-    };
-    return {
-        load: read,
-        create: async (level) => {
-            if (!getScene()) {
-                return null;
-            }
-            const id = makeId();
-            await write([...read(), { id, ...level }]);
-            return id;
-        },
-        update: async (id, patch) => {
-            await write(read().map((level) => (level.id === id ? { ...level, ...patch } : level)));
-        },
-        remove: async (id) => {
-            await write(read().filter((level) => level.id !== id));
-        },
-    };
-}
-
-/** Native Levels where the running Foundry has them (v14+), otherwise the flag store. */
-export function createLevelStore(getScene: () => FoundryScene | null, nativeLevels: boolean, makeId: () => string): LevelStore {
-    return nativeLevels ? nativeStore(getScene) : flagStore(getScene, makeId);
 }

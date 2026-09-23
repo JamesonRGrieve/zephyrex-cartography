@@ -2,16 +2,15 @@
 /**
  * Pure translation from the core's document specs to Foundry create data:
  * door, sense and movement enums, scene px to scene distance units, native
- * Level membership (v14), and the teleport behaviour schema, which differs
- * between v13 and v14. It has no Foundry runtime dependency, so it is
- * unit-tested even though it sits at the boundary.
+ * Level membership, and teleport behaviours. It has no Foundry runtime
+ * dependency, so it is unit-tested even though it sits at the boundary.
  */
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
 import type { DoorState, DoorType, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { LightCreateData, RegionCreateData, TileCreateData, WallCreateData } from './boundary';
 
-/** `CONST.WALL_DOOR_TYPES` (stable across v13 and v14). */
+/** `CONST.WALL_DOOR_TYPES`. */
 const DOOR_TYPES: Record<DoorType, number> = { none: 0, door: 1, secret: 2 };
 
 /** `CONST.WALL_DOOR_STATES`. */
@@ -19,7 +18,7 @@ const DOOR_STATES: Record<DoorState, number> = { closed: 0, open: 1, locked: 2 }
 
 const DOOR_STATE_NAMES: readonly DoorState[] = ['closed', 'open', 'locked'];
 
-/** `CONST.EDGE_SENSE_TYPES` (v14) / `WALL_SENSE_TYPES` (v13): NONE and NORMAL. */
+/** `CONST.EDGE_SENSE_TYPES`: NONE and NORMAL. */
 const SENSE_NONE = 0;
 const SENSE_NORMAL = 20;
 
@@ -27,19 +26,11 @@ const SENSE_NORMAL = 20;
 const MOVE_NONE = 0;
 const MOVE_NORMAL = 20;
 
-/** Foundry generation from which scenes have native Level documents and the multi-destination teleport schema. */
-export const NATIVE_LEVELS_GENERATION = 14;
-
 export interface SceneGrid {
     /** Px per grid square. */
     readonly size: number;
     /** Scene distance units per grid square. */
     readonly distance: number;
-}
-
-/** How create data is shaped for the running Foundry: whether level ids are native Level documents. */
-export interface TranslateOptions {
-    readonly nativeLevels: boolean;
 }
 
 /** The door state for a wall's `ds` value, or null for a value Foundry does not define. */
@@ -51,12 +42,12 @@ function sense(blocks: boolean): number {
     return blocks ? SENSE_NORMAL : SENSE_NONE;
 }
 
-/** Native level membership: only on v14, where level ids are Level documents (an empty set means every level). */
-function levelsField(level: string | null, options: TranslateOptions): { levels?: string[] } {
-    return options.nativeLevels && level !== null ? { levels: [level] } : {};
+/** Native Level membership; left out (every level) for a document on no level. */
+function levelsField(level: string | null): { levels?: string[] } {
+    return level === null ? {} : { levels: [level] };
 }
 
-export function wallCreateData(wall: WallDoc, options: TranslateOptions): WallCreateData {
+export function wallCreateData(wall: WallDoc): WallCreateData {
     return {
         c: [wall.a.x, wall.a.y, wall.b.x, wall.b.y],
         door: DOOR_TYPES[wall.door],
@@ -65,7 +56,7 @@ export function wallCreateData(wall: WallDoc, options: TranslateOptions): WallCr
         light: sense(wall.blocks.light),
         sound: sense(wall.blocks.sound),
         move: wall.blocks.movement ? MOVE_NORMAL : MOVE_NONE,
-        ...levelsField(wall.level, options),
+        ...levelsField(wall.level),
     };
 }
 
@@ -74,7 +65,7 @@ export function pxToDistance(px: number, grid: SceneGrid): number {
     return grid.size > 0 ? (px / grid.size) * grid.distance : 0;
 }
 
-export function lightCreateData(light: LightDoc, grid: SceneGrid, options: TranslateOptions): LightCreateData {
+export function lightCreateData(light: LightDoc, grid: SceneGrid): LightCreateData {
     return {
         x: light.x,
         y: light.y,
@@ -88,11 +79,11 @@ export function lightCreateData(light: LightDoc, grid: SceneGrid, options: Trans
             ...(light.angle === undefined ? {} : { angle: light.angle }),
             ...(light.animation === undefined ? {} : { animation: light.animation }),
         },
-        ...levelsField(light.level, options),
+        ...levelsField(light.level),
     };
 }
 
-export function tileCreateData(tile: TileDoc, options: TranslateOptions): TileCreateData {
+export function tileCreateData(tile: TileDoc): TileCreateData {
     return {
         texture: { src: tile.src },
         x: tile.x,
@@ -102,7 +93,7 @@ export function tileCreateData(tile: TileDoc, options: TranslateOptions): TileCr
         rotation: tile.rotation,
         elevation: tile.elevation,
         flags: { [MODULE_ID]: { featureId: tile.featureId } },
-        ...levelsField(tile.level, options),
+        ...levelsField(tile.level),
     };
 }
 
@@ -111,17 +102,12 @@ function flatten(points: readonly Point[]): number[] {
 }
 
 /**
- * A teleport behaviour to `destinations` (region UUIDs). v14 takes a set of
- * destinations and can keep the token's relative position (the ends of a
- * stair share a footprint); v13 takes one destination, so only the first is
- * used there.
+ * A teleport behaviour to `destinations` (region UUIDs). The token keeps its
+ * position relative to the region (the ends of a stair share a footprint),
+ * and chooses when there is more than one way to go.
  */
-function teleportBehaviour(destinations: readonly string[], options: TranslateOptions): RegionCreateData['behaviors'][number] {
-    const choice = destinations.length > 1;
-    const system = options.nativeLevels
-        ? { destinations: [...destinations], placement: 'relative', choice }
-        : { destination: destinations[0] ?? '', choice: false };
-    return { type: 'teleportToken', system };
+function teleportBehaviour(destinations: readonly string[]): RegionCreateData['behaviors'][number] {
+    return { type: 'teleportToken', system: { destinations: [...destinations], placement: 'relative', choice: destinations.length > 1 } };
 }
 
 /** A Scene Region's UUID. */
@@ -140,7 +126,6 @@ export function regionCreateData(
     ids: readonly string[],
     sceneId: string,
     nameOf: (region: RegionDoc) => string,
-    options: TranslateOptions,
 ): RegionCreateData[] {
     return regions.map((region, i) => {
         const destinations = (region.teleport?.targets ?? []).flatMap((target) => {
@@ -155,8 +140,8 @@ export function regionCreateData(
             name: nameOf(region),
             shapes: [{ type: 'polygon', points: flatten(region.polygon), hole: false }],
             elevation: { bottom: region.bottom, top: region.top },
-            behaviors: destinations.length > 0 ? [teleportBehaviour(destinations, options)] : [],
-            ...levelsField(region.level, options),
+            behaviors: destinations.length > 0 ? [teleportBehaviour(destinations)] : [],
+            ...levelsField(region.level),
         };
     });
 }

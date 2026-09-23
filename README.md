@@ -1,6 +1,6 @@
 # Zephyrex Cartography
 
-Scene authoring for Foundry VTT v13+. Paint terrain, draw roads and rivers, and
+Scene authoring for Foundry VTT v14. Paint terrain, draw roads and rivers, and
 build structures directly on the canvas. Walls, doors and lights come out as
 real Foundry documents, so vision, movement and lighting just work.
 
@@ -22,8 +22,8 @@ Dungeondraft, Inkarnate) and runs entirely inside Foundry.
   structure-aware: occlusion walls traced from the art, light emitters, doors
   that cut room walls, and containers backed by Item Piles. Variants (open,
   lit, broken) switch in place.
-- **Levels:** multi-floor scenes as elevation bands, with stairs, ladders,
-  lifts and hatches as teleport regions. On v14 these are native Levels.
+- **Levels:** multi-floor scenes on Foundry's native Levels, with per-floor
+  walls and vision, and stairs, ladders, lifts and hatches as teleport regions.
 - **Interiors:** an enterable stamp (a building, a hab) links to its own
   interior scene, new or existing, with an entrance and an exit.
 - **Map builder:** generate a floor plan from a seed, or build any map
@@ -43,7 +43,7 @@ so any tool that writes JSON can generate maps.
 ## Install
 
 Add the module to your Foundry `Data/modules` folder (built output in `dist/`),
-then enable it in your world. Requires Foundry VTT v13 or later.
+then enable it in your world. Requires Foundry VTT v14.
 
 ## Development
 

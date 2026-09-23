@@ -26,7 +26,6 @@ import { FoundrySceneStore } from './foundry/scene-store';
 import { createWorldScenes } from './foundry/scenes';
 import { createSilhouetteSource } from './foundry/silhouette';
 import { registerSubmapRuntime } from './foundry/submap-runtime';
-import { NATIVE_LEVELS_GENERATION } from './foundry/translate';
 import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
 import { MODULE_ID } from './module-id';
@@ -247,13 +246,12 @@ function setupDrawLayer(): void {
 
     const renderer = new GraphicsFeatureRenderer(createPixiSurface(container), packs.textures());
     const makeId = (): string => foundry.utils.randomID();
-    const nativeLevels = (game.release?.generation ?? 0) >= NATIVE_LEVELS_GENERATION;
     const controller = new CartographyController({
         renderer,
         store: new FoundrySceneStore(activeScene),
-        sink: new FoundryDocumentSink(activeScene, { nativeLevels, makeId, regionName }),
-        levels: createLevelStore(activeScene, nativeLevels, makeId),
-        scenes: createWorldScenes({ nativeLevels, regionName }),
+        sink: new FoundryDocumentSink(activeScene, { makeId, regionName }),
+        levels: createLevelStore(activeScene),
+        scenes: createWorldScenes({ regionName }),
         containers: createItemPilesContainers(() => activeScene()?.id ?? null),
         catalog: packs.catalog,
         silhouettes,

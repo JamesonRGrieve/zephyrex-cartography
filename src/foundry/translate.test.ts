@@ -4,12 +4,10 @@ import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
 import { doorStateFromDs, lightCreateData, pxToDistance, regionCreateData, regionUuid, tileCreateData, wallCreateData } from './translate';
 
 const GRID = { size: 100, distance: 5 };
-const V13 = { nativeLevels: false };
-const V14 = { nativeLevels: true };
 
 describe('wallCreateData', () => {
     it('translates a plain wall blocking every sense', () => {
-        expect(wallCreateData({ a: { x: 0, y: 0 }, b: { x: 10, y: 5 }, door: 'none', doorState: 'closed', blocks: BLOCKS_ALL, level: null }, V14)).toEqual({
+        expect(wallCreateData({ a: { x: 0, y: 0 }, b: { x: 10, y: 5 }, door: 'none', doorState: 'closed', blocks: BLOCKS_ALL, level: null })).toEqual({
             c: [0, 0, 10, 5],
             door: 0,
             ds: 0,
@@ -21,24 +19,21 @@ describe('wallCreateData', () => {
     });
 
     it('translates door type, door state and unblocked senses', () => {
-        const data = wallCreateData(
-            {
-                a: { x: 0, y: 0 },
-                b: { x: 1, y: 0 },
-                door: 'secret',
-                doorState: 'locked',
-                blocks: { sight: false, movement: true, light: false, sound: true },
-                level: null,
-            },
-            V13,
-        );
+        const data = wallCreateData({
+            a: { x: 0, y: 0 },
+            b: { x: 1, y: 0 },
+            door: 'secret',
+            doorState: 'locked',
+            blocks: { sight: false, movement: true, light: false, sound: true },
+            level: null,
+        });
         expect(data).toMatchObject({ door: 2, ds: 2, sight: 0, light: 0, sound: 20, move: 20 });
     });
 
-    it('puts a levelled wall on its native Level only on v14', () => {
+    it('puts a levelled wall on its native Level, and a level-less one on every level', () => {
         const wall = { a: { x: 0, y: 0 }, b: { x: 1, y: 0 }, door: 'none' as const, doorState: 'closed' as const, blocks: BLOCKS_ALL, level: 'L1' };
-        expect(wallCreateData(wall, V14).levels).toEqual(['L1']);
-        expect(wallCreateData(wall, V13).levels).toBeUndefined();
+        expect(wallCreateData(wall).levels).toEqual(['L1']);
+        expect(wallCreateData({ ...wall, level: null }).levels).toBeUndefined();
     });
 });
 
@@ -62,7 +57,6 @@ describe('lightCreateData', () => {
             lightCreateData(
                 { x: 1, y: 2, dim: 400, bright: 200, color: '#ff0000', angle: 90, rotation: 45, animation: { type: 'torch' }, elevation: 3, level: 'L2' },
                 GRID,
-                V14,
             ),
         ).toEqual({
             x: 1,
@@ -75,7 +69,7 @@ describe('lightCreateData', () => {
     });
 
     it('omits absent optional styling and defaults rotation to 0', () => {
-        expect(lightCreateData({ x: 0, y: 0, dim: 100, bright: 0, elevation: 0, level: null }, GRID, V13)).toEqual({
+        expect(lightCreateData({ x: 0, y: 0, dim: 100, bright: 0, elevation: 0, level: null }, GRID)).toEqual({
             x: 0,
             y: 0,
             elevation: 0,
@@ -87,7 +81,7 @@ describe('lightCreateData', () => {
 
 describe('tileCreateData', () => {
     it('writes the texture, geometry, level and the owning feature flag', () => {
-        expect(tileCreateData({ src: 'a.png', x: 1, y: 2, width: 3, height: 4, rotation: 90, elevation: 5, level: 'L1', featureId: 'f1' }, V14)).toEqual({
+        expect(tileCreateData({ src: 'a.png', x: 1, y: 2, width: 3, height: 4, rotation: 90, elevation: 5, level: 'L1', featureId: 'f1' })).toEqual({
             texture: { src: 'a.png' },
             x: 1,
             y: 2,
@@ -115,8 +109,8 @@ describe('regionCreateData', () => {
     ];
     const nameOf = (r: RegionDoc): string => `${r.label.kind} ${r.level ?? ''}`;
 
-    it('wires v14 teleports to every destination, relative, with a choice when there are several', () => {
-        const [start, end, plain] = regionCreateData(stair, ['r0', 'r1', 'r2'], 's', nameOf, V14);
+    it('wires teleports to every destination, relative, with a choice when there are several', () => {
+        const [start, end, plain] = regionCreateData(stair, ['r0', 'r1', 'r2'], 's', nameOf);
         expect(start).toEqual({
             _id: 'r0',
             name: 'stairs A',
@@ -129,12 +123,6 @@ describe('regionCreateData', () => {
         expect(plain?.behaviors).toEqual([]);
     });
 
-    it('wires v13 teleports to the first destination only, without native levels', () => {
-        const [start] = regionCreateData(stair, ['r0', 'r1', 'r2'], 's', nameOf, V13);
-        expect(start?.behaviors[0]?.system).toEqual({ destination: 'Scene.s.Region.r1', choice: false });
-        expect(start?.levels).toBeUndefined();
-    });
-
     it('addresses a region in another scene directly, with an open-ended band', () => {
         const entrance: RegionDoc = {
             id: 'in1',
@@ -145,7 +133,7 @@ describe('regionCreateData', () => {
             level: null,
             teleport: { targets: [{ scene: 'hab', region: 'out1' }] },
         };
-        const [data] = regionCreateData([entrance], ['in1'], 's', nameOf, V14);
+        const [data] = regionCreateData([entrance], ['in1'], 's', nameOf);
         expect(data?.elevation).toEqual({ bottom: null, top: null });
         expect(data?.behaviors[0]?.system).toEqual({ destinations: ['Scene.hab.Region.out1'], placement: 'relative', choice: false });
         expect(regionUuid('a', 'b')).toBe('Scene.a.Region.b');
