@@ -41,9 +41,12 @@ describe('terrain as Scene Regions', () => {
         await lake(h); // p1
         await swath(h); // p2
         await h.c.setTerrainRegions(true);
-        expect(h.d.regions.map((batch) => batch[0]?.label)).toEqual([
-            { kind: 'terrain', biome: 'water' },
-            { kind: 'terrain', biome: 'forest' },
+        // Both mirrored in one write.
+        expect(h.d.regions.map((batch) => batch.map((region) => region.label))).toEqual([
+            [
+                { kind: 'terrain', biome: 'water' },
+                { kind: 'terrain', biome: 'forest' },
+            ],
         ]);
         expect(h.d.regions[0]?.[0]?.teleport).toBeNull();
         expect(h.d.regions[0]?.[0]?.polygon.length).toBeGreaterThan(3);

@@ -121,17 +121,21 @@ describe('batch', () => {
         expect(s.last()).toEqual([]);
     });
 
-    it('ends when its work throws, so later edits are undone one by one again', async () => {
-        const { c, s } = makeHarness();
+    it('rolls back and ends when its work throws, so later edits are undone one by one again', async () => {
+        const { c, s, d } = makeHarness();
         await expect(
             c.batch(async () => {
                 await roomAt(c, 0);
                 throw new Error('stop');
             }),
         ).rejects.toThrow('stop');
+        // Nothing of the failed batch was written or kept.
+        expect(d.writes).toEqual([]);
+        expect(s.last()).toEqual([]);
         await roomAt(c, 200);
+        await roomAt(c, 400);
         await c.undo();
-        expect(s.last().map((f) => f.id)).toEqual(['p1']);
+        expect(s.last().map((f) => f.id)).toEqual(['p2']);
     });
 
     it('hands out fresh feature ids', () => {

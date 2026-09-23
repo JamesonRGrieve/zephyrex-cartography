@@ -39,7 +39,8 @@ export interface DocumentPlan {
     readonly sounds: readonly SoundDoc[];
 }
 
-const EMPTY_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [], sounds: [] };
+/** A plan with no documents. */
+export const NO_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [], sounds: [] };
 
 /** What a feature's plan may depend on besides the feature itself. */
 export interface PlanContext {
@@ -333,12 +334,12 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
         return stampPlan(feature, context);
     }
     if (feature.type === 'path' && feature.walls) {
-        return { ...EMPTY_PLAN, walls: pathWalls(feature, floorOf(feature, context)) };
+        return { ...NO_PLAN, walls: pathWalls(feature, floorOf(feature, context)) };
     }
     if ((feature.type === 'region' || feature.type === 'stroke') && context.terrainRegions) {
-        return { ...EMPTY_PLAN, regions: [terrainRegion(feature, context.levels)] };
+        return { ...NO_PLAN, regions: [terrainRegion(feature, context.levels)] };
     }
-    return EMPTY_PLAN;
+    return NO_PLAN;
 }
 
 /** Pairs of a flat `[x, y, …]` outline as points. */

@@ -31,4 +31,21 @@ test('an enterable stamp opens into a new interior scene, each side teleporting 
     // The entrance follows the stamp, so it is locked; the exit is the GM's to place. Both show on the Regions layer.
     expect(result.locked).toEqual([true, false]);
     expect(result.visibility).toEqual([0, 0]);
+
+    // Moving the stamp redraws the entrance in place, under the same id and with its teleport, so the exit still reaches it.
+    await world.evaluate(async () => {
+        await canvas?.scene?.tiles.contents[0]?.update({ x: 900, y: 700 });
+    });
+    await expect
+        .poll(async () =>
+            world.evaluate(() => {
+                const entrance = canvas?.scene?.regions.contents[0];
+                const xs = entrance?.shapes.flatMap((shape) => ('points' in shape ? [...shape.points].filter((_, i) => i % 2 === 0) : [])) ?? [];
+                const system: object | undefined = entrance?.behaviors.contents[0]?.system;
+                const destinations =
+                    system !== undefined && 'destinations' in system && system.destinations instanceof Set ? [...system.destinations].map(String) : [];
+                return { uuid: entrance?.uuid, count: canvas?.scene?.regions.size, moved: xs.length > 0 && Math.min(...xs) > 600, destinations };
+            }),
+        )
+        .toEqual({ uuid: result.entranceUuid, count: 1, moved: true, destinations: [result.exitUuid] });
 });

@@ -169,8 +169,9 @@ describe('CartographyController door stamps', () => {
     it('snaps onto a room wall, supplies the door wall, and cuts the room wall around it', async () => {
         const { c, d } = await roomWithDoor();
         expect(c.getFeature('p2')?.points).toEqual([{ x: 200, y: 0 }]);
-        expect(d.walls[1]).toEqual([expect.objectContaining({ a: { x: 150, y: 0 }, b: { x: 250, y: 0 }, door: 'door', doorState: 'closed' })]);
-        const resynced = d.walls[2] ?? [];
+        // One write: the door wall, then the room's walls re-synced around it.
+        const [doorWall, ...resynced] = d.walls[1] ?? [];
+        expect(doorWall).toEqual(expect.objectContaining({ a: { x: 150, y: 0 }, b: { x: 250, y: 0 }, door: 'door', doorState: 'closed' }));
         expect(resynced).toHaveLength(5);
         expect(c.getFeature('p1')?.docs.walls).toEqual(['w5', 'w6', 'w7', 'w8', 'w9']);
         expect(d.deletedIds()).toEqual(['w0', 'w1', 'w2', 'w3', 'L0']);

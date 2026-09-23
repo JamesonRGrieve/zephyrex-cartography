@@ -91,6 +91,9 @@ export interface RegionCreateData extends OnLevels {
     readonly visibility: number;
 }
 
+/** A region redrawn in place: everything but its behaviours, which are embedded documents of their own. */
+type RegionUpdateData = Omit<RegionCreateData, 'behaviors'>;
+
 interface LevelCreateData {
     readonly name: string;
     readonly elevation: { readonly bottom: number; readonly top: number };
@@ -105,6 +108,29 @@ interface LevelUpdateData {
 export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level';
 
 type EmbeddedCreateData = WallCreateData | LightCreateData | SoundCreateData | TileCreateData | RegionCreateData | LevelCreateData;
+
+/** Create data carrying the id the document will have. */
+export type IdentifiedCreateData = EmbeddedCreateData & { readonly _id: string };
+
+/**
+ * One operation of `foundry.documents.modifyBatch` on a scene's embedded
+ * documents. Operations run in order and may not use each other's results,
+ * so every create carries its own `_id` (`keepId`).
+ */
+export type BatchOperation =
+    | {
+          readonly action: 'create';
+          readonly documentName: EmbeddedName;
+          readonly parent: FoundryScene;
+          readonly data: readonly IdentifiedCreateData[];
+          readonly keepId: true;
+      }
+    | { readonly action: 'update'; readonly documentName: 'Tile'; readonly parent: FoundryScene; readonly updates: readonly TileUpdateData[] }
+    | { readonly action: 'update'; readonly documentName: 'Region'; readonly parent: FoundryScene; readonly updates: readonly RegionUpdateData[] }
+    | { readonly action: 'delete'; readonly documentName: EmbeddedName; readonly parent: FoundryScene; readonly ids: readonly string[] };
+
+/** Applies a batch of operations in one transaction: all of them land, or none. */
+export type ModifyBatch = (operations: readonly BatchOperation[]) => Promise<unknown>;
 
 export interface EmbeddedCollection {
     readonly has: (id: string) => boolean;

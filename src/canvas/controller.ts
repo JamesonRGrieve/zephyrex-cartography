@@ -13,17 +13,7 @@ import { nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
-import {
-    hasDocs,
-    NO_DOCS,
-    type DoorState,
-    type GeneratedDocs,
-    type LightDoc,
-    type RegionDoc,
-    type SoundDoc,
-    type TileDoc,
-    type WallDoc,
-} from '../tools/documents';
+import { hasDocs, type DoorState, type GeneratedDocs, type RegionDoc, type TileDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
@@ -33,7 +23,7 @@ import { DEFAULT_LEVEL_HEIGHT, findLevel, type Level, levelElevation, nextLevelB
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { drawOrder } from '../tools/nesting';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
-import { type PlanContext, planDocuments } from '../tools/plan';
+import { NO_PLAN, type PlanContext, planDocuments } from '../tools/plan';
 import { makeRegion } from '../tools/region';
 import {
     type DoorSettings,
@@ -50,6 +40,7 @@ import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFea
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
 import type { FeatureRenderer } from './renderer';
+import { type DocumentKind, StagedChanges, type StagedWrite } from './staged-changes';
 
 export interface SceneStore {
     load: () => Feature[];
@@ -123,16 +114,16 @@ export interface TileUpdate {
     readonly tile: TileDoc;
 }
 
-/** Creates, updates and deletes the native Foundry documents features generate. Returns created ids in input order. */
+/**
+ * Writes the native Foundry documents features generate. The controller
+ * stages each transaction's changes (see {@link StagedChanges}) and hands
+ * them over whole, to be written atomically.
+ */
 export interface DocumentSink {
-    createWalls: (walls: readonly WallDoc[]) => Promise<string[]>;
-    createLights: (lights: readonly LightDoc[]) => Promise<string[]>;
-    createSounds: (sounds: readonly SoundDoc[]) => Promise<string[]>;
-    createTiles: (tiles: readonly TileDoc[]) => Promise<string[]>;
-    updateTiles: (updates: readonly TileUpdate[]) => Promise<void>;
-    /** Create regions, wiring each `teleport.targets` index to the created region it names. */
-    createRegions: (regions: readonly RegionDoc[]) => Promise<string[]>;
-    deleteDocuments: (docs: GeneratedDocs) => Promise<void>;
+    /** A fresh id for a document of `kind` about to be created. */
+    newId: (kind: DocumentKind) => string;
+    /** Delete, create and update everything in `write`, in one transaction: all of it lands, or none. */
+    write: (write: StagedWrite) => Promise<void>;
 }
 
 export type Brush =
@@ -184,6 +175,10 @@ export class CartographyController {
     private future: Feature[][] = [];
     /** Inside {@link batch}: edits share the batch's one undo snapshot. */
     private batching = false;
+    /** Document changes waiting for the current transaction to end. */
+    private readonly staged: StagedChanges;
+    /** Depth of nested transactions; only the outermost one writes. */
+    private writing = 0;
 
     /** Half-width (scene px) applied to newly drawn paths. */
     halfWidth = DEFAULT_HALF_WIDTH;
@@ -221,6 +216,7 @@ export class CartographyController {
         this.catalog = ports.catalog;
         this.silhouettes = ports.silhouettes;
         this.makeId = ports.makeId;
+        this.staged = new StagedChanges((kind) => ports.sink.newId(kind));
     }
 
     /** An enterable stamp, or null for anything else. */
@@ -299,10 +295,12 @@ export class CartographyController {
         this.terrainRegions = on;
         // Only terrain whose regions disagree with the setting is re-synced.
         const stale = this.features.filter((f) => (f.type === 'region' || f.type === 'stroke') && f.docs.regions.length > 0 !== on);
-        await stale.reduce(async (previous, f) => {
-            await previous;
-            await this.syncDocs(this.getFeature(f.id) ?? f);
-        }, Promise.resolve());
+        await this.transaction(async () =>
+            stale.reduce(async (previous, f) => {
+                await previous;
+                await this.syncDocs(this.getFeature(f.id) ?? f);
+            }, Promise.resolve()),
+        );
     }
 
     /** The scene's levels, bottom to top. */
@@ -327,11 +325,13 @@ export class CartographyController {
         if (findLevel(this.levelList, this.active) === null) {
             this.active = null;
         }
-        await this.dropOrphans();
-        if (JSON.stringify(before) !== JSON.stringify(this.levelList)) {
-            await this.resyncLevelled();
-            this.redraw();
-        }
+        await this.transaction(async () => {
+            await this.dropOrphans();
+            if (JSON.stringify(before) !== JSON.stringify(this.levelList)) {
+                await this.resyncLevelled();
+            }
+        });
+        this.redraw();
     }
 
     /** Add a level stacked above (or below) the existing ones and make it active; returns its id. */
@@ -607,13 +607,15 @@ export class CartographyController {
     /** Add a committed feature: onto the active level unless it names its own, render, persist, then generate its documents. */
     async add(input: Feature): Promise<void> {
         const feature = input.level === null && this.active !== null ? { ...input, level: this.active } : input;
-        this.snapshot();
-        const before = [...this.features];
-        this.features.push(feature);
-        this.show(feature);
-        await this.store.save(this.features);
-        await this.syncDocs(feature);
-        await this.resyncDependents(before, [feature]);
+        await this.transaction(async () => {
+            this.snapshot();
+            const before = [...this.features];
+            this.features.push(feature);
+            this.show(feature);
+            await this.store.save(this.features);
+            await this.syncDocs(feature);
+            await this.resyncDependents(before, [feature]);
+        });
     }
 
     async remove(id: string): Promise<void> {
@@ -621,19 +623,21 @@ export class CartographyController {
         if (!target) {
             return;
         }
-        this.snapshot();
-        const before = this.features;
-        this.features = this.features.filter((f) => f.id !== id);
-        this.renderer.remove(id);
-        await this.store.save(this.features);
-        await this.discard(target);
-        await this.resyncDependents(before, [target]);
+        await this.transaction(async () => {
+            this.snapshot();
+            const before = this.features;
+            this.features = this.features.filter((f) => f.id !== id);
+            this.renderer.remove(id);
+            await this.store.save(this.features);
+            await this.discard(target);
+            await this.resyncDependents(before, [target]);
+        });
     }
 
     /** Delete everything a feature owns outside the feature list: its documents, its interior exit, its container pile. */
     private async discard(feature: Feature): Promise<void> {
         if (hasDocs(feature.docs)) {
-            await this.sink.deleteDocuments(feature.docs);
+            await this.transaction(() => this.staged.stage({ remove: feature.docs, create: NO_PLAN, updateTiles: [] }));
         }
         if (feature.type !== 'stamp') {
             return;
@@ -904,7 +908,8 @@ export class CartographyController {
             return;
         }
         this.future.push([...this.features]);
-        await this.restore(prev);
+        // One transaction: an undo lands whole or not at all.
+        await this.transaction(async () => this.restore(prev));
     }
 
     /** Re-apply an undone edit, documents included. */
@@ -914,7 +919,7 @@ export class CartographyController {
             return;
         }
         this.history.push([...this.features]);
-        await this.restore(next);
+        await this.transaction(async () => this.restore(next));
     }
 
     async toFront(id: string): Promise<void> {
@@ -957,17 +962,19 @@ export class CartographyController {
         if (!old) {
             return;
         }
-        this.snapshot();
-        const before = this.features;
-        this.features = this.features.map((f) => (f.id === id ? next : f));
-        this.show(next);
-        await this.store.save(this.features);
-        await this.syncDocs(next);
-        if (next.type === 'stamp' && next.pile !== null) {
-            // The container token follows the stamp.
-            await this.containers.move(next.pile, pileSpec(next, levelElevation(this.levelList, next.level)));
-        }
-        await this.resyncDependents(before, [old, next]);
+        await this.transaction(async () => {
+            this.snapshot();
+            const before = this.features;
+            this.features = this.features.map((f) => (f.id === id ? next : f));
+            this.show(next);
+            await this.store.save(this.features);
+            await this.syncDocs(next);
+            if (next.type === 'stamp' && next.pile !== null) {
+                // The container token follows the stamp.
+                await this.containers.move(next.pile, pileSpec(next, levelElevation(this.levelList, next.level)));
+            }
+            await this.resyncDependents(before, [old, next]);
+        });
     }
 
     /**
@@ -998,6 +1005,10 @@ export class CartographyController {
      * resulting ids on the feature and persists.
      */
     private async syncDocs(feature: Feature): Promise<void> {
+        await this.transaction(async () => this.stageDocs(feature));
+    }
+
+    private async stageDocs(feature: Feature): Promise<void> {
         const plan = planDocuments(feature, this.planContext());
         const old = feature.docs;
         const planned = plan.walls.length + plan.lights.length + plan.tiles.length + plan.regions.length + plan.sounds.length;
@@ -1005,24 +1016,48 @@ export class CartographyController {
             return;
         }
         const keepTiles = old.tiles.length > 0 && old.tiles.length === plan.tiles.length;
-        await this.sink.deleteDocuments({ ...old, tiles: keepTiles ? [] : old.tiles });
-        let tiles: readonly string[];
-        if (keepTiles) {
-            await this.sink.updateTiles(pairTiles(old.tiles, plan.tiles));
-            tiles = old.tiles;
-        } else {
-            tiles = plan.tiles.length > 0 ? await this.sink.createTiles(plan.tiles) : [];
-        }
-        const docs: GeneratedDocs = {
-            ...NO_DOCS,
-            walls: plan.walls.length > 0 ? await this.sink.createWalls(plan.walls) : [],
-            lights: plan.lights.length > 0 ? await this.sink.createLights(plan.lights) : [],
-            tiles,
-            regions: plan.regions.length > 0 ? await this.sink.createRegions(plan.regions) : [],
-            sounds: plan.sounds.length > 0 ? await this.sink.createSounds(plan.sounds) : [],
-        };
+        const created = this.staged.stage({
+            remove: { ...old, tiles: keepTiles ? [] : old.tiles },
+            create: { ...plan, tiles: keepTiles ? [] : plan.tiles },
+            updateTiles: keepTiles ? pairTiles(old.tiles, plan.tiles) : [],
+        });
+        const docs: GeneratedDocs = { ...created, tiles: keepTiles ? old.tiles : created.tiles };
         this.features = this.features.map((f) => (f.id === feature.id ? withDocs(f, docs) : f));
         await this.store.save(this.features);
+    }
+
+    /**
+     * Run `work` as one document transaction: whatever it stages is written
+     * together when it ends, atomically. Nested transactions join the
+     * outermost, which does the writing. If the work or the write fails,
+     * nothing was written, so the feature list and undo history roll back to
+     * where the transaction began (and are persisted so), and the error
+     * propagates. Side effects outside the scene's documents (another scene's
+     * exit region, a container pile, a level) are not rolled back.
+     */
+    private async transaction<T>(work: () => Promise<T> | T): Promise<T> {
+        if (this.writing > 0) {
+            return work();
+        }
+        const before = { features: [...this.features], history: [...this.history], future: [...this.future] };
+        this.writing = 1;
+        try {
+            const result = await work();
+            if (!this.staged.empty) {
+                await this.sink.write(this.staged.take());
+            }
+            return result;
+        } catch (error) {
+            this.staged.take();
+            this.features = before.features;
+            this.history.splice(0, this.history.length, ...before.history);
+            this.future = before.future;
+            this.redraw();
+            await this.store.save(this.features);
+            throw error;
+        } finally {
+            this.writing = 0;
+        }
     }
 
     /** A fresh id for a feature built outside the controller (e.g. from a scene spec). */
@@ -1039,7 +1074,8 @@ export class CartographyController {
         this.snapshot();
         this.batching = true;
         try {
-            await work();
+            // One undo step, and one atomic document write.
+            await this.transaction(work);
         } finally {
             this.batching = false;
         }

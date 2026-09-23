@@ -23,7 +23,7 @@ import { createLevelStore } from './foundry/levels';
 import { registerMaterialsRuntime } from './foundry/materials-runtime';
 import { registerPackRuntime } from './foundry/pack-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
-import { activeScene } from './foundry/scene-bridge';
+import { activeScene, modifyBatch } from './foundry/scene-bridge';
 import { FoundrySceneStore } from './foundry/scene-store';
 import { createWorldScenes } from './foundry/scenes';
 import { createSilhouetteSource } from './foundry/silhouette';
@@ -254,7 +254,7 @@ function setupDrawLayer(): void {
     const controller = new CartographyController({
         renderer,
         store: new FoundrySceneStore(activeScene),
-        sink: new FoundryDocumentSink(activeScene, { makeId, regionName, lightName, soundName }),
+        sink: new FoundryDocumentSink(activeScene, { makeId, modifyBatch, regionName, lightName, soundName }),
         levels: createLevelStore(activeScene),
         scenes: createWorldScenes({ regionName }),
         containers: createItemPilesContainers(() => activeScene()?.id ?? null),

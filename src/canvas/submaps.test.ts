@@ -48,7 +48,7 @@ describe('CartographyController submaps', () => {
             teleport: { targets: [{ scene: 'sc1', region: 'p4' }] },
         });
         expect(entrance?.polygon).toHaveLength(4);
-        expect(c.getFeature('p1')?.docs.regions).toEqual(['r0']);
+        expect(c.getFeature('p1')?.docs.regions).toEqual(['p3']);
     });
 
     it('links an existing scene, and relinking removes the old exit first', async () => {
@@ -62,8 +62,12 @@ describe('CartographyController submaps', () => {
     it('keeps the entrance id when the stamp moves, so the exit still points at it', async () => {
         const { c, d } = await placed();
         await c.linkSubmap('p1', 'vault');
+        const created = d.regions.length;
         await c.syncStampFrame('p1', { x: 300, y: 300, width: 200, height: 100, rotation: 0 });
-        const entrance = d.regions[d.regions.length - 1]?.[0];
+        // Redrawn in place, not deleted and recreated (Foundry rejects both on one id in a batch).
+        expect(d.regions).toHaveLength(created);
+        expect(d.deletedIds()).toEqual([]);
+        const entrance = d.regionUpdates[d.regionUpdates.length - 1]?.[0];
         expect(entrance?.id).toBe('p3');
         expect(entrance?.polygon[0]).toEqual({ x: 300, y: 300 });
     });
@@ -74,7 +78,7 @@ describe('CartographyController submaps', () => {
         expect(await first.c.unlinkSubmap('p1')).toBe(true);
         expect(first.c.submapOf('p1')).toBeNull();
         expect(first.w.deleted).toEqual([{ scene: 'vault', region: 'p4' }]);
-        expect(first.d.deletedIds()).toContain('r0');
+        expect(first.d.deletedIds()).toContain('p3');
         expect(await first.c.unlinkSubmap('p1')).toBe(false);
 
         const second = await placed();

@@ -7,7 +7,7 @@
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, loadPacks } from '../stamps/catalog';
 import type { PileSpec } from '../tools/containers';
-import type { GeneratedDocs, LightDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
+import { hasDocs, type GeneratedDocs, type LightDoc, type RegionDoc, type SoundDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
 import type { SceneFrame } from '../tools/submap';
@@ -21,6 +21,7 @@ import {
     type WorldScenes,
 } from './controller';
 import type { FeatureRenderer } from './renderer';
+import type { DocumentKind, StagedWrite } from './staged-changes';
 
 class FakeRenderer implements FeatureRenderer {
     readonly setIds: string[] = [];
@@ -58,56 +59,59 @@ class FakeStore implements SceneStore {
     }
 }
 
-/** Issues ids `<prefix><n>` from one counter per document type, like a real scene. */
+/** Document-id prefix per kind, like a real scene's distinct collections. */
+const ID_PREFIX: Record<DocumentKind, string> = { walls: 'w', lights: 'L', tiles: 't', regions: 'r', sounds: 's' };
+
+/**
+ * Records every write, and the documents created per type (one entry per
+ * write that created any). Issues ids `<prefix><n>` from one counter per
+ * document type.
+ */
 class FakeSink implements DocumentSink {
+    readonly writes: StagedWrite[] = [];
     readonly walls: WallDoc[][] = [];
     readonly lights: LightDoc[][] = [];
     readonly tiles: TileDoc[][] = [];
     readonly tileUpdates: TileUpdate[][] = [];
     readonly regions: RegionDoc[][] = [];
+    readonly regionUpdates: RegionDoc[][] = [];
     readonly sounds: SoundDoc[][] = [];
     readonly deleted: GeneratedDocs[] = [];
-    private readonly counters = { w: 0, L: 0, t: 0, r: 0, s: 0 };
+    /** Reject every write, as Foundry rejects a batch it cannot apply. */
+    rejecting = false;
+    private readonly counters: Record<DocumentKind, number> = { walls: 0, lights: 0, tiles: 0, regions: 0, sounds: 0 };
 
-    private issue(prefix: 'w' | 'L' | 't' | 'r' | 's', count: number): string[] {
-        return Array.from({ length: count }, () => {
-            const id = `${prefix}${this.counters[prefix]}`;
-            this.counters[prefix] += 1;
-            return id;
-        });
+    newId(kind: DocumentKind): string {
+        const id = `${ID_PREFIX[kind]}${this.counters[kind]}`;
+        this.counters[kind] += 1;
+        return id;
     }
 
-    async createWalls(walls: readonly WallDoc[]): Promise<string[]> {
-        this.walls.push([...walls]);
-        await Promise.resolve();
-        return this.issue('w', walls.length);
-    }
-    async createLights(lights: readonly LightDoc[]): Promise<string[]> {
-        this.lights.push([...lights]);
-        await Promise.resolve();
-        return this.issue('L', lights.length);
-    }
-    async createSounds(sounds: readonly SoundDoc[]): Promise<string[]> {
-        this.sounds.push([...sounds]);
-        await Promise.resolve();
-        return this.issue('s', sounds.length);
-    }
-    async createTiles(tiles: readonly TileDoc[]): Promise<string[]> {
-        this.tiles.push([...tiles]);
-        await Promise.resolve();
-        return this.issue('t', tiles.length);
-    }
-    async updateTiles(updates: readonly TileUpdate[]): Promise<void> {
-        this.tileUpdates.push([...updates]);
-        await Promise.resolve();
-    }
-    async createRegions(regions: readonly RegionDoc[]): Promise<string[]> {
-        this.regions.push([...regions]);
-        await Promise.resolve();
-        return this.issue('r', regions.length);
-    }
-    async deleteDocuments(docs: GeneratedDocs): Promise<void> {
-        this.deleted.push(docs);
+    async write(write: StagedWrite): Promise<void> {
+        if (this.rejecting) {
+            throw new Error('batch rejected');
+        }
+        this.writes.push(write);
+        if (hasDocs(write.deletes)) {
+            this.deleted.push(write.deletes);
+        }
+        const record = <T>(into: T[][], staged: readonly { readonly doc: T }[]): void => {
+            if (staged.length > 0) {
+                into.push(staged.map((s) => s.doc));
+            }
+        };
+        record(this.walls, write.walls);
+        record(this.lights, write.lights);
+        record(this.tiles, write.tiles);
+        record(this.sounds, write.sounds);
+        const regions = write.regions.flatMap((group) => group.regions.filter((_, i) => !group.cancelled.includes(group.ids[i] ?? '')));
+        if (regions.length > 0) {
+            this.regions.push(regions);
+        }
+        if (write.tileUpdates.length > 0) {
+            this.tileUpdates.push(write.tileUpdates.map((s) => ({ id: s.id, tile: s.doc })));
+        }
+        record(this.regionUpdates, write.regionUpdates);
         await Promise.resolve();
     }
     /** Every id deleted so far, flattened across document types. */

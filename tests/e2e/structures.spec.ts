@@ -39,12 +39,19 @@ test('a generated floor plan is walled rooms joined by one-square doors, undone 
     const built = await world.evaluate(async () => {
         const api = game.modules?.get('zephyrex-cartography').api;
         const plan = api?.generateFloorPlan({ seed: 7, width: 16, height: 12 });
+        let deleted = 0;
+        const hook = Hooks.on('deleteWall', () => {
+            deleted += 1;
+        });
         const outcome = await api?.buildSpec(plan);
+        Hooks.off('deleteWall', hook);
         const walls = canvas?.scene?.walls.contents ?? [];
         const doorLengths = walls.filter((w) => w.door === 1).map((w) => Math.hypot(w.c[2] - w.c[0], w.c[3] - w.c[1]));
-        return { rooms: plan?.features.length ?? 0, ok: outcome?.ok, doorLengths };
+        return { rooms: plan?.features.length ?? 0, ok: outcome?.ok, doorLengths, deleted };
     });
     expect(built.ok).toBe(true);
+    // The build is one transaction: a room re-synced by a later neighbour replaces its pending walls, never written ones.
+    expect(built.deleted).toBe(0);
     // One door per split (rooms - 1) plus the entrance.
     expect(built.doorLengths).toHaveLength(built.rooms);
     expect(new Set(built.doorLengths)).toEqual(new Set([100]));

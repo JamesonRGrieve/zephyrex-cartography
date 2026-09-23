@@ -361,12 +361,25 @@ Work down the priorities in order.
 
 ### Priority 1: engine foundations
 These make everything after them cheaper and safer, so they come first.
-- **Atomic writes with `foundry.documents.modifyBatch(operations)`** [14.349;
-  broadcasts to every client since 14.353]. It applies many create, update and
-  delete operations, across document types and scenes, as one database
-  transaction. `syncDocs`, `restore()` (undo/redo) and `realizeSpec` should
-  each become one atomic write instead of dozens, with no half-applied state
-  if one step fails. The `DocumentSink` port becomes a batch of operations.
+- **[done] Atomic writes with `foundry.documents.modifyBatch(operations)`**
+  [14.349; broadcasts to every client since 14.353]. It applies many create,
+  update and delete operations as one database transaction.
+  - Every edit is one controller transaction: with its dependent re-syncs,
+    and likewise an undo, a redo, a batch and a built spec.
+    `canvas/staged-changes.ts` stages its document changes, and the
+    `DocumentSink` (`newId`, `write`) writes them as a single `modifyBatch`.
+  - Operations cannot use each other's results, so every document gets its
+    id up front and is created with `keepId`.
+  - Removing a document created earlier in the same transaction cancels the
+    create. A tile is updated in place.
+  - Foundry rejects a batch that deletes and recreates one id. So a written
+    region replaced under its own fixed id (a submap entrance following its
+    stamp) is an update that leaves its behaviours alone.
+  - Foundry reports a rejected batch only as an empty result, so
+    `scene-bridge.modifyBatch` throws on it. Then the transaction rolls the
+    features, the store and the undo history back to where it began.
+    Side effects outside the scene's documents are not rolled back: another
+    scene's exit, a pile or a level.
 - **[done] Name every generated document** after its feature, for
   Foundry's Placeables sidebar tab and palette [14.354, 14.355]. Tiles take
   the stamp's pack name, which the stamp keeps. Lights are "<stamp> light" or

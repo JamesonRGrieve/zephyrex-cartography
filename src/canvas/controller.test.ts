@@ -57,6 +57,40 @@ describe('CartographyController', () => {
         expect(d.deletedIds()).toEqual(['w0', 'w1', 'w2', 'L0']);
     });
 
+    /** Draw a room through `xs`, the first two on y=0 and the rest on y=100. */
+    async function drawRoom(c: ReturnType<typeof make>['c'], xs: readonly number[]): Promise<void> {
+        c.begin({ type: 'room', floor: 'dirt' }, 'click');
+        for (const [i, x] of xs.entries()) {
+            c.addPoint({ x, y: i < 2 ? 0 : 100 });
+        }
+        await c.commit();
+    }
+
+    it('writes an edit and every neighbour it re-syncs as one transaction', async () => {
+        const { c, d } = make();
+        await drawRoom(c, [0, 100, 100, 0]);
+        await drawRoom(c, [100, 200, 200, 100]); // shares an edge with p1, which re-syncs
+        expect(d.writes).toHaveLength(2);
+        await c.remove('p1'); // p2 takes the shared edge back
+        expect(d.writes).toHaveLength(3);
+    });
+
+    it('rolls the features, the store and the undo history back when a write is rejected', async () => {
+        const { c, d, s } = make();
+        await drawRoom(c, [0, 100, 100]);
+        const committed = c.getFeature('p1');
+        d.rejecting = true;
+        await expect(c.moveVertex('p1', 2, { x: 300, y: 300 })).rejects.toThrow('batch rejected');
+        expect(c.getFeature('p1')).toEqual(committed);
+        expect(s.last()).toEqual([committed]);
+        await expect(c.remove('p1')).rejects.toThrow('batch rejected');
+        expect(c.getFeature('p1')).toEqual(committed);
+        d.rejecting = false;
+        // The failed edits left no undo steps: one undo takes back the commit.
+        await c.undo();
+        expect(s.last()).toEqual([]);
+    });
+
     it('sizes a room light to reach its farthest corner', async () => {
         const { c, d } = make();
         c.begin({ type: 'room', floor: 'dirt' }, 'click');

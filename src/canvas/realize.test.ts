@@ -82,14 +82,19 @@ describe('realizeSpec', () => {
         expect(outer.reduce((sum, w) => sum + Math.hypot(w.b.x - w.a.x, w.b.y - w.a.y), 0)).toBe(2 * (width + height) * GRID);
     });
 
-    it('is one undo step', async () => {
+    it('is one undo step, and each of building, undoing and redoing is one atomic write', async () => {
         const h = makeHarness();
         const report = await realizeSpec(h.c, generateFloorPlan(DEFAULT_FLOOR_PLAN), { origin: ORIGIN, gridSize: GRID });
         expect(report.features.length).toBeGreaterThan(1);
+        expect(h.d.writes).toHaveLength(1);
+        // Rooms re-synced by a later neighbour in the same build cancel their earlier creates rather than deleting.
+        expect(h.d.deletedIds()).toEqual([]);
         await h.c.undo();
+        expect(h.d.writes).toHaveLength(2);
         expect(h.s.last()).toEqual([]);
         expect(liveWalls(h)).toEqual([]);
         await h.c.redo();
+        expect(h.d.writes).toHaveLength(3);
         expect(h.s.last()).toHaveLength(report.features.length);
     });
 
