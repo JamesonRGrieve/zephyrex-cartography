@@ -94,6 +94,9 @@ run_bg "schema"         pnpm -s schema:check
 # Bundle: build then size-limit (size-limit needs dist/).
 run_bg "size"           bash -c 'pnpm -s build && pnpm -s size-limit'
 
+# Storybook: the stories and their config must still build.
+run_bg "storybook"      pnpm -s build-storybook
+
 wait_all
 [ "$FAILED" = "0" ] || exit 1
 

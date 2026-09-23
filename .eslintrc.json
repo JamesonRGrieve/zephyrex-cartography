@@ -30,8 +30,12 @@
         "plugin:import/typescript",
         "plugin:promise/recommended",
         "@typhonjs-fvtt/eslint-config-foundry.js",
+        "plugin:storybook/recommended",
         "prettier",
         "plugin:prettier/recommended"
+    ],
+    "ignorePatterns": [
+        "!.storybook"
     ],
     "settings": {
         "import/resolver": {

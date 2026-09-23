@@ -66,6 +66,29 @@ Gate members (all wired into `gate` + pre-commit + CI):
 - **deps:ratchet** — dependency-cruiser layering (see Architecture)
 - **lockfile:validate** — lockfile resolves only to trusted hosts
 - **build** (Vite lib) + **size-limit** (JS bundle only)
+- **build-storybook**: the stories and their config must build
+
+## UI views and Storybook
+
+Every DOM view lives in `src/ui/` as a pure function from a view model to
+elements. It dispatches actions to a pure reducer, and its view model sits in
+the pure core (e.g. `stamps/browser.ts`). The view is built from nodes and
+text, never from markup strings. Controls are labelled native elements, and
+focus survives a re-render. Views never import `canvas/` or `foundry/`; a thin
+ApplicationV2 host in `foundry/` mounts them.
+
+- Each view has a co-located `*.stories.ts` (Storybook 10, `@storybook/html-vite`,
+  a11y addon with `test: 'error'`). Stories run the real reducer, so they stay
+  interactive. They use `stamps/fixtures.ts` (inline-SVG demo packs), never
+  pack assets.
+- Foundry's CSS is not redistributable. `.storybook/chrome.css` stands in for
+  the window chrome, and stories wrap views in `.zephyrex-cartography` so the
+  `tw-` utilities apply.
+- A `*.stories.test.ts` mounts every story under vitest, so stories cannot
+  rot. `pnpm storybook` runs the dev server; `pnpm build-storybook` is in the
+  gate.
+- Tailwind's preflight is off: it is a global element reset and would restyle
+  Foundry's own chrome.
 
 CI (`.github/workflows/ci.yml`) runs `pnpm gate` then `git diff --exit-code` — a
 ratchet that had to mutate a baseline means the gate was not run locally, and

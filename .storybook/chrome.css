@@ -1,0 +1,39 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/*
+ * Stand-in for the Foundry window chrome the views are hosted in. Foundry's CSS
+ * is not redistributable, so stories get this approximation: a dark window
+ * body, readable text and visible native controls.
+ */
+body {
+    margin: 0;
+    background: #1b1b1f;
+    color: #e6e1d5;
+    font-family: system-ui, sans-serif;
+}
+
+.zc-story-window {
+    box-sizing: border-box;
+    height: 620px;
+    width: 820px;
+    padding: 8px;
+    background: #23232a;
+    border: 1px solid #44444f;
+}
+
+.zc-story-window button,
+.zc-story-window input,
+.zc-story-window select {
+    color: inherit;
+    background: #2e2e36;
+    border: 1px solid #55555f;
+    border-radius: 3px;
+}
+
+.zc-story-window button[aria-pressed='true'] {
+    border-color: #ff6400;
+}
+
+.zc-story-window :focus-visible {
+    outline: 2px solid #ff6400;
+}

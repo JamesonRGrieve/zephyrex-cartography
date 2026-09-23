@@ -16,7 +16,7 @@ module.exports = {
         {
             name: 'no-orphans',
             severity: 'warn',
-            from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)zephyrex-cartography\\.ts$', '\\.test\\.ts$'] },
+            from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)zephyrex-cartography\\.ts$', '\\.test\\.ts$', '\\.stories\\.ts$'] },
             to: {},
         },
         {
