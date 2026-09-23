@@ -9,14 +9,14 @@
 import { nearestVertex } from '../geometry/hit';
 import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
-import { perimeterSegments, type Segment } from '../geometry/wall';
+import { nearestSegment, type WallSpec } from '../geometry/wall';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
 import type { Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { DEFAULT_HALF_WIDTH, makePath, type CartographyPath, type PathKind } from '../tools/path';
 import { makeRegion, type BiomeKind } from '../tools/region';
-import { makeRoom, withRoomWalls } from '../tools/room';
+import { makeRoom, roomWalls, withRoomDoors, withRoomWalls } from '../tools/room';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { FeatureRenderer } from './renderer';
 
@@ -27,8 +27,8 @@ export interface SceneStore {
 
 export interface WallEmitter {
     emit: (path: CartographyPath) => Promise<void>;
-    /** Create native Foundry walls along the segments; returns their document ids. */
-    emitSegments: (segments: readonly Segment[]) => Promise<string[]>;
+    /** Create native Foundry walls (some flagged as doors); returns their document ids. */
+    emitSegments: (walls: readonly WallSpec[]) => Promise<string[]>;
     /** Delete native Foundry walls by document id. */
     deleteWalls: (ids: readonly string[]) => Promise<void>;
 }
@@ -132,7 +132,7 @@ export class CartographyController {
         }
         if (feature.type === 'room') {
             // Rooms generate native Foundry walls; track their ids on the room for lifecycle sync.
-            const wallIds = await this.wallEmitter.emitSegments(perimeterSegments(feature.points));
+            const wallIds = await this.wallEmitter.emitSegments(roomWalls(feature));
             const walled = withRoomWalls(feature, wallIds);
             this.features = this.features.map((f) => (f.id === feature.id ? walled : f));
             await this.store.save(this.features);
@@ -192,6 +192,32 @@ export class CartographyController {
             }
         }
         return null;
+    }
+
+    /** The topmost room wall segment within `tol` of `pt`: its room id + segment index, or null. */
+    pickWallSegment(pt: Point, tol: number): { id: string; index: number } | null {
+        for (let i = this.features.length - 1; i >= 0; i--) {
+            const f = this.features[i];
+            if (f?.type !== 'room') {
+                continue;
+            }
+            const { index, distance } = nearestSegment(pt, f.points);
+            if (index >= 0 && distance <= tol) {
+                return { id: f.id, index };
+            }
+        }
+        return null;
+    }
+
+    /** Toggle whether a room's perimeter segment is a door; re-syncs the native walls. */
+    async toggleDoor(id: string, index: number): Promise<boolean> {
+        const f = this.getFeature(id);
+        if (f?.type !== 'room') {
+            return false;
+        }
+        const doors = f.doors.includes(index) ? f.doors.filter((d) => d !== index) : [...f.doors, index];
+        await this.replaceFeature(id, withRoomDoors(f, doors));
+        return true;
     }
 
     /** Move a control point of a committed feature; false if the edit is invalid. */
@@ -310,7 +336,7 @@ export class CartographyController {
             if (old.type === 'room' && old.wallIds.length > 0) {
                 await this.wallEmitter.deleteWalls(old.wallIds);
             }
-            const wallIds = await this.wallEmitter.emitSegments(perimeterSegments(next.points));
+            const wallIds = await this.wallEmitter.emitSegments(roomWalls(next));
             const walled = withRoomWalls(next, wallIds);
             this.features = this.features.map((f) => (f.id === id ? walled : f));
             await this.store.save(this.features);

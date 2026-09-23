@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import type { Segment } from '../geometry/wall';
+import type { WallSpec } from '../geometry/wall';
 import type { Feature } from '../tools/feature';
 import type { CartographyPath } from '../tools/path';
 import { CartographyController, type SceneStore, type WallEmitter } from './controller';
@@ -41,15 +41,17 @@ class FakeStore implements SceneStore {
 class FakeWalls implements WallEmitter {
     readonly emitted: string[] = [];
     readonly segmentCalls: number[] = [];
+    readonly wallSpecs: WallSpec[][] = [];
     readonly deleted: string[][] = [];
     async emit(path: CartographyPath): Promise<void> {
         this.emitted.push(path.id);
         await Promise.resolve();
     }
-    async emitSegments(segments: readonly Segment[]): Promise<string[]> {
-        this.segmentCalls.push(segments.length);
+    async emitSegments(walls: readonly WallSpec[]): Promise<string[]> {
+        this.segmentCalls.push(walls.length);
+        this.wallSpecs.push([...walls]);
         await Promise.resolve();
-        return segments.map((_, i) => `w${i}`);
+        return walls.map((_, i) => `w${i}`);
     }
     async deleteWalls(ids: readonly string[]): Promise<void> {
         this.deleted.push([...ids]);
@@ -135,6 +137,24 @@ describe('CartographyController', () => {
         await c.moveVertex('p1', 1, { x: 120, y: 0 });
         expect(w.deleted).toEqual([['w0', 'w1', 'w2']]); // old walls dropped
         expect(w.segmentCalls).toEqual([3, 3]); // emitted on commit, then re-emitted on edit
+    });
+
+    it('toggles a room wall segment into a Foundry door and back', async () => {
+        const { c, w } = make();
+        c.begin({ type: 'room', floor: 'dirt' }, 'click');
+        c.addPoint({ x: 0, y: 0 });
+        c.addPoint({ x: 100, y: 0 });
+        c.addPoint({ x: 100, y: 100 });
+        await c.commit(); // p1
+        expect(c.pickWallSegment({ x: 50, y: 1 }, 8)).toEqual({ id: 'p1', index: 0 });
+        await c.toggleDoor('p1', 0);
+        const lastSpecs = w.wallSpecs[w.wallSpecs.length - 1];
+        expect(lastSpecs?.[0]?.door).toBe(true);
+        expect(lastSpecs?.[1]?.door).toBe(false);
+        await c.toggleDoor('p1', 0);
+        const room = c.getFeature('p1');
+        const doorCount = room?.type === 'room' ? room.doors.length : -1;
+        expect(doorCount).toBe(0);
     });
 
     it('commits a biome region', async () => {

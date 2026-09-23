@@ -7,6 +7,8 @@
 export interface WallCreateData {
     /** Wall endpoints as `[x0, y0, x1, y1]` in scene pixels. */
     readonly c: readonly number[];
+    /** Foundry door type: 1 = door (omitted for a plain wall). */
+    readonly door?: number;
 }
 
 /*

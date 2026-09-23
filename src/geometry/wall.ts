@@ -5,11 +5,16 @@
  * textured wall ribbons and to emit Foundry WallDocuments). Pure and
  * unit-tested; the closing edge (last → first) is included.
  */
-import type { Point } from './spline';
+import { distanceToSegment, type Point } from './spline';
 
 export interface Segment {
     readonly a: Point;
     readonly b: Point;
+}
+
+/** A wall segment plus whether it is a door (drives WallDocument.door at the boundary). */
+export interface WallSpec extends Segment {
+    readonly door: boolean;
 }
 
 /** Edge segments of a closed polygon (n points → n segments, including the closing edge). */
@@ -27,4 +32,23 @@ export function perimeterSegments(points: readonly Point[]): Segment[] {
         }
     }
     return out;
+}
+
+/** Nearest perimeter segment of a closed polygon to `pt`: its index (−1 if none) and distance. */
+export function nearestSegment(pt: Point, points: readonly Point[]): { index: number; distance: number } {
+    const segs = perimeterSegments(points);
+    let index = -1;
+    let min = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < segs.length; i++) {
+        const s = segs[i];
+        if (!s) {
+            continue;
+        }
+        const d = distanceToSegment(pt, s.a, s.b);
+        if (d < min) {
+            min = d;
+            index = i;
+        }
+    }
+    return { index, distance: min };
 }

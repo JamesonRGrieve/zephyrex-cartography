@@ -37,6 +37,7 @@ interface DrawState {
     active: boolean;
     erasing: boolean;
     editing: boolean;
+    doorMode: boolean;
     drag: { id: string; index: number } | null;
     activeBrush: Brush | null;
     down: Point | null;
@@ -47,6 +48,9 @@ let state: DrawState | null = null;
 
 /** Scene-px radius within which a click grabs a control-point handle in edit mode. */
 const EDIT_PICK_TOL = 10;
+
+/** Scene-px radius within which a click grabs a room wall segment in door mode. */
+const WALL_PICK_TOL = 16;
 
 /** Drag distance (scene px) past which a biome click becomes a freehand paint stroke. */
 const PAINT_THRESHOLD = 8;
@@ -104,8 +108,10 @@ function brushFor(toolName: string): Brush | null {
  */
 function activeScene(): FoundryScene | null {
     const scene = canvas?.scene;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- fvtt-types constrains Scene#getFlag's scope to known scopes ("core"/registered ids), so tsc requires this assertion to view the live scene as our looser string-scoped FoundryScene boundary; it is runtime-safe (Foundry accepts arbitrary scope strings) and the rule mis-reports it as unnecessary
-    return scene ? (scene as FoundryScene) : null;
+    // fvtt-types over-constrains Scene's flag + embedded-document methods, so tsc requires this assertion to view the
+    // live scene as our looser FoundryScene boundary. Runtime-safe; the single irreducible framework-boundary bridge.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- see note above; the rule mis-reports it as unnecessary
+    return scene ? (scene as FoundryScene) : null; // type-coverage:ignore-line
 }
 
 function localPoint(pointerEvent: PIXI.FederatedPointerEvent, container: PIXI.Container): Point {
@@ -149,6 +155,7 @@ function setupDrawLayer(): void {
         active: false,
         erasing: false,
         editing: false,
+        doorMode: false,
         drag: null,
         activeBrush: null,
         down: null,
@@ -161,6 +168,13 @@ function setupDrawLayer(): void {
             return;
         }
         const pt = localPoint(pointerEvent, container);
+        if (st.doorMode) {
+            const seg = st.controller.pickWallSegment(pt, WALL_PICK_TOL);
+            if (seg) {
+                void st.controller.toggleDoor(seg.id, seg.index);
+            }
+            return;
+        }
         if (st.editing) {
             const hit = st.controller.pickVertex(pt, EDIT_PICK_TOL);
             if (!hit) {
@@ -270,7 +284,9 @@ Hooks.on('getSceneControlButtons', (controls) => {
     });
     const roomOrder = BIOMES.length + 2;
     tools['room'] = { name: 'room', order: roomOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Room', icon: 'fa-solid fa-vector-square' };
-    const editOrder = roomOrder + 1;
+    const doorOrder = roomOrder + 1;
+    tools['door'] = { name: 'door', order: doorOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Door', icon: 'fa-solid fa-door-open' };
+    const editOrder = doorOrder + 1;
     tools['edit'] = { name: 'edit', order: editOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Edit', icon: 'fa-solid fa-arrows-up-down-left-right' };
     const eraseOrder = editOrder + 1;
     tools['erase'] = { name: 'erase', order: eraseOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Erase', icon: 'fa-solid fa-eraser' };
@@ -310,6 +326,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
                 st.active = false;
                 st.erasing = false;
                 st.editing = false;
+                st.doorMode = false;
                 st.drag = null;
                 st.activeBrush = null;
                 st.down = null;
@@ -324,6 +341,16 @@ Hooks.on('getSceneControlButtons', (controls) => {
             st.drag = null;
             st.down = null;
             st.painting = false;
+            st.doorMode = false;
+            if (tool.name === 'door') {
+                st.active = active;
+                st.doorMode = active;
+                st.editing = false;
+                st.erasing = false;
+                st.activeBrush = null;
+                st.controller.cancel();
+                return;
+            }
             if (tool.name === 'edit') {
                 st.active = active;
                 st.editing = active;

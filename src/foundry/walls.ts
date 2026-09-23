@@ -8,7 +8,7 @@
 import type { WallEmitter } from '../canvas/controller';
 import { RIBBON_SAMPLES } from '../canvas/renderer';
 import { catmullRom } from '../geometry/spline';
-import type { Segment } from '../geometry/wall';
+import type { WallSpec } from '../geometry/wall';
 import { isRecord, type CartographyPath } from '../tools/path';
 import type { FoundryScene, WallCreateData } from './boundary';
 
@@ -48,12 +48,12 @@ export class FoundryWallEmitter implements WallEmitter {
         }
     }
 
-    async emitSegments(segments: readonly Segment[]): Promise<string[]> {
+    async emitSegments(walls: readonly WallSpec[]): Promise<string[]> {
         const scene = this.getScene();
         if (!scene) {
             return [];
         }
-        const data: WallCreateData[] = segments.map((s) => ({ c: [s.a.x, s.a.y, s.b.x, s.b.y] }));
+        const data: WallCreateData[] = walls.map((w) => (w.door ? { c: [w.a.x, w.a.y, w.b.x, w.b.y], door: 1 } : { c: [w.a.x, w.a.y, w.b.x, w.b.y] }));
         if (data.length === 0) {
             return [];
         }

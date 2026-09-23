@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FLOOR, makeRoom, parseRoom, withRoomPoints, withRoomWalls } from './room';
+import { DEFAULT_FLOOR, makeRoom, parseRoom, roomWalls, withRoomDoors, withRoomPoints, withRoomWalls } from './room';
 
 const pts = [
     { x: 0, y: 0 },
@@ -39,6 +39,24 @@ describe('withRoomPoints', () => {
     });
 });
 
+describe('doors + roomWalls', () => {
+    it('flags door segments in the generated walls', () => {
+        const r = makeRoom('r', 'dirt', pts); // 4 points → 4 perimeter segments
+        const withDoor = r ? withRoomDoors(r, [1]) : null;
+        const walls = withDoor ? roomWalls(withDoor) : [];
+        expect(walls).toHaveLength(4);
+        expect(walls[1]?.door).toBe(true);
+        expect(walls[0]?.door).toBe(false);
+    });
+
+    it('drops door indices that no longer exist when the room shrinks', () => {
+        const r = makeRoom('r', 'dirt', pts);
+        const withDoor = r ? withRoomDoors(r, [3]) : null; // door on the 4th segment
+        const shrunk = withDoor ? withRoomPoints(withDoor, pts.slice(0, 3)) : null; // now 3 segments
+        expect(shrunk?.doors).toEqual([]);
+    });
+});
+
 describe('withRoomWalls', () => {
     it('records the generated wall ids', () => {
         const r = makeRoom('r', 'dirt', pts);
@@ -61,6 +79,10 @@ describe('parseRoom', () => {
 
     it('defaults wall ids to empty when absent', () => {
         expect(parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts })?.wallIds).toEqual([]);
+    });
+
+    it('parses door indices', () => {
+        expect(parseRoom({ type: 'room', id: 'a', floor: 'dirt', points: pts, doors: [0, 2] })?.doors).toEqual([0, 2]);
     });
 
     it('rejects non-rooms, unknown floors, and too-few points', () => {
