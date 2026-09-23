@@ -128,6 +128,41 @@ coastline foam; more palettes; elevation/Levels awareness (ties to the vault's
 
 ---
 
+## Structure mapping — Foundry-native (phased)
+
+Room-first structure authoring (Dungeondraft-style): draw a room, its floor and
+its **native Foundry** walls/doors/lights follow. The decisive rule: **walls,
+doors, and lights are native Foundry documents** (`WallDocument`,
+`AmbientLightDocument`) generated from rooms — the plugin does **not** own a
+parallel wall/light model. Foundry owns vision, movement, door controls, and
+lighting; the plugin only creates/updates/deletes those documents.
+
+**Lifecycle (critical):** a room tracks the ids of the Foundry documents it
+generated (`wallIds`, `lightIds`, …) in its scene-flag record, so create /
+update / delete stay idempotent — editing or removing a room re-syncs *its* docs
+and never orphans them or touches hand-placed ones. Every generated-document
+feature must follow this track-ids-then-reconcile pattern.
+
+- **Phase 1 — floors + walls [done].** Square-grid snapping (`geometry/snap.ts`);
+  `RoomFeature` (grid-snapped floor, crisp edge); `geometry/wall.ts`
+  perimeter→segments; rooms emit native `WallDocument`s on commit and delete them
+  on removal, ids tracked on the room.
+- **Phase 2 — wall re-sync on edit [done].** Moving/deleting a room vertex
+  deletes the old walls and re-emits from the new perimeter (`replaceFeature`).
+- **Phase 3 — doors [done].** A door tool marks a room's wall segment as a
+  Foundry door (`WallDocument.door`); door segment indices persist on the room
+  and survive re-emission. Foundry renders the door control + open/close state.
+- **Phase 4 — auto lighting [done].** Each room emits a native
+  `AmbientLightDocument` at its centroid (Foundry lighting picks it up
+  automatically); its id is tracked and re-synced with the room's lifecycle.
+
+Follow-ups (not yet): shared-wall dedup between adjacent rooms (one wall,
+per-side textures); room-in-room nesting; per-door type/state UI; wall/floor
+material selection beyond the biome set; undo/redo of generated Foundry docs
+(undo currently restores the drawing model, not the emitted documents).
+
+---
+
 ## Terrain / biomes
 
 `BiomeKind` is the terrain enum. Water, ocean, and **river are untextured** —
