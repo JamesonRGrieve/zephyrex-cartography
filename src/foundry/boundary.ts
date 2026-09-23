@@ -60,7 +60,8 @@ export interface RegionCreateData extends OnLevels {
     readonly _id: string;
     readonly name: string;
     readonly shapes: readonly { readonly type: 'polygon'; readonly points: readonly number[]; readonly hole: boolean }[];
-    readonly elevation: { readonly bottom: number; readonly top: number };
+    /** A null bound is open-ended. */
+    readonly elevation: { readonly bottom: number | null; readonly top: number | null };
     readonly behaviors: readonly { readonly type: 'teleportToken'; readonly system: TeleportSystem }[];
 }
 
@@ -103,6 +104,11 @@ export interface NativeLevel {
 /* eslint-disable @typescript-eslint/method-signature-style -- bivariant method signatures are required to bridge the live Foundry Scene document; see the note above */
 export interface FoundryScene {
     readonly id: string | null;
+    readonly name: string;
+    /** The playable rectangle inside the padding, and the grid size, in px. */
+    readonly dimensions: { readonly sceneX: number; readonly sceneY: number; readonly sceneWidth: number; readonly sceneHeight: number; readonly size: number };
+    /** v14: the Level a token lands on by default. */
+    readonly initialLevel?: { readonly id: string | null } | null;
     /** Grid size in px per square, and the scene distance units one square spans. */
     readonly grid: { readonly size: number; readonly distance: number };
     readonly walls: EmbeddedCollection;
@@ -110,7 +116,7 @@ export interface FoundryScene {
     readonly tiles: EmbeddedCollection;
     readonly regions: EmbeddedCollection;
     /** v14 native Levels; absent on v13. */
-    readonly levels?: { readonly contents: readonly NativeLevel[] };
+    readonly levels?: { readonly contents: readonly NativeLevel[]; readonly size: number };
     // eslint-disable-next-line no-restricted-syntax -- boundary: a Foundry flag value is arbitrary serialised JSON; getFlag returns unknown by contract and is narrowed at the parse boundary
     getFlag(scope: string, key: string): unknown;
     // eslint-disable-next-line no-restricted-syntax -- boundary: setFlag accepts an arbitrary serialisable flag value, exactly as the live Foundry Scene API does

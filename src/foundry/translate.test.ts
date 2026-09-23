@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
-import { doorStateFromDs, lightCreateData, pxToDistance, regionCreateData, tileCreateData, wallCreateData } from './translate';
+import { doorStateFromDs, lightCreateData, pxToDistance, regionCreateData, regionUuid, tileCreateData, wallCreateData } from './translate';
 
 const GRID = { size: 100, distance: 5 };
 const V13 = { nativeLevels: false };
@@ -109,15 +109,14 @@ describe('regionCreateData', () => {
     ];
     const label = { kind: 'stairs' as const, from: 'A', to: ['B'] };
     const stair: RegionDoc[] = [
-        { label, polygon: square, bottom: 0, top: 10, level: 'A', teleport: { targets: [1, 2] } },
-        { label, polygon: square, bottom: 10, top: 20, level: 'B', teleport: { targets: [0] } },
-        { label, polygon: square, bottom: -10, top: 0, level: 'C', teleport: null },
+        { id: null, label, polygon: square, bottom: 0, top: 10, level: 'A', teleport: { targets: [{ plan: 1 }, { plan: 2 }] } },
+        { id: null, label, polygon: square, bottom: 10, top: 20, level: 'B', teleport: { targets: [{ plan: 0 }] } },
+        { id: null, label, polygon: square, bottom: -10, top: 0, level: 'C', teleport: null },
     ];
-    const uuid = (id: string): string => `Scene.s.Region.${id}`;
     const nameOf = (r: RegionDoc): string => `${r.label.kind} ${r.level ?? ''}`;
 
     it('wires v14 teleports to every destination, relative, with a choice when there are several', () => {
-        const [start, end, plain] = regionCreateData(stair, ['r0', 'r1', 'r2'], uuid, nameOf, V14);
+        const [start, end, plain] = regionCreateData(stair, ['r0', 'r1', 'r2'], 's', nameOf, V14);
         expect(start).toEqual({
             _id: 'r0',
             name: 'stairs A',
@@ -131,8 +130,24 @@ describe('regionCreateData', () => {
     });
 
     it('wires v13 teleports to the first destination only, without native levels', () => {
-        const [start] = regionCreateData(stair, ['r0', 'r1', 'r2'], uuid, nameOf, V13);
+        const [start] = regionCreateData(stair, ['r0', 'r1', 'r2'], 's', nameOf, V13);
         expect(start?.behaviors[0]?.system).toEqual({ destination: 'Scene.s.Region.r1', choice: false });
         expect(start?.levels).toBeUndefined();
+    });
+
+    it('addresses a region in another scene directly, with an open-ended band', () => {
+        const entrance: RegionDoc = {
+            id: 'in1',
+            label: { kind: 'entrance', scene: 'Hab' },
+            polygon: square,
+            bottom: null,
+            top: null,
+            level: null,
+            teleport: { targets: [{ scene: 'hab', region: 'out1' }] },
+        };
+        const [data] = regionCreateData([entrance], ['in1'], 's', nameOf, V14);
+        expect(data?.elevation).toEqual({ bottom: null, top: null });
+        expect(data?.behaviors[0]?.system).toEqual({ destinations: ['Scene.hab.Region.out1'], placement: 'relative', choice: false });
+        expect(regionUuid('a', 'b')).toBe('Scene.a.Region.b');
     });
 });

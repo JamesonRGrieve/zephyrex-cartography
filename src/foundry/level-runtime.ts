@@ -38,10 +38,13 @@ function panelLabels(): LevelPanelLabels {
     };
 }
 
-/** A generated transition region's display name, e.g. "Stairs: Ground floor → Upper floor". */
+/** A generated region's display name, e.g. "Stairs: Ground floor → Upper floor" or "Enter Hab 12". */
 export function regionName(region: RegionDoc): string {
-    const { kind, from, to } = region.label;
-    return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[kind]), from, to: to.join(' / ') });
+    const label = region.label;
+    if ('scene' in label) {
+        return format(label.kind === 'entrance' ? I18N.regions.entrance : I18N.regions.exit, { scene: label.scene });
+    }
+    return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
 }
 
 export function registerLevelRuntime(controller: () => CartographyController | null): LevelRuntime {

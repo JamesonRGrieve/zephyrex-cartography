@@ -124,23 +124,32 @@ function teleportBehaviour(destinations: readonly string[], options: TranslateOp
     return { type: 'teleportToken', system };
 }
 
+/** A Scene Region's UUID. */
+export function regionUuid(scene: string, region: string): string {
+    return `Scene.${scene}.Region.${region}`;
+}
+
 /**
- * Create data for the regions of one plan, whose ids are chosen up front
- * (`ids[i]` for `regions[i]`) so each teleport can name its destinations'
- * UUIDs within the same create call.
+ * Create data for the regions of one plan in scene `sceneId`, whose ids are
+ * chosen up front (`ids[i]` for `regions[i]`) so each teleport can name its
+ * destinations' UUIDs within the same create call. A target in another scene
+ * is addressed directly.
  */
 export function regionCreateData(
     regions: readonly RegionDoc[],
     ids: readonly string[],
-    uuidOf: (id: string) => string,
+    sceneId: string,
     nameOf: (region: RegionDoc) => string,
     options: TranslateOptions,
 ): RegionCreateData[] {
     return regions.map((region, i) => {
-        const destinations = (region.teleport?.targets ?? [])
-            .map((t) => ids[t])
-            .filter((id): id is string => id !== undefined)
-            .map(uuidOf);
+        const destinations = (region.teleport?.targets ?? []).flatMap((target) => {
+            if ('plan' in target) {
+                const id = ids[target.plan];
+                return id === undefined ? [] : [regionUuid(sceneId, id)];
+            }
+            return [regionUuid(target.scene, target.region)];
+        });
         return {
             _id: ids[i] ?? '',
             name: nameOf(region),

@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { describe, expect, it } from 'vitest';
+import { catalogStamps, makeHarness } from './test-fakes';
+
+const buildings = catalogStamps([
+    {
+        id: 'hab',
+        name: 'Hab Block',
+        category: 'Structures',
+        scale: 'city',
+        perspective: 'top-down',
+        enterable: true,
+        variants: [{ state: 'intact', image: 'hab.png', width: 200, height: 100 }],
+    },
+    {
+        id: 'crate',
+        name: 'Crate',
+        category: 'Storage',
+        scale: 'interior',
+        perspective: 'top-down',
+        variants: [{ state: 'x', image: 'c.png', width: 100, height: 100 }],
+    },
+]);
+
+async function placed(): Promise<ReturnType<typeof makeHarness>> {
+    const h = makeHarness(buildings);
+    h.c.grid = { size: 100, originX: 0, originY: 0 };
+    await h.c.placeStamp({ stamp: 'pack:hab', x: 100, y: 50 }); // p1
+    await h.c.placeStamp({ stamp: 'pack:crate', x: 500, y: 500 }); // p2
+    return h;
+}
+
+describe('CartographyController submaps', () => {
+    it('creates an interior scene and wires entrance and exit to each other', async () => {
+        const { c, d, w } = await placed();
+        const sceneId = await c.createInterior('p1', 'Hab Block interior');
+        expect(sceneId).toBe('sc1');
+        const link = c.submapOf('p1');
+        expect(link).toEqual({ scene: 'sc1', sceneName: 'Hab Block interior', entryRegion: 'p3', exitRegion: 'p4' });
+        const exit = w.regions[0];
+        expect(exit?.scene).toBe('sc1');
+        expect(exit?.region).toMatchObject({ id: 'p4', label: { kind: 'exit', scene: 'Town' }, teleport: { targets: [{ scene: 'here', region: 'p3' }] } });
+        expect(exit?.region.polygon[0]).toEqual({ x: 450, y: 350 });
+        const entrance = d.regions[d.regions.length - 1]?.[0];
+        expect(entrance).toMatchObject({
+            id: 'p3',
+            label: { kind: 'entrance', scene: 'Hab Block interior' },
+            teleport: { targets: [{ scene: 'sc1', region: 'p4' }] },
+        });
+        expect(entrance?.polygon).toHaveLength(4);
+        expect(c.getFeature('p1')?.docs.regions).toEqual(['r0']);
+    });
+
+    it('links an existing scene, and relinking removes the old exit first', async () => {
+        const { c, w } = await placed();
+        expect(await c.linkSubmap('p1', 'vault')).toBe(true);
+        expect(await c.createInterior('p1', 'Annex')).toBe('sc1');
+        expect(w.deleted).toEqual([{ scene: 'vault', region: 'p4' }]);
+        expect(c.submapOf('p1')?.scene).toBe('sc1');
+    });
+
+    it('keeps the entrance id when the stamp moves, so the exit still points at it', async () => {
+        const { c, d } = await placed();
+        await c.linkSubmap('p1', 'vault');
+        await c.syncStampFrame('p1', { x: 300, y: 300, width: 200, height: 100, rotation: 0 });
+        const entrance = d.regions[d.regions.length - 1]?.[0];
+        expect(entrance?.id).toBe('p3');
+        expect(entrance?.polygon[0]).toEqual({ x: 300, y: 300 });
+    });
+
+    it('unlinks, and deletes the exit with the stamp', async () => {
+        const first = await placed();
+        await first.c.linkSubmap('p1', 'vault');
+        expect(await first.c.unlinkSubmap('p1')).toBe(true);
+        expect(first.c.submapOf('p1')).toBeNull();
+        expect(first.w.deleted).toEqual([{ scene: 'vault', region: 'p4' }]);
+        expect(first.d.deletedIds()).toContain('r0');
+        expect(await first.c.unlinkSubmap('p1')).toBe(false);
+
+        const second = await placed();
+        await second.c.linkSubmap('p1', 'vault');
+        await second.c.remove('p1');
+        expect(second.w.deleted).toEqual([{ scene: 'vault', region: 'p4' }]);
+    });
+
+    it('refuses stamps that are not enterable, missing scenes, and the current scene', async () => {
+        const { c, w } = await placed();
+        expect(await c.linkSubmap('p2', 'vault')).toBe(false);
+        expect(await c.createInterior('p2', 'x')).toBeNull();
+        expect(await c.linkSubmap('p1', 'nowhere')).toBe(false);
+        expect(await c.linkSubmap('p1', 'here')).toBe(false);
+        expect(c.submapOf('p2')).toBeNull();
+        expect(w.regions).toEqual([]);
+    });
+});

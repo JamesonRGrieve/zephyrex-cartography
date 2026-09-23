@@ -87,8 +87,8 @@ export class FoundryDocumentSink implements DocumentSink {
         if (!scene || sceneId === null || sceneId === undefined || regions.length === 0) {
             return [];
         }
-        const ids = regions.map(() => this.options.makeId());
-        const data = regionCreateData(regions, ids, (id) => `Scene.${sceneId}.Region.${id}`, this.options.regionName, this.options);
+        const ids = regions.map((region) => region.id ?? this.options.makeId());
+        const data = regionCreateData(regions, ids, sceneId, this.options.regionName, this.options);
         return extractIds(await scene.createEmbeddedDocuments('Region', data, { keepId: true }));
     }
 

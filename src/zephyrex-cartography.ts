@@ -12,14 +12,16 @@ import './styles/entry.css';
 import { type Brush, CartographyController } from './canvas/controller';
 import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
-import type { FoundryScene } from './foundry/boundary';
 import { FoundryDocumentSink } from './foundry/documents';
 import { registerLevelRuntime, regionName } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
 import { registerPackRuntime } from './foundry/pack-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
+import { activeScene } from './foundry/scene-bridge';
 import { FoundrySceneStore } from './foundry/scene-store';
+import { createWorldScenes } from './foundry/scenes';
 import { createSilhouetteSource } from './foundry/silhouette';
+import { registerSubmapRuntime } from './foundry/submap-runtime';
 import { NATIVE_LEVELS_GENERATION } from './foundry/translate';
 import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
@@ -40,6 +42,8 @@ let state: DrawState | null = null;
 const packs = registerPackRuntime(() => state?.controller ?? null);
 
 const levels = registerLevelRuntime(() => state?.controller ?? null);
+
+registerSubmapRuntime(() => state?.controller ?? null, packs.catalog);
 
 // Newly loaded packs or another texture set re-render the layer.
 packs.onChange(() => {
@@ -79,20 +83,6 @@ const BIOME_ICONS: Record<BiomeKind, string> = {
     tundra: 'fa-solid fa-wind',
     ocean: 'fa-solid fa-anchor',
 };
-
-/**
- * Adapt the live scene to the narrow {@link FoundryScene} the boundary needs.
- * Framework boundary: a Foundry `Scene` structurally provides getFlag / setFlag /
- * the embedded-document methods, so it satisfies our minimal, precisely-typed surface
- * directly — the pure store/document code never depends on fvtt-types flag generics.
- */
-function activeScene(): FoundryScene | null {
-    const scene = canvas?.scene;
-    // fvtt-types over-constrains Scene's flag + embedded-document methods, so tsc requires this assertion to view the
-    // live scene as our looser FoundryScene boundary. Runtime-safe; the single irreducible framework-boundary bridge.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- see note above; the rule mis-reports it as unnecessary
-    return scene ? (scene as FoundryScene) : null; // type-coverage:ignore-line
-}
 
 function localPoint(pointerEvent: PIXI.FederatedPointerEvent, container: PIXI.Container): Point {
     const p = pointerEvent.getLocalPosition(container);
@@ -233,6 +223,7 @@ function setupDrawLayer(): void {
         store: new FoundrySceneStore(activeScene),
         sink: new FoundryDocumentSink(activeScene, { nativeLevels, makeId, regionName }),
         levels: createLevelStore(activeScene, nativeLevels, makeId),
+        scenes: createWorldScenes({ nativeLevels, regionName }),
         catalog: packs.catalog,
         silhouettes,
         makeId,

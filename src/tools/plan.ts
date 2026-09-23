@@ -167,26 +167,46 @@ function transitionRegions(stamp: StampFeature, levels: readonly Level[]): Regio
     }
     const polygon = stampCorners(stamp);
     const start: RegionDoc = {
+        id: null,
         label: { kind: transition.kind, from: here.name, to: ends.map((end) => end.name) },
         polygon,
         bottom: here.bottom,
         top: here.top,
         level: here.id,
-        teleport: { targets: ends.map((_, i) => i + 1) },
+        teleport: { targets: ends.map((_, i) => ({ plan: i + 1 })) },
     };
     return [
         start,
         ...ends.map(
             (end): RegionDoc => ({
+                id: null,
                 label: { kind: transition.kind, from: end.name, to: [here.name] },
                 polygon,
                 bottom: end.bottom,
                 top: end.top,
                 level: end.id,
-                teleport: { targets: [0] },
+                teleport: { targets: [{ plan: 0 }] },
             }),
         ),
     ];
+}
+
+/** A linked stamp's entrance: over its footprint on its own level, teleporting to the interior's exit. */
+function entranceRegion(stamp: StampFeature, levels: readonly Level[]): RegionDoc | null {
+    const link = stamp.submap;
+    if (!link) {
+        return null;
+    }
+    const band = findLevel(levels, stamp.level);
+    return {
+        id: link.entryRegion,
+        label: { kind: 'entrance', scene: link.sceneName },
+        polygon: stampCorners(stamp),
+        bottom: band?.bottom ?? null,
+        top: band?.top ?? null,
+        level: stamp.level,
+        teleport: { targets: [{ scene: link.scene, region: link.exitRegion }] },
+    };
 }
 
 function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
@@ -197,7 +217,7 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
         walls: [...(door ? [door] : []), ...stampWalls(stamp, floor)],
         tiles: [stampTile(stamp, floor)],
         lights: light ? [light] : [],
-        regions: transitionRegions(stamp, context.levels),
+        regions: [...transitionRegions(stamp, context.levels), ...[entranceRegion(stamp, context.levels)].filter((r): r is RegionDoc => r !== null)],
     };
 }
 

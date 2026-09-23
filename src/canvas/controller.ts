@@ -24,6 +24,7 @@ import { makeRegion, type BiomeKind } from '../tools/region';
 import { makeRoom, withRoomDoors } from '../tools/room';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
+import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
 import type { FeatureRenderer } from './renderer';
 
 export interface SceneStore {
@@ -52,12 +53,26 @@ export interface LevelStore {
     remove: (id: string) => Promise<void>;
 }
 
-/** Everything the controller is injected with: rendering, persistence, document creation, levels, packs, ids. */
+/** The world's scenes, for submaps: the one being edited, others to link, new interiors, their exit regions. */
+export interface WorldScenes {
+    /** The scene being edited. */
+    current: () => { readonly id: string; readonly name: string } | null;
+    name: (sceneId: string) => string | null;
+    frame: (sceneId: string) => SceneFrame | null;
+    /** Create an empty interior scene named `name`, gridded like the current one; returns its id. */
+    createScene: (name: string) => Promise<string | null>;
+    /** Create one region in another scene, with the id it names. */
+    createRegion: (sceneId: string, region: RegionDoc) => Promise<boolean>;
+    deleteRegion: (sceneId: string, regionId: string) => Promise<void>;
+}
+
+/** Everything the controller is injected with: rendering, persistence, document creation, levels, scenes, packs, ids. */
 export interface ControllerPorts {
     readonly renderer: FeatureRenderer;
     readonly store: SceneStore;
     readonly sink: DocumentSink;
     readonly levels: LevelStore;
+    readonly scenes: WorldScenes;
     readonly catalog: StampCatalog;
     readonly silhouettes: SilhouetteSource;
     readonly makeId: () => string;
@@ -149,6 +164,7 @@ export class CartographyController {
     private readonly store: SceneStore;
     private readonly sink: DocumentSink;
     private readonly levelStore: LevelStore;
+    private readonly scenes: WorldScenes;
     private readonly catalog: StampCatalog;
     private readonly silhouettes: SilhouetteSource;
     private readonly makeId: () => string;
@@ -162,9 +178,67 @@ export class CartographyController {
         this.store = ports.store;
         this.sink = ports.sink;
         this.levelStore = ports.levels;
+        this.scenes = ports.scenes;
         this.catalog = ports.catalog;
         this.silhouettes = ports.silhouettes;
         this.makeId = ports.makeId;
+    }
+
+    /** An enterable stamp, or null for anything else. */
+    private enterable(id: string): StampFeature | null {
+        const feature = this.getFeature(id);
+        return feature?.type === 'stamp' && feature.behaviour.enterable ? feature : null;
+    }
+
+    /** The interior an enterable stamp leads into, or null. */
+    submapOf(id: string): SubmapLink | null {
+        return this.enterable(id)?.submap ?? null;
+    }
+
+    /**
+     * Link an enterable stamp to `sceneId` as its interior: an exit region
+     * goes into the interior (one square at its centre, for the GM to move)
+     * and an entrance region over the stamp, each teleporting to the other.
+     * A previous link is undone first. False if the stamp is not enterable, or
+     * either scene is missing.
+     */
+    async linkSubmap(id: string, sceneId: string): Promise<boolean> {
+        const stamp = this.enterable(id);
+        const here = this.scenes.current();
+        const frame = this.scenes.frame(sceneId);
+        const sceneName = this.scenes.name(sceneId);
+        if (!stamp || !here || !frame || sceneName === null || sceneId === here.id) {
+            return false;
+        }
+        if (stamp.submap) {
+            await this.scenes.deleteRegion(stamp.submap.scene, stamp.submap.exitRegion);
+        }
+        const link: SubmapLink = { scene: sceneId, sceneName, entryRegion: this.makeId(), exitRegion: this.makeId() };
+        if (!(await this.scenes.createRegion(sceneId, exitRegion(link, exitSquare(frame), here.id, here.name)))) {
+            return false;
+        }
+        await this.replaceFeature(id, { ...stamp, submap: link });
+        return true;
+    }
+
+    /** Create a new, empty interior scene named `name` and link the stamp to it; returns the scene id. */
+    async createInterior(id: string, sceneName: string): Promise<string | null> {
+        if (!this.enterable(id)) {
+            return null;
+        }
+        const sceneId = await this.scenes.createScene(sceneName);
+        return sceneId !== null && (await this.linkSubmap(id, sceneId)) ? sceneId : null;
+    }
+
+    /** Remove a stamp's interior link and both of its regions (the interior scene itself is kept). */
+    async unlinkSubmap(id: string): Promise<boolean> {
+        const stamp = this.enterable(id);
+        if (!stamp?.submap) {
+            return false;
+        }
+        await this.scenes.deleteRegion(stamp.submap.scene, stamp.submap.exitRegion);
+        await this.replaceFeature(id, { ...stamp, submap: null });
+        return true;
     }
 
     /** The scene's levels, bottom to top. */
@@ -430,6 +504,10 @@ export class CartographyController {
         await this.store.save(this.features);
         if (hasDocs(target.docs)) {
             await this.sink.deleteDocuments(target.docs);
+        }
+        // A linked stamp's exit lives in its interior scene; it goes with the stamp.
+        if (target.type === 'stamp' && target.submap) {
+            await this.scenes.deleteRegion(target.submap.scene, target.submap.exitRegion);
         }
         await this.resyncDependents(before, [target]);
     }

@@ -13,6 +13,7 @@ import { type CatalogStamp, clampVariantIndex, computeTilePlacement, effectivePr
 import { type PlacedBehaviour, placedBehaviourSchema } from '../stamps/schema';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr } from './guards';
+import { parseSubmapLink, type SubmapLink } from './submap';
 
 /** A stamp placement request: everything a human or a generator states to place one. */
 export interface StampPlacement {
@@ -51,6 +52,8 @@ export interface StampFeature extends FeatureCommon {
     readonly behaviour: PlacedBehaviour;
     /** Traced outline loops as footprint fractions, for `alpha` occlusion; null when not traced. */
     readonly silhouette: Point[][] | null;
+    /** The interior scene an enterable stamp leads into, or null. */
+    readonly submap: SubmapLink | null;
 }
 
 /** Grid size assumed for a persisted stamp that predates the field. */
@@ -111,6 +114,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         gridSize,
         behaviour: behaviourOf(stamp, variant),
         silhouette: null,
+        submap: null,
         ...NEW_FEATURE,
     };
 }
@@ -124,7 +128,7 @@ export function stampCentre(feature: StampFeature): Point {
 export function withStampVariant(feature: StampFeature, stamp: CatalogStamp, index: number, gridSize: number): StampFeature {
     const centre = stampCentre(feature);
     const placed = makeStamp(feature.id, stamp, { stamp: stamp.key, variant: index, x: centre.x, y: centre.y, scale: feature.scale }, gridSize);
-    return { ...placed, rotation: feature.rotation, elevation: feature.elevation, docs: feature.docs, level: feature.level };
+    return { ...placed, rotation: feature.rotation, elevation: feature.elevation, docs: feature.docs, level: feature.level, submap: feature.submap };
 }
 
 /** Move, resize or rotate the footprint (e.g. after the GM edits the tile natively). */
@@ -207,6 +211,7 @@ export function parseStamp(v: unknown): StampFeature | null {
         gridSize: numberOr(v['gridSize'], FALLBACK_GRID_SIZE),
         behaviour: parseBehaviour(v['behaviour']),
         silhouette: parseSilhouette(v['silhouette']),
+        submap: parseSubmapLink(v['submap']),
         ...parseFeatureCommon(v),
     };
 }

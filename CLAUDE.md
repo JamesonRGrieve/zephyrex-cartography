@@ -190,9 +190,18 @@ tool; an auto `AmbientLightDocument` per room at its centroid.
   the band's elevation, but walls apply on every level (v13 has no per-level
   walls), and a teleport takes its first destination only.
 
-**Submaps [next]:** clicking an enterable stamp (a building, a hab) either
-creates a new interior scene or **links an existing one**. Both directions get
-auto-built transition regions, tracked per the lifecycle rule.
+**Submaps [done]:** an enterable stamp (a building, a hab) gets an "Interior"
+button on its Tile HUD. The GM either creates a new interior scene (gridded like
+the current one) or **links an existing one**, imported scenes included.
+
+- **Regions.** The link fixes both region ids up front, so each teleport can
+  name the other across scenes. The entrance sits over the stamp; the exit is
+  one square at the interior's centre, for the GM to move.
+- **Lifecycle.** The entrance follows the stamp (moves keep its id). The exit
+  is deleted with the stamp or on unlink; the interior scene itself is always
+  kept.
+- **v14.** An exit in a multi-level interior sits on that scene's initial
+  Level, as teleports require.
 
 Follow-ups: shared-wall dedup between adjacent rooms; room nesting; per-door
 type/state UI; floor/wall materials beyond biomes; undo/redo of generated

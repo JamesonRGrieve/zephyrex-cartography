@@ -45,6 +45,22 @@ export const I18N = {
     },
     regions: {
         transition: key('Regions.Transition'),
+        entrance: key('Regions.Entrance'),
+        exit: key('Regions.Exit'),
+    },
+    submap: {
+        title: key('Submap.Title'),
+        linkedTo: key('Submap.LinkedTo'),
+        notLinked: key('Submap.NotLinked'),
+        createInterior: key('Submap.CreateInterior'),
+        linkExisting: key('Submap.LinkExisting'),
+        scene: key('Submap.Scene'),
+        link: key('Submap.Link'),
+        open: key('Submap.Open'),
+        unlink: key('Submap.Unlink'),
+        noScenes: key('Submap.NoScenes'),
+        hud: key('Submap.Hud'),
+        defaultName: key('Submap.DefaultName'),
     },
     settings: {
         textureSetName: key('Settings.TextureSet.Name'),

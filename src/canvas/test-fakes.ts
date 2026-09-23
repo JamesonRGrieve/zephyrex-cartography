@@ -9,7 +9,8 @@ import { type CatalogStamp, loadPacks } from '../stamps/catalog';
 import type { GeneratedDocs, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
-import { CartographyController, type DocumentSink, type LevelStore, type SceneStore, type TileUpdate } from './controller';
+import type { SceneFrame } from '../tools/submap';
+import { CartographyController, type DocumentSink, type LevelStore, type SceneStore, type TileUpdate, type WorldScenes } from './controller';
 import type { FeatureRenderer } from './renderer';
 
 class FakeRenderer implements FeatureRenderer {
@@ -124,12 +125,49 @@ class FakeLevels implements LevelStore {
     }
 }
 
+/** A world of scenes in memory: the current one is `here` ("Town"); created interiors are `sc1`, `sc2`, … */
+class FakeScenes implements WorldScenes {
+    readonly names = new Map<string, string>([
+        ['here', 'Town'],
+        ['vault', 'Vault'],
+    ]);
+    readonly regions: { scene: string; region: RegionDoc }[] = [];
+    readonly deleted: { scene: string; region: string }[] = [];
+    private counter = 0;
+    current(): { id: string; name: string } {
+        return { id: 'here', name: 'Town' };
+    }
+    name(sceneId: string): string | null {
+        return this.names.get(sceneId) ?? null;
+    }
+    frame(sceneId: string): SceneFrame | null {
+        return this.names.has(sceneId) ? { x: 0, y: 0, width: 1000, height: 800, gridSize: 100 } : null;
+    }
+    async createScene(sceneName: string): Promise<string> {
+        this.counter += 1;
+        const id = `sc${this.counter}`;
+        this.names.set(id, sceneName);
+        await Promise.resolve();
+        return id;
+    }
+    async createRegion(sceneId: string, region: RegionDoc): Promise<boolean> {
+        this.regions.push({ scene: sceneId, region });
+        await Promise.resolve();
+        return this.names.has(sceneId);
+    }
+    async deleteRegion(sceneId: string, regionId: string): Promise<void> {
+        this.deleted.push({ scene: sceneId, region: regionId });
+        await Promise.resolve();
+    }
+}
+
 export interface Harness {
     readonly c: CartographyController;
     readonly r: FakeRenderer;
     readonly s: FakeStore;
     readonly d: FakeSink;
     readonly l: FakeLevels;
+    readonly w: FakeScenes;
 }
 
 /** A unit square traced from any image: the silhouette every fake stamp gets. */
@@ -148,12 +186,14 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
     const s = new FakeStore();
     const d = new FakeSink();
     const l = new FakeLevels();
+    const w = new FakeScenes();
     let counter = 0;
     const c = new CartographyController({
         renderer: r,
         store: s,
         sink: d,
         levels: l,
+        scenes: w,
         catalog: { get: (key) => stamps.find((stamp) => stamp.key === key) ?? null },
         silhouettes: { trace: async () => Promise.resolve(traced) },
         makeId: () => {
@@ -161,7 +201,7 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
             return `p${counter}`;
         },
     });
-    return { c, r, s, d, l };
+    return { c, r, s, d, l, w };
 }
 
 /** One catalog stamp per definition, loaded through the real pack parser from module `pack`. */

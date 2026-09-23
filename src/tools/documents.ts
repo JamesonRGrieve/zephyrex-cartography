@@ -74,25 +74,29 @@ export interface TileDoc {
 }
 
 /** How a transition region names itself: what it is and where it leads (the boundary localises it). */
-interface TransitionLabel {
-    readonly kind: NonNullable<PlacedBehaviour['transition']>['kind'];
-    readonly from: string;
-    readonly to: readonly string[];
-}
+/** How a generated region names itself (the boundary localises it): a stair between levels, or a way into or out of a submap. */
+type RegionLabel =
+    | { readonly kind: NonNullable<PlacedBehaviour['transition']>['kind']; readonly from: string; readonly to: readonly string[] }
+    | { readonly kind: 'entrance' | 'exit'; readonly scene: string };
 
 /**
- * A native Scene Region. `teleport.targets` are indices of other regions in the
- * same plan, so a stair's two ends can point at each other before either exists.
- * The sink turns them into region UUIDs.
+ * Where a teleport leads: another region of the same plan (by index, so a
+ * stair's two ends can point at each other before either exists), or a region
+ * in any scene by id (a submap's other side).
  */
+type RegionTarget = { readonly plan: number } | { readonly scene: string; readonly region: string };
+
+/** A native Scene Region. The sink turns its targets into region UUIDs. */
 export interface RegionDoc {
-    readonly label: TransitionLabel;
+    /** Fixed document id, for a region another scene must be able to point at; null lets the sink choose. */
+    readonly id: string | null;
+    readonly label: RegionLabel;
     readonly polygon: readonly Point[];
-    /** Elevation band (scene distance units). */
-    readonly bottom: number;
-    readonly top: number;
+    /** Elevation band (scene distance units); null is open-ended. */
+    readonly bottom: number | null;
+    readonly top: number | null;
     readonly level: string | null;
-    readonly teleport: { readonly targets: readonly number[] } | null;
+    readonly teleport: { readonly targets: readonly RegionTarget[] } | null;
 }
 
 /** The ids of every native document one feature generated, by document type. */

@@ -115,10 +115,10 @@ describe('CartographyController levels', () => {
             level: 'lv1',
             bottom: 0,
             top: 10,
-            teleport: { targets: [1] },
+            teleport: { targets: [{ plan: 1 }] },
             label: { kind: 'stairs', from: 'Ground', to: ['Upper'] },
         });
-        expect(end).toMatchObject({ level: 'lv2', bottom: 10, top: 20, teleport: { targets: [0] } });
+        expect(end).toMatchObject({ level: 'lv2', bottom: 10, top: 20, teleport: { targets: [{ plan: 0 }] } });
         expect(start?.polygon).toEqual(end?.polygon);
         expect(c.getFeature('p1')?.docs.regions).toEqual(['r0', 'r1']);
     });
@@ -141,6 +141,6 @@ describe('CartographyController levels', () => {
         await c.placeStamp({ stamp: 'pack:well', x: 50, y: 50 });
         const regions = d.regions[d.regions.length - 1] ?? [];
         expect(regions.map((r) => r.level)).toEqual(['lv1', 'lv2', 'lv3']);
-        expect(regions[0]?.teleport).toEqual({ targets: [1, 2] });
+        expect(regions[0]?.teleport).toEqual({ targets: [{ plan: 1 }, { plan: 2 }] });
     });
 });
