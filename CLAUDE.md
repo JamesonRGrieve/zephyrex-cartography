@@ -206,9 +206,14 @@ the current one) or **links an existing one**, imported scenes included.
 - **v14.** An exit in a multi-level interior sits on that scene's initial
   Level, as teleports require.
 
+**Undo/redo [done]** carries the scene with it. Features an undo or redo drops
+are discarded (documents, container pile, interior exit). Features it brings
+back are revived: documents recreated, a fresh pile, and the exit rebuilt under
+its fixed id. Changed features re-sync from their live documents.
+
 Follow-ups: shared-wall dedup between adjacent rooms; room nesting; per-door
-type/state UI; floor/wall materials beyond biomes; undo/redo of generated
-documents; per-point path width; Scene Regions from biomes.
+type/state UI; floor/wall materials beyond biomes; per-point path width; Scene
+Regions from biomes.
 
 **Generative map builder [intent — last]:** build real maps
 *declaratively* with this module's own tools, not by generating images. A

@@ -523,17 +523,100 @@ export class CartographyController {
         this.features = this.features.filter((f) => f.id !== id);
         this.renderer.remove(id);
         await this.store.save(this.features);
-        if (hasDocs(target.docs)) {
-            await this.sink.deleteDocuments(target.docs);
+        await this.discard(target);
+        await this.resyncDependents(before, [target]);
+    }
+
+    /** Delete everything a feature owns outside the feature list: its documents, its interior exit, its container pile. */
+    private async discard(feature: Feature): Promise<void> {
+        if (hasDocs(feature.docs)) {
+            await this.sink.deleteDocuments(feature.docs);
+        }
+        if (feature.type !== 'stamp') {
+            return;
         }
         // A linked stamp's exit lives in its interior scene; it goes with the stamp.
-        if (target.type === 'stamp' && target.submap) {
-            await this.scenes.deleteRegion(target.submap.scene, target.submap.exitRegion);
+        if (feature.submap) {
+            await this.scenes.deleteRegion(feature.submap.scene, feature.submap.exitRegion);
         }
-        if (target.type === 'stamp' && target.pile !== null) {
-            await this.containers.remove(target.pile);
+        if (feature.pile !== null) {
+            await this.containers.remove(feature.pile);
         }
-        await this.resyncDependents(before, [target]);
+    }
+
+    /**
+     * Rebuild what `discard` deleted for a feature undo or redo brings back:
+     * a fresh container pile, and the interior exit under its fixed id. Its
+     * documents are recreated by the sync that follows.
+     */
+    private async revive(feature: Feature): Promise<Feature> {
+        if (feature.type !== 'stamp') {
+            return feature;
+        }
+        const withPile = feature.pile === null ? feature : await this.withPile({ ...feature, pile: null }, this.catalog.get(feature.stamp)?.name ?? '');
+        await this.restoreExit(withPile);
+        return withPile;
+    }
+
+    /** Recreate a linked stamp's exit in its interior (its id is fixed by the link, so the entrance still points at it). */
+    private async restoreExit(stamp: StampFeature): Promise<void> {
+        const here = this.scenes.current();
+        const frame = stamp.submap ? this.scenes.frame(stamp.submap.scene) : null;
+        if (stamp.submap && here && frame) {
+            await this.scenes.createRegion(stamp.submap.scene, exitRegion(stamp.submap, exitSquare(frame), here.id, here.name));
+        }
+    }
+
+    /**
+     * Make `target` (an undo or redo snapshot) the live feature list, and bring
+     * the scene's documents with it:
+     * - features it drops are discarded;
+     * - features it brings back are revived and synced;
+     * - features it changes are synced from their live documents (the snapshot's
+     *   document ids were replaced since);
+     * - an interior link it undoes or redoes moves the exit region to match.
+     */
+    private async restore(target: readonly Feature[]): Promise<void> {
+        const live = new Map(this.features.map((f) => [f.id, f]));
+        const kept = new Set(target.map((f) => f.id));
+        const before = this.features;
+        const dropped = before.filter((f) => !kept.has(f.id));
+        await Promise.all(dropped.map(async (f) => this.discard(f)));
+
+        const unchanged = (f: Feature, current: Feature): boolean => JSON.stringify({ ...f, docs: null }) === JSON.stringify({ ...current, docs: null });
+        const touched = target.filter((f) => {
+            const current = live.get(f.id);
+            return !current || !unchanged(f, current);
+        });
+        // In order: reviving can create piles and exit regions, which must not race.
+        this.features = await target.reduce(async (built, f) => {
+            const list = await built;
+            const current = live.get(f.id);
+            if (!current) {
+                return [...list, await this.revive(f)];
+            }
+            return [...list, unchanged(f, current) ? current : await this.relink(f, current)];
+        }, Promise.resolve<Feature[]>([]));
+        await this.store.save(this.features);
+        this.redraw();
+        await touched.reduce(async (previous, f) => {
+            await previous;
+            await this.syncDocs(this.getFeature(f.id) ?? f);
+        }, Promise.resolve());
+        await this.resyncDependents(before, [...dropped, ...touched]);
+    }
+
+    /** A changed feature restored from a snapshot, on the live documents, with its interior exit moved to match. */
+    private async relink(restored: Feature, current: Feature): Promise<Feature> {
+        const next = withDocs(restored, current.docs);
+        if (next.type !== 'stamp' || current.type !== 'stamp' || JSON.stringify(next.submap) === JSON.stringify(current.submap)) {
+            return next;
+        }
+        if (current.submap) {
+            await this.scenes.deleteRegion(current.submap.scene, current.submap.exitRegion);
+        }
+        await this.restoreExit(next);
+        return next;
     }
 
     /** The features shown on the active level, topmost (last drawn) first: what pointer picks consider. */
@@ -642,26 +725,24 @@ export class CartographyController {
         return true;
     }
 
+    /** Step back one edit, bringing the scene's generated documents back with it. */
     async undo(): Promise<void> {
         const prev = this.history.pop();
         if (!prev) {
             return;
         }
         this.future.push([...this.features]);
-        this.features = prev;
-        await this.store.save(this.features);
-        this.redraw();
+        await this.restore(prev);
     }
 
+    /** Re-apply an undone edit, documents included. */
     async redo(): Promise<void> {
         const next = this.future.pop();
         if (!next) {
             return;
         }
         this.history.push([...this.features]);
-        this.features = next;
-        await this.store.save(this.features);
-        this.redraw();
+        await this.restore(next);
     }
 
     async toFront(id: string): Promise<void> {
