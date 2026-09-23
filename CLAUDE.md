@@ -237,7 +237,12 @@ carry no behaviours: GMs and systems attach their own (difficult terrain,
 weather and so on). Toggling it, or loading a scene last edited under the
 other setting, re-syncs only terrain that disagrees. Only the active GM writes.
 
-Follow-ups: room nesting; floor/wall materials beyond biomes.
+**Room nesting [done]:** a room inside another room on the same level (a closet
+in a hall) always draws above the room containing it and is picked first,
+whatever the drawing order. Nesting is derived from geometry on every draw
+(`tools/nesting.ts`), never stored, so edits cannot leave it stale.
+
+Follow-ups: floor/wall materials beyond biomes.
 
 **Generative map builder [intent — last]:** build real maps
 *declaratively* with this module's own tools, not by generating images. A

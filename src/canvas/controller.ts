@@ -19,6 +19,7 @@ import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
+import { drawOrder } from '../tools/nesting';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
 import { type PlanContext, planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
@@ -371,7 +372,10 @@ export class CartographyController {
 
     /** Draw a feature if it is on the active level, otherwise make sure it is not drawn. */
     private show(feature: Feature): void {
-        if (this.visible(feature)) {
+        if (feature.type === 'room') {
+            // A room can change what nests in what, so the whole draw order is rebuilt.
+            this.redraw();
+        } else if (this.visible(feature)) {
             this.renderer.set(feature.id, feature);
         } else {
             this.renderer.remove(feature.id);
@@ -668,7 +672,7 @@ export class CartographyController {
 
     /** The features shown on the active level, topmost (last drawn) first: what pointer picks consider. */
     private topDown(): Feature[] {
-        return this.features.filter((f) => this.visible(f)).reverse();
+        return drawOrder(this.features.filter((f) => this.visible(f))).reverse();
     }
 
     /** Topmost shown feature under `pt`, or null. */
@@ -978,7 +982,7 @@ export class CartographyController {
 
     private redraw(): void {
         this.renderer.clear();
-        for (const f of this.features) {
+        for (const f of drawOrder(this.features)) {
             if (this.visible(f)) {
                 this.renderer.set(f.id, f);
             }
