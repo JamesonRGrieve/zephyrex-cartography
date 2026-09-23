@@ -9,7 +9,7 @@
  */
 import { RIBBON_SAMPLES } from '../geometry/ribbon';
 import { catmullRom, type Point } from '../geometry/spline';
-import { cutSegment, perimeterSegments } from '../geometry/wall';
+import { cutSegment, perimeterSegments, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
 import { BLOCKS_ALL, type LightDoc, type RegionDoc, type SenseBlock, type TileDoc, type WallDoc, wallDocFromSpec } from './documents';
 import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
@@ -221,15 +221,31 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
     };
 }
 
-/** Perimeter walls with door-stamp openings cut out (the stamps supply those door walls). */
+/**
+ * A room's perimeter walls, sharing edges with its neighbours on the same floor
+ * without doubling them:
+ * - door-stamp openings are cut out (the stamps supply those door walls);
+ * - a stretch shared with an earlier room is cut out, because the earlier room
+ *   owns it;
+ * - a stretch this room owns is a door if either room marks it as one.
+ */
 function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
     const floor = floorOf(room, context);
     const light = roomLight(room);
-    // Only doors on the room's own floor open its walls.
-    const openings = doorOpenings(context.features.filter((f) => f.level === room.level));
+    const sameFloor = context.features.filter((f) => f.level === room.level && f.id !== room.id);
+    const order = new Map(context.features.map((f, i) => [f.id, i]));
+    const here = order.get(room.id) ?? Number.POSITIVE_INFINITY;
+    const rooms = sameFloor.filter((f): f is RoomFeature => f.type === 'room');
+    const owned = rooms.filter((r) => (order.get(r.id) ?? 0) < here).flatMap((r) => perimeterSegments(r.points));
+    const laterDoors = rooms.filter((r) => (order.get(r.id) ?? 0) > here).flatMap((r) => roomWalls(r).filter((w) => w.door));
+    const cuts = [...doorOpenings(sameFloor), ...owned];
     return {
         walls: roomWalls(room).flatMap((spec) =>
-            cutSegment(spec, openings, OPENING_TOLERANCE).map((piece) => wallDocFromSpec({ ...piece, door: spec.door }, floor.level)),
+            cutSegment(spec, cuts, OPENING_TOLERANCE).flatMap((piece) =>
+                splitSegment(piece, laterDoors, OPENING_TOLERANCE).map((part) =>
+                    wallDocFromSpec({ a: part.a, b: part.b, door: spec.door || part.covered }, floor.level),
+                ),
+            ),
         ),
         lights: light.dim > 0 ? [{ ...light, elevation: floor.elevation, level: floor.level }] : [],
         tiles: [],

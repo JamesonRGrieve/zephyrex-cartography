@@ -211,9 +211,14 @@ are discarded (documents, container pile, interior exit). Features it brings
 back are revived: documents recreated, a fresh pile, and the exit rebuilt under
 its fixed id. Changed features re-sync from their live documents.
 
-Follow-ups: shared-wall dedup between adjacent rooms; room nesting; per-door
-type/state UI; floor/wall materials beyond biomes; per-point path width; Scene
-Regions from biomes.
+**Shared walls [done]:** rooms on the same floor never double a shared edge.
+The earlier room (in feature order) owns the shared stretch and the later room
+cuts it out. The stretch is a door if either room marks it. When a room is
+added, moved or removed, only the neighbours whose planned walls change are
+re-synced.
+
+Follow-ups: room nesting; per-door type/state UI; floor/wall materials beyond
+biomes; per-point path width; Scene Regions from biomes.
 
 **Generative map builder [intent — last]:** build real maps
 *declaratively* with this module's own tools, not by generating images. A

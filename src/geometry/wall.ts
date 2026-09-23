@@ -51,39 +51,66 @@ function pointAt(seg: Segment, t: number): Point {
     return { x: seg.a.x + (seg.b.x - seg.a.x) * t, y: seg.a.y + (seg.b.y - seg.a.y) * t };
 }
 
-/**
- * `seg` with every collinear cut removed: each cut whose endpoints both lie
- * within `tolerance` of the segment's line is an opening. The pieces of the
- * segment outside every opening are returned in order. Cuts that are not
- * collinear leave the segment whole.
- */
-export function cutSegment(seg: Segment, cuts: readonly Segment[], tolerance: number): Segment[] {
-    const openings: [number, number][] = [];
-    for (const cut of cuts) {
-        const a = project(seg, cut.a);
-        const b = project(seg, cut.b);
+/** A stretch of a segment, and whether some overlay covers it. */
+export interface SegmentPiece extends Segment {
+    readonly covered: boolean;
+}
+
+/** The merged parameter intervals (0..1 along `seg`) that collinear overlays cover. */
+function coveredIntervals(seg: Segment, overlays: readonly Segment[], tolerance: number): [number, number][] {
+    const intervals: [number, number][] = [];
+    for (const overlay of overlays) {
+        const a = project(seg, overlay.a);
+        const b = project(seg, overlay.b);
         if (a.offset > tolerance || b.offset > tolerance) {
             continue;
         }
         const from = Math.max(0, Math.min(a.t, b.t));
         const to = Math.min(1, Math.max(a.t, b.t));
         if (to > from) {
-            openings.push([from, to]);
+            intervals.push([from, to]);
         }
     }
-    openings.sort((p, q) => p[0] - q[0]);
-    const pieces: Segment[] = [];
-    let cursor = 0;
-    for (const [from, to] of openings) {
-        if (from > cursor) {
-            pieces.push({ a: pointAt(seg, cursor), b: pointAt(seg, from) });
+    intervals.sort((p, q) => p[0] - q[0]);
+    const merged: [number, number][] = [];
+    for (const [from, to] of intervals) {
+        const last = merged[merged.length - 1];
+        if (last && from <= last[1]) {
+            last[1] = Math.max(last[1], to);
+        } else {
+            merged.push([from, to]);
         }
-        cursor = Math.max(cursor, to);
+    }
+    return merged;
+}
+
+/**
+ * `seg` split, in order, into the stretches collinear overlays cover and the
+ * stretches they do not. An overlay covers where both its endpoints lie within
+ * `tolerance` of the segment's line. Overlays that are not collinear leave the
+ * segment one uncovered piece.
+ */
+export function splitSegment(seg: Segment, overlays: readonly Segment[], tolerance: number): SegmentPiece[] {
+    const pieces: SegmentPiece[] = [];
+    let cursor = 0;
+    for (const [from, to] of coveredIntervals(seg, overlays, tolerance)) {
+        if (from > cursor) {
+            pieces.push({ a: pointAt(seg, cursor), b: pointAt(seg, from), covered: false });
+        }
+        pieces.push({ a: pointAt(seg, from), b: pointAt(seg, to), covered: true });
+        cursor = to;
     }
     if (cursor < 1) {
-        pieces.push({ a: pointAt(seg, cursor), b: pointAt(seg, 1) });
+        pieces.push({ a: pointAt(seg, cursor), b: pointAt(seg, 1), covered: false });
     }
     return pieces;
+}
+
+/** `seg` with every collinear cut removed: the uncovered stretches of {@link splitSegment}. */
+export function cutSegment(seg: Segment, cuts: readonly Segment[], tolerance: number): Segment[] {
+    return splitSegment(seg, cuts, tolerance)
+        .filter((piece) => !piece.covered)
+        .map(({ a, b }) => ({ a, b }));
 }
 
 /** Average of a polygon's vertices — a good-enough light-placement centre for a room. */

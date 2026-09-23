@@ -1,7 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import type { Point } from './spline';
-import { centroid, cutSegment, nearestSegment, perimeterSegments } from './wall';
+import { centroid, cutSegment, nearestSegment, perimeterSegments, splitSegment } from './wall';
+
+describe('splitSegment', () => {
+    it('splits into covered and uncovered stretches in order, merging overlaps', () => {
+        const seg = { a: { x: 0, y: 0 }, b: { x: 100, y: 0 } };
+        const pieces = splitSegment(
+            seg,
+            [
+                { a: { x: 20, y: 0 }, b: { x: 40, y: 0 } },
+                { a: { x: 30, y: 0 }, b: { x: 50, y: 0 } },
+            ],
+            1,
+        );
+        expect(pieces.map((p) => [p.a.x, p.b.x, p.covered])).toEqual([
+            [0, 20, false],
+            [20, 50, true],
+            [50, 100, false],
+        ]);
+    });
+
+    it('covers the whole segment when an overlay spans it', () => {
+        const seg = { a: { x: 0, y: 0 }, b: { x: 10, y: 0 } };
+        expect(splitSegment(seg, [{ a: { x: -1, y: 0 }, b: { x: 20, y: 0 } }], 1)).toEqual([{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, covered: true }]);
+    });
+});
 
 describe('cutSegment', () => {
     const seg = { a: { x: 0, y: 0 }, b: { x: 100, y: 0 } };

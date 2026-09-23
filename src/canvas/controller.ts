@@ -799,17 +799,20 @@ export class CartographyController {
     }
 
     /**
-     * Re-sync the features whose plan depends on others that just changed: a
-     * door stamp added, moved or removed changes the openings in room walls.
-     * Only rooms whose planned walls actually differ are touched.
+     * Re-sync the features whose plan depends on others that just changed. A
+     * door stamp changes the openings in room walls, and a room changes which
+     * stretches its neighbours share with it (and their doors). Only rooms
+     * whose planned walls actually differ are touched.
      */
     private async resyncDependents(before: readonly Feature[], changed: readonly Feature[]): Promise<void> {
-        if (!changed.some(isDoorStamp)) {
+        if (!changed.some((f) => isDoorStamp(f) || f.type === 'room')) {
             return;
         }
         const wallsOf = (room: Feature, features: readonly Feature[]): string =>
             JSON.stringify(planDocuments(room, { features, levels: this.levelList }).walls);
-        const affected = this.features.filter((f) => f.type === 'room' && wallsOf(f, before) !== wallsOf(f, this.features));
+        // The changed features themselves were synced already.
+        const changedIds = new Set(changed.map((f) => f.id));
+        const affected = this.features.filter((f) => f.type === 'room' && !changedIds.has(f.id) && wallsOf(f, before) !== wallsOf(f, this.features));
         // Sequential: each sync reads and persists the shared feature list, so concurrent syncs would race.
         await affected.reduce(async (previous, room) => {
             await previous;
