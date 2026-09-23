@@ -273,6 +273,185 @@ this module's own tools, not by generating images.
 
 ---
 
+## Foundry v14 coverage — the roadmap
+
+The goal is **full use of Foundry v14's scene features**. This list compares
+what the plugin generates with the v14 document schemas and region behaviours
+(verified against the 14.359 source: `common/documents/*.mjs`,
+`common/constants.mjs`, `client/data/region-behaviors/`). Closing a gap means
+exposing the option everywhere it applies:
+- the engine's plan and document specs, and the Foundry translation;
+- the stamp pack schema (additive v1 fields);
+- the scene spec;
+- the UI.
+
+Work down the priorities in order.
+
+### Priority 0: bugs found against v14
+- **Tile anchor.** A v14 tile's `(x, y)` is its *anchor* point, and
+  `texture.anchorX/Y` default to 0.5, so `(x, y)` is the tile's centre. The
+  tile rotates about the anchor (`TileDocument#shape` is a
+  `RectangleShapeData`, changed in 14.349). `tileCreateData` sends the
+  unrotated top-left and no anchor, so every stamp draws offset by half its
+  size from its walls, light and door. The `updateTile` read-back into
+  `syncStampFrame` assumes top-left too. Fix: send the centre with an
+  explicit anchor of 0.5, and convert back using the tile's own anchor.
+- **Level deletion (14.361).** Deleting a Level now deletes every placeable
+  that exists only on it. A GM deleting a Level natively removes our features'
+  documents, but the features stay in the scene flag. `reloadLevels` must
+  discard features whose level is gone.
+
+### Priority 1: native levels
+- **Stairs → `changeLevel`.** v14's way between floors is one region spanning
+  the levels with a `changeLevel` behaviour: Foundry asks the token which level
+  to take. Transition stamps currently create paired `teleportToken` regions
+  instead. Keep teleport for submaps (cross-scene), not for stairs.
+- **Floors and ceilings → `defineSurface`.** A behaviour giving a region a
+  surface at its bottom, top or both that restricts light, movement, sight and
+  sound and causes occlusion or exposure. Rooms on upper levels should have
+  floors, so the level below cannot be seen through them.
+- **Per-level art.** Level documents carry `background` (src, colour, tint,
+  alpha threshold), `foreground` and `fog` images, `textures` (anchor, offset,
+  fit, scale, rotation) and `visibility.levels`. The levels panel and the
+  scene spec should set them.
+
+### Priority 2: full wall options
+- **Senses beyond on/off.** `light`, `sight` and `sound` take the whole
+  `EDGE_SENSE_TYPES` range: NONE, LIMITED (terrain walls), NORMAL, PROXIMITY
+  and DISTANCE. `move` is NONE or NORMAL. Today only NONE and NORMAL are
+  generated.
+- **One-way walls:** `dir` (BOTH, LEFT, RIGHT).
+- **Proximity thresholds:** `threshold` (light, sight, sound distances, and
+  `attenuation`).
+- **Doors:** `doorSound`, and `animation` (type such as swing or slide,
+  direction, double, duration, flip, strength, texture). Types and states are
+  already complete.
+- Rooms, room doors, door stamps, stamp occlusion walls, path walls and the
+  scene spec all take these options.
+
+### Priority 3: tiles and lights
+- **Stamp tiles.** They should take:
+  - `alpha` and `hidden`;
+  - `occlusion` (`modes`, `alpha`), for roofs and canopies that fade when a
+    token is under them;
+  - `restrictions` (`light`, `weather`);
+  - `video` (`loop`, `autoplay`, `volume`) for animated stamps.
+- **Lights.** Add the missing AmbientLight fields:
+  - `walls`, `vision` and `hidden`;
+  - in `config`: `negative` (darkness sources), `priority`, `coloration`,
+    `attenuation`, `luminosity`, `saturation`, `contrast`, `shadows` and the
+    `darkness` range.
+  - Already generated: dim, bright, colour, alpha, angle, rotation and
+    animation.
+
+### Priority 4: region behaviours and other documents
+- **Region behaviours** on terrain regions and rooms. Only `teleportToken` is
+  generated today. Still to add:
+  - `increaseMovementCost` (difficult terrain);
+  - `adjustDarknessLevel`, `suppressWeather` and `applyActiveEffect`;
+  - `displayScrollingText`, `executeMacro`, `executeScript`, `pauseGame` and
+    `toggleBehavior`.
+- **Region fields:** `color`, and `restriction` (a region acting as a barrier
+  of type light, darkness, sight, sound or move).
+- **Ambient sounds**, as stamp emitters (a generator's hum, a fountain).
+- **Notes** (map pins) and **drawings**.
+- **Scene settings:** darkness, weather, fog and environment.
+
+### From the v14 release notes (14.349 → 14.368)
+Read on 2026-09-23. The latest stable is **14.368**; the local reference
+source is 14.359, so check anything newer than that against a newer release
+before building on it. These go beyond the schema gaps above.
+
+**Engine and correctness**
+- **`foundry.documents.modifyBatch(operations)`**: many create, update and
+  delete operations, across document types and scenes, in one database
+  transaction (14.349; since 14.353 it broadcasts to every client). Use it for
+  `syncDocs`, `restore()` (undo/redo) and `realizeSpec`: one atomic write
+  instead of dozens, and no half-applied state if one fails.
+- **Region shapes beyond polygons**: rectangle, circle, ellipse, cone, ring,
+  line, emanation, token, and **grid** (`GridShapeData`, an arbitrary set of
+  grid cells, 14.356). Shapes other than polygons can be grid-based. Rooms can
+  be rectangle shapes, and terrain painted on the grid can be exact grid cells.
+- **Region fields**:
+  - `visibility`: from 14.356 the default for non-template regions is only on
+    the Region layer when unlocked;
+  - `hidden` (14.360; regions visible to GMs only, behaviours off);
+  - `highlightMode` (covered grid spaces) and `displayMeasurements`;
+  - `locked` and `ownership`;
+  - `attachment.token` (a region that moves with a token);
+  - `restriction.priority`.
+  Generated regions should set `locked` and a deliberate `visibility`.
+- **Level defaults (14.368)**: a Level's default top is now 4 × the grid
+  distance rather than 20. `nextLevelBand` should use the scene's grid
+  distance, not a fixed `DEFAULT_LEVEL_HEIGHT`.
+- **Placeables palette and sidebar tab** (14.354, 14.355): Foundry's own bulk
+  editor for selected placeables. Generated documents should carry `name`s
+  (walls, lights, tiles), so they read clearly in the Placeables tab.
+  `PlaceableObject#isFilteredOut` and `CanvasDocument#locatedInLevel` (14.364)
+  are available.
+
+**Levels**
+- **`changeLevel` refinements (14.361)**: it can restrict which movement
+  actions trigger it, and the token always arrives at the destination level's
+  base elevation. It fires until the token leaves the region.
+- **`defineSurface` "reveal elevated surface"** (14.355): roofs and balconies
+  that stay hidden from observers directly below. It pairs with the **SURFACE
+  occlusion mode**.
+- **Occlusion modes are a bit set**: NONE 0, FADE 1, SURFACE 2, RADIAL 4,
+  VISION 8, and several can combine (14.355). Tiles also have
+  `texture.alphaThreshold` (14.359), the opacity below which a texture counts
+  as not solid.
+- **Level preloading** (14.364) and the Scene Levels config tab. Submaps and
+  levels could complement each other: a building can be an interior scene or
+  upper levels of the same scene. That is the GM's choice per building, so
+  offer both.
+- `Scene#getSurfaces` / `Scene#testSurfaceCollision` (14.355, 14.356), and
+  `Level#updateRegionShapeConstraints` (14.365).
+
+**Regions and behaviours**
+- **Teleport options** (14.349, 14.353):
+  - destination placement: relative, centre, or unsnapped;
+  - random or chosen destinations;
+  - `avoidOccupied`;
+  - custom dialogs with `{scene}`, `{token}` and `{region}` placeholders;
+  - a **scene-transition animation** (14 transition types) for cross-scene
+    teleports.
+  Submap entrances should offer a transition and a custom prompt.
+- **`RegionDocument#spawnTokens`** and `TokenLayer#placeTokens` (14.352,
+  14.356): a spec or generator can declare spawn regions (encounters,
+  reinforcements).
+- **Measured templates are gone** (14.352). Area-of-effect shapes are regions
+  now, so a region preset for hazards (fire, gas) fits the same model.
+
+**Walls and doors**
+- **Door animation types** (`CONFIG.Wall.animationTypes`): ascend, descend,
+  slide, swing and swivel. Door stamps should declare theirs in the pack
+  schema, and room doors pick one.
+- **Blank walls** (14.361): walls that block nothing are grouped separately in
+  Foundry's UI.
+
+**Lights, sounds and effects**
+- **Light colouration techniques "Adaptive Attenuation" and "Natural
+  Attenuation"** (14.349).
+- **Sources respect elevation and levels** (14.353, 14.355): lights and
+  sounds are no longer unbounded vertically. Emitter elevation must be
+  correct: a stamp's light belongs at its level's base plus its height.
+- **`ParticleGenerator`** (14.355) and the **VFX module** (14.356, built on
+  animejs): native canvas particles. Stamps could declare emitters (smoke,
+  embers, sparks, dripping water) as an additive pack-schema field.
+- **`CanvasShakeEffect`** (14.355), for scripted moments rather than
+  authoring. Not a target.
+
+**Scene settings**
+- **Fog exploration modes** `CONST.FOG_EXPLORATION_MODES`: DISABLED,
+  INDIVIDUAL, SHARED (14.353).
+- **Scene transitions** (14.352) as a scene property, and the redesigned
+  scene config (Basics tab). A scene spec could set scene-level options.
+- **KTX2 and Basis textures** (14.362): GPU-compressed tile and background
+  art. Asset packs could ship them for large stamp sets.
+
+---
+
 ## Stamp pack schema — the contract
 
 The engine owns a **versioned schema** for asset packs, defined once in zod in
