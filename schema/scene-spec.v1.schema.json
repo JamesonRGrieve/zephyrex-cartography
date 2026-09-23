@@ -1,0 +1,450 @@
+{
+    "$id": "https://raw.githubusercontent.com/JamesonRGrieve/zephyrex-cartography/main/schema/scene-spec.v1.schema.json",
+    "title": "Zephyrex Cartography scene spec (v1)",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "schemaVersion": {
+            "type": "number",
+            "const": 1
+        },
+        "units": {
+            "default": "grid",
+            "description": "Unit of every coordinate, width and radius: grid squares, or scene pixels.",
+            "type": "string",
+            "enum": [
+                "grid",
+                "px"
+            ]
+        },
+        "levels": {
+            "default": [],
+            "description": "Levels to add, bottom to top, stacked above any the scene has.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "What features name in their `level`."
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "bottom": {
+                        "description": "Floor elevation (scene distance units); with `top`, sets the band.",
+                        "type": "number"
+                    },
+                    "top": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "key",
+                    "name"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "features": {
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "region"
+                            },
+                            "biome": {
+                                "type": "string",
+                                "enum": [
+                                    "water",
+                                    "grassland",
+                                    "forest",
+                                    "sand",
+                                    "rock",
+                                    "snow",
+                                    "dirt",
+                                    "lava",
+                                    "marsh",
+                                    "ice",
+                                    "ash",
+                                    "tundra",
+                                    "ocean"
+                                ]
+                            },
+                            "points": {
+                                "minItems": 3,
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "x": {
+                                            "type": "number"
+                                        },
+                                        "y": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": [
+                                        "x",
+                                        "y"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "description": "Boundary control points."
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "biome",
+                            "points"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A closed, smoothed area of one biome."
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "stroke"
+                            },
+                            "biome": {
+                                "type": "string",
+                                "enum": [
+                                    "water",
+                                    "grassland",
+                                    "forest",
+                                    "sand",
+                                    "rock",
+                                    "snow",
+                                    "dirt",
+                                    "lava",
+                                    "marsh",
+                                    "ice",
+                                    "ash",
+                                    "tundra",
+                                    "ocean"
+                                ]
+                            },
+                            "points": {
+                                "minItems": 2,
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "x": {
+                                            "type": "number"
+                                        },
+                                        "y": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": [
+                                        "x",
+                                        "y"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "description": "Centerline."
+                            },
+                            "radius": {
+                                "description": "Half-width of the swath (default: the brush default).",
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "biome",
+                            "points"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A painted biome swath along a centerline."
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "path"
+                            },
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "road",
+                                    "river"
+                                ]
+                            },
+                            "points": {
+                                "minItems": 2,
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "x": {
+                                            "type": "number"
+                                        },
+                                        "y": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": [
+                                        "x",
+                                        "y"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "description": "Centerline control points."
+                            },
+                            "halfWidth": {
+                                "description": "Half-width at every point (default: the path default).",
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                            },
+                            "walls": {
+                                "default": false,
+                                "description": "Also emit walls along the centerline.",
+                                "type": "boolean"
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "kind",
+                            "points"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A road or river."
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "room"
+                            },
+                            "points": {
+                                "minItems": 3,
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "x": {
+                                            "type": "number"
+                                        },
+                                        "y": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": [
+                                        "x",
+                                        "y"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "description": "Boundary. Split an edge with a collinear point to put a door on part of it."
+                            },
+                            "floor": {
+                                "description": "A biome or a pack \"floor.<name>\" material (default: the room default).",
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "water",
+                                            "grassland",
+                                            "forest",
+                                            "sand",
+                                            "rock",
+                                            "snow",
+                                            "dirt",
+                                            "lava",
+                                            "marsh",
+                                            "ice",
+                                            "ash",
+                                            "tundra",
+                                            "ocean"
+                                        ]
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^floor\\..+"
+                                    }
+                                ]
+                            },
+                            "wall": {
+                                "default": null,
+                                "description": "A pack \"wall.<name>\" material to draw the walls in; null leaves them undrawn.",
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "pattern": "^wall\\..+"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "doors": {
+                                "default": [],
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "segment": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991,
+                                            "description": "Perimeter segment index: segment i runs from point i to point i + 1 (the last closes the loop)."
+                                        },
+                                        "type": {
+                                            "default": "door",
+                                            "type": "string",
+                                            "enum": [
+                                                "door",
+                                                "secret"
+                                            ]
+                                        },
+                                        "state": {
+                                            "default": "closed",
+                                            "type": "string",
+                                            "enum": [
+                                                "closed",
+                                                "open",
+                                                "locked"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "segment"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "points"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A walled room. Rooms sharing an edge on one level share its walls."
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "stamp"
+                            },
+                            "stamp": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Catalog key, \"<pack module id>:<stamp id>\"."
+                            },
+                            "x": {
+                                "type": "number",
+                                "description": "Footprint centre."
+                            },
+                            "y": {
+                                "type": "number"
+                            },
+                            "variant": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                            },
+                            "rotation": {
+                                "description": "Degrees clockwise.",
+                                "type": "number"
+                            },
+                            "scale": {
+                                "description": "Multiplier over the authored footprint.",
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                            },
+                            "interior": {
+                                "anyOf": [
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "create": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "description": "Name of a new interior scene to create."
+                                            }
+                                        },
+                                        "required": [
+                                            "create"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "scene": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "description": "Id of an existing scene to link as the interior."
+                                            }
+                                        },
+                                        "required": [
+                                            "scene"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                ],
+                                "description": "Where an enterable stamp leads."
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "stamp",
+                            "x",
+                            "y"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A stamp from a loaded pack."
+                    }
+                ]
+            },
+            "description": "In drawing order: later features draw above, and earlier rooms own shared walls."
+        }
+    },
+    "required": [
+        "schemaVersion",
+        "features"
+    ],
+    "additionalProperties": false
+}

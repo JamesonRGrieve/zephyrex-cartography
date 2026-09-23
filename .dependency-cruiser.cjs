@@ -41,6 +41,13 @@ module.exports = {
             to: { path: '^src/(canvas|foundry)/' },
         },
         {
+            name: 'generate-is-pure',
+            comment: "Generators emit scene specs as data; realising a spec on a scene is the canvas layer's job.",
+            severity: 'warn',
+            from: { path: '^src/generate/' },
+            to: { path: '^src/(canvas|foundry|ui)/' },
+        },
+        {
             name: 'tools-must-not-import-canvas',
             comment: 'Tool/path state is Foundry-agnostic; the canvas layer depends on it, not the reverse.',
             severity: 'warn',

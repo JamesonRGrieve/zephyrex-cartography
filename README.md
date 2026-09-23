@@ -13,20 +13,32 @@ Dungeondraft, Inkarnate) and runs entirely inside Foundry.
   soft edges and tiled textures from swappable texture packs.
 - **Roads and rivers:** smooth, variable-width paths. Rivers taper at the ends.
   Paths can optionally emit walls along their centreline.
-- **Structures:** grid-snapped rooms with floors. Each room gets native walls
-  and a light, and a door tool turns any wall segment into a Foundry door.
-  Editing a room keeps its walls, doors and light in sync.
-- **Editing:** drag control points, delete points, erase, undo/redo, reorder.
-
-In progress: structure-aware stamps (auto occlusion walls, light-emitting and
-door stamps), multi-level scenes with stairs, and enterable buildings that open
-into linked interior scenes.
+- **Structures:** grid-snapped rooms with floor and wall materials. Each room
+  gets native walls and a light, and neighbouring rooms share their walls. A
+  door tool turns any wall segment into a Foundry door (ordinary or secret;
+  closed, open or locked). Editing a room keeps its walls, doors and light in
+  sync.
+- **Stamps:** placed as native tiles from asset packs. They are
+  structure-aware: occlusion walls traced from the art, light emitters, doors
+  that cut room walls, and containers backed by Item Piles. Variants (open,
+  lit, broken) switch in place.
+- **Levels:** multi-floor scenes as elevation bands, with stairs, ladders,
+  lifts and hatches as teleport regions. On v14 these are native Levels.
+- **Interiors:** an enterable stamp (a building, a hab) links to its own
+  interior scene, new or existing, with an entrance and an exit.
+- **Map builder:** generate a floor plan from a seed, or build any map
+  described as a scene spec (a published JSON Schema), from terrain to stamps
+  and levels. The result is ordinary, editable features, and one undo step.
+- **Editing:** drag control points, set road and river widths per point,
+  delete points, erase, undo/redo, reorder.
 
 ## Asset packs
 
 Art isn't bundled with this module. Stamps and terrain textures come from asset
 pack modules such as `zephyrex-cartography-assets`. Packs follow a versioned
-schema defined here, so anyone can publish their own.
+schema defined here (`schema/stamp-pack.v1.schema.json`), so anyone can
+publish their own. Scene specs have one too (`schema/scene-spec.v1.schema.json`),
+so any tool that writes JSON can generate maps.
 
 ## Install
 

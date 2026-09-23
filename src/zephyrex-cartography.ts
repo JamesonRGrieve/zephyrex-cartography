@@ -14,6 +14,7 @@ import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
 import { FoundryDocumentSink } from './foundry/documents';
 import { registerDoorRuntime } from './foundry/door-runtime';
+import { registerGeneratorRuntime } from './foundry/generator-runtime';
 import { createItemPilesContainers } from './foundry/item-piles';
 import { registerLevelRuntime, regionName } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
@@ -52,6 +53,8 @@ registerSubmapRuntime(() => state?.controller ?? null, packs.catalog);
 const doors = registerDoorRuntime(() => state?.controller ?? null);
 
 const materials = registerMaterialsRuntime(() => state?.controller ?? null, packs.textureRoles);
+
+const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
 // Newly loaded packs or another texture set re-render the layer.
 packs.onChange(() => {
@@ -356,6 +359,16 @@ Hooks.on('getSceneControlButtons', (controls) => {
         button: true,
         onChange: (): void => {
             levels.openPanel();
+        },
+    };
+    tools['generator'] = {
+        name: 'generator',
+        order: modeTools.length + 3,
+        title: I18N.tools.generator,
+        icon: 'fa-solid fa-wand-magic-sparkles',
+        button: true,
+        onChange: (): void => {
+            generator.open();
         },
     };
     tools['redo'] = actionTool('redo', modeTools.length + 1, I18N.tools.redo, 'fa-solid fa-rotate-right', (controller) => {

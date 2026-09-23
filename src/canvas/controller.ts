@@ -174,6 +174,8 @@ export class CartographyController {
     private brush: Brush | null = null;
     private readonly history: Feature[][] = [];
     private future: Feature[][] = [];
+    /** Inside {@link batch}: edits share the batch's one undo snapshot. */
+    private batching = false;
 
     /** Half-width (scene px) applied to newly drawn paths. */
     halfWidth = DEFAULT_HALF_WIDTH;
@@ -965,8 +967,31 @@ export class CartographyController {
         await this.store.save(this.features);
     }
 
-    /** Record the current feature list for undo, capped, and drop the redo stack. */
+    /** A fresh id for a feature built outside the controller (e.g. from a scene spec). */
+    newFeatureId(): string {
+        return this.makeId();
+    }
+
+    /** Run `work` as one edit: a single undo step takes back everything it did. */
+    async batch(work: () => Promise<void>): Promise<void> {
+        if (this.batching) {
+            await work();
+            return;
+        }
+        this.snapshot();
+        this.batching = true;
+        try {
+            await work();
+        } finally {
+            this.batching = false;
+        }
+    }
+
+    /** Record the current feature list for undo, capped, and drop the redo stack; inside a batch, the batch's one snapshot stands. */
     private snapshot(): void {
+        if (this.batching) {
+            return;
+        }
         this.history.push([...this.features]);
         if (this.history.length > MAX_HISTORY) {
             this.history.shift();

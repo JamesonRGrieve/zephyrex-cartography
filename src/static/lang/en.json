@@ -14,7 +14,29 @@
             "Redo": "Redo",
             "Stamp": "Stamps (click the canvas to place the selected stamp)",
             "Levels": "Levels",
-            "Materials": "Room materials (click a room to set its floor and walls)"
+            "Materials": "Room materials (click a room to set its floor and walls)",
+            "Generator": "Map builder (generate a floor plan, or build a scene spec)"
+        },
+        "Generator": {
+            "Title": "Map builder",
+            "FloorPlan": "Floor plan",
+            "Seed": "Seed",
+            "NewSeed": "New seed",
+            "Width": "Width (squares)",
+            "Height": "Height (squares)",
+            "MinRoom": "Smallest room",
+            "MaxRoom": "Largest room",
+            "Entrance": "Entrance",
+            "Generate": "Generate",
+            "Spec": "Scene spec (JSON)",
+            "BuildSpec": "Build spec",
+            "Built": "Built {count} features.",
+            "Refused": "The scene spec was not built:",
+            "Problems": {
+                "Level": "features.{index}: skipped, its level could not be created.",
+                "Stamp": "features.{index}: skipped, its stamp is not in any loaded pack.",
+                "Interior": "features.{index}: placed, but its interior could not be linked."
+            }
         },
         "Materials": {
             "Title": "Room materials",

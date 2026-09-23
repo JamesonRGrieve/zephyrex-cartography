@@ -103,3 +103,39 @@ describe('undo and redo with generated documents', () => {
         expect(w.regions.map((r) => r.region.id)).toEqual(['p3', 'p3']);
     });
 });
+
+describe('batch', () => {
+    it('undoes everything done inside it, nested batches included, in one step', async () => {
+        const { c, s } = makeHarness();
+        await roomAt(c, 0);
+        await c.batch(async () => {
+            await roomAt(c, 200);
+            await c.batch(async () => {
+                await roomAt(c, 400);
+            });
+        });
+        expect(s.last()).toHaveLength(3);
+        await c.undo();
+        expect(s.last().map((f) => f.id)).toEqual(['p1']);
+        await c.undo();
+        expect(s.last()).toEqual([]);
+    });
+
+    it('ends when its work throws, so later edits are undone one by one again', async () => {
+        const { c, s } = makeHarness();
+        await expect(
+            c.batch(async () => {
+                await roomAt(c, 0);
+                throw new Error('stop');
+            }),
+        ).rejects.toThrow('stop');
+        await roomAt(c, 200);
+        await c.undo();
+        expect(s.last().map((f) => f.id)).toEqual(['p1']);
+    });
+
+    it('hands out fresh feature ids', () => {
+        const { c } = makeHarness();
+        expect([c.newFeatureId(), c.newFeatureId()]).toEqual(['p1', 'p2']);
+    });
+});
