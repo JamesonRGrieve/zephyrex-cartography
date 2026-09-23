@@ -226,8 +226,12 @@ parses as a closed door.
   later re-syncs keep it as left. Each room wall doc carries its perimeter
   `segment` for that mapping.
 
-Follow-ups: room nesting; floor/wall materials beyond biomes; per-point path
-width; Scene Regions from biomes.
+**Per-point path width [done]:** in edit mode, Shift-dragging a road or river
+control point sets that point's half-width to its distance from the pointer.
+It previews live and is clamped to a visible minimum.
+
+Follow-ups: room nesting; floor/wall materials beyond biomes; Scene Regions from
+biomes.
 
 **Generative map builder [intent — last]:** build real maps
 *declaratively* with this module's own tools, not by generating images. A

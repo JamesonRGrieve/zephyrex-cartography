@@ -288,6 +288,24 @@ describe('CartographyController', () => {
         expect(s.last()[0]?.points[0]).toEqual({ x: 5, y: 5 });
     });
 
+    it('sets a path width at one point, previewing first', async () => {
+        const { c, r, s } = make();
+        c.begin({ type: 'path', kind: 'road' }, 'click');
+        c.addPoint({ x: 0, y: 0 });
+        c.addPoint({ x: 100, y: 0 });
+        await c.commit(); // p1
+        const previews = r.previews;
+        c.previewPathWidth('p1', 1, 40);
+        expect(r.previews).toBe(previews + 1);
+        expect(await c.setPathWidth('p1', 1, 40)).toBe(true);
+        const saved = s.last()[0];
+        expect(saved?.type === 'path' ? saved.halfWidths : null).toEqual([20, 40]);
+        expect(await c.setPathWidth('p1', 5, 40)).toBe(false);
+        expect(await c.setPathWidth('nope', 0, 40)).toBe(false);
+        c.previewPathWidth('nope', 0, 40);
+        expect(r.previews).toBe(previews + 1);
+    });
+
     it('deletes a control point and undoes the deletion', async () => {
         const { c, s } = make();
         c.begin({ type: 'region', biome: 'sand' }, 'click');

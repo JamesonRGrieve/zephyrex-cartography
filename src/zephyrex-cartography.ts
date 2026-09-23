@@ -34,7 +34,8 @@ interface DrawState {
     controller: CartographyController;
     container: PIXI.Container;
     mode: Mode;
-    drag: { id: string; index: number } | null;
+    /** A control point being dragged: moved, or (Shift) its path width set by distance from `anchor`. */
+    drag: { id: string; index: number; kind: 'move' | 'width'; anchor: Point } | null;
     down: Point | null;
     painting: boolean;
 }
@@ -141,10 +142,11 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
         }
         case 'edit': {
             const hit = st.controller.pickVertex(pt, EDIT_PICK_TOL);
+            const anchor = hit ? st.controller.getFeature(hit.id)?.points[hit.index] : undefined;
             if (hit && pointerEvent.button === SECONDARY_BUTTON) {
                 void st.controller.deleteVertex(hit.id, hit.index);
-            } else if (hit) {
-                st.drag = hit;
+            } else if (hit && anchor) {
+                st.drag = { ...hit, kind: pointerEvent.shiftKey ? 'width' : 'move', anchor };
             }
             return;
         }
@@ -168,6 +170,10 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
 
 function onPointerMove(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent): void {
     const pt = localPoint(pointerEvent, st.container);
+    if (st.drag?.kind === 'width') {
+        st.controller.previewPathWidth(st.drag.id, st.drag.index, distance(st.drag.anchor, pt));
+        return;
+    }
     if (st.drag) {
         st.controller.previewVertexMove(st.drag.id, st.drag.index, pt);
         return;
@@ -190,9 +196,13 @@ function onPointerMove(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
 function onPointerUp(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent): void {
     const pt = localPoint(pointerEvent, st.container);
     if (st.drag) {
-        const { id, index } = st.drag;
+        const { id, index, kind, anchor } = st.drag;
         st.drag = null;
-        void st.controller.moveVertex(id, index, pt);
+        if (kind === 'width') {
+            void st.controller.setPathWidth(id, index, distance(anchor, pt));
+        } else {
+            void st.controller.moveVertex(id, index, pt);
+        }
         st.controller.clearPreview();
         return;
     }

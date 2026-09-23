@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { deletePoint, movePoint } from './edit';
+import { deletePoint, MIN_HALF_WIDTH, movePoint, setHalfWidth } from './edit';
 import type { Feature } from './feature';
 import { makePath } from './path';
 import { makeRegion } from './region';
@@ -147,5 +147,20 @@ describe('editing a room', () => {
         const d = deletePoint(room(), 0);
         expect(d?.points).toHaveLength(3);
         expect(deletePoint(d as Feature, 0)).toBeNull();
+    });
+});
+
+describe('setHalfWidth', () => {
+    it('sets one path point width, clamped to the minimum', () => {
+        const wide = setHalfWidth(road(), 1, 12);
+        expect(wide?.type === 'path' ? wide.halfWidths : null).toEqual([5, 12, 5]);
+        const thin = setHalfWidth(road(), 0, -3);
+        expect(thin?.type === 'path' ? thin.halfWidths[0] : null).toBe(MIN_HALF_WIDTH);
+    });
+
+    it('refuses non-paths, bad indices and non-numbers', () => {
+        expect(setHalfWidth(region(), 0, 5)).toBeNull();
+        expect(setHalfWidth(road(), 9, 5)).toBeNull();
+        expect(setHalfWidth(road(), 0, Number.NaN)).toBeNull();
     });
 });

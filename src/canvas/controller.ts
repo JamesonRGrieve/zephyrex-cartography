@@ -15,7 +15,7 @@ import { pileSpec, type PileSpec } from '../tools/containers';
 import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type LightDoc, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
-import { deletePoint, movePoint } from '../tools/edit';
+import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
@@ -738,6 +738,26 @@ export class CartographyController {
         const moved = movePoint(f, index, to);
         if (moved) {
             this.renderer.preview(moved);
+        }
+    }
+
+    /** Set a path's half-width at one control point; false if it is not a path point. */
+    async setPathWidth(id: string, index: number, halfWidth: number): Promise<boolean> {
+        const f = this.getFeature(id);
+        const next = f ? setHalfWidth(f, index, halfWidth) : null;
+        if (!next) {
+            return false;
+        }
+        await this.replaceFeature(id, next);
+        return true;
+    }
+
+    /** Render a transient preview of a path width change (drag feedback), without persisting. */
+    previewPathWidth(id: string, index: number, halfWidth: number): void {
+        const f = this.getFeature(id);
+        const next = f ? setHalfWidth(f, index, halfWidth) : null;
+        if (next) {
+            this.renderer.preview(next);
         }
     }
 
