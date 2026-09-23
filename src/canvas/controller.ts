@@ -9,13 +9,14 @@
 import { nearestVertex } from '../geometry/hit';
 import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
+import { perimeterSegments, type Segment } from '../geometry/wall';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
 import type { Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { DEFAULT_HALF_WIDTH, makePath, type CartographyPath, type PathKind } from '../tools/path';
 import { makeRegion, type BiomeKind } from '../tools/region';
-import { makeRoom } from '../tools/room';
+import { makeRoom, withRoomWalls } from '../tools/room';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { FeatureRenderer } from './renderer';
 
@@ -26,6 +27,10 @@ export interface SceneStore {
 
 export interface WallEmitter {
     emit: (path: CartographyPath) => Promise<void>;
+    /** Create native Foundry walls along the segments; returns their document ids. */
+    emitSegments: (segments: readonly Segment[]) => Promise<string[]>;
+    /** Delete native Foundry walls by document id. */
+    deleteWalls: (ids: readonly string[]) => Promise<void>;
 }
 
 export type Brush =
@@ -125,16 +130,27 @@ export class CartographyController {
         if (feature.type === 'path' && feature.walls) {
             await this.wallEmitter.emit(feature);
         }
+        if (feature.type === 'room') {
+            // Rooms generate native Foundry walls; track their ids on the room for lifecycle sync.
+            const wallIds = await this.wallEmitter.emitSegments(perimeterSegments(feature.points));
+            const walled = withRoomWalls(feature, wallIds);
+            this.features = this.features.map((f) => (f.id === feature.id ? walled : f));
+            await this.store.save(this.features);
+        }
     }
 
     async remove(id: string): Promise<void> {
-        if (!this.features.some((f) => f.id === id)) {
+        const target = this.features.find((f) => f.id === id);
+        if (!target) {
             return;
         }
         this.snapshot();
         this.features = this.features.filter((f) => f.id !== id);
         this.renderer.remove(id);
         await this.store.save(this.features);
+        if (target.type === 'room' && target.wallIds.length > 0) {
+            await this.wallEmitter.deleteWalls(target.wallIds);
+        }
     }
 
     /** Topmost feature under `pt`, or null — scans front-to-back (render order). */

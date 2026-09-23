@@ -25,5 +25,6 @@ export interface FoundryScene {
     // eslint-disable-next-line no-restricted-syntax -- boundary: setFlag accepts an arbitrary serialisable flag value, exactly as the live Foundry Scene API does
     setFlag(scope: string, key: string, value: unknown): Promise<unknown>;
     createEmbeddedDocuments(embeddedName: 'Wall', data: readonly WallCreateData[]): Promise<unknown>;
+    deleteEmbeddedDocuments(embeddedName: 'Wall', ids: readonly string[]): Promise<unknown>;
 }
 /* eslint-enable @typescript-eslint/method-signature-style */

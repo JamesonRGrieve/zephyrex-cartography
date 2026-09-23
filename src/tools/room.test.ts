@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FLOOR, makeRoom, parseRoom, withRoomPoints } from './room';
+import { DEFAULT_FLOOR, makeRoom, parseRoom, withRoomPoints, withRoomWalls } from './room';
 
 const pts = [
     { x: 0, y: 0 },
@@ -10,11 +10,12 @@ const pts = [
 ];
 
 describe('makeRoom', () => {
-    it('builds a room from >= 3 points', () => {
+    it('builds a room from >= 3 points with no wall links yet', () => {
         const r = makeRoom('r', DEFAULT_FLOOR, pts);
         expect(r?.type).toBe('room');
         expect(r?.floor).toBe(DEFAULT_FLOOR);
         expect(r?.points).toHaveLength(4);
+        expect(r?.wallIds).toEqual([]);
     });
 
     it('returns null for fewer than three points', () => {
@@ -38,11 +39,28 @@ describe('withRoomPoints', () => {
     });
 });
 
+describe('withRoomWalls', () => {
+    it('records the generated wall ids', () => {
+        const r = makeRoom('r', 'dirt', pts);
+        expect(r).not.toBeNull();
+        const walled = r ? withRoomWalls(r, ['w0', 'w1', 'w2', 'w3']) : null;
+        expect(walled?.wallIds).toEqual(['w0', 'w1', 'w2', 'w3']);
+        // Re-editing points preserves the wall links.
+        const moved = walled ? withRoomPoints(walled, pts.slice(0, 3)) : null;
+        expect(moved?.wallIds).toEqual(['w0', 'w1', 'w2', 'w3']);
+    });
+});
+
 describe('parseRoom', () => {
-    it('parses a valid room', () => {
-        const r = parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts });
+    it('parses a valid room and its wall ids', () => {
+        const r = parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts, wallIds: ['w0', 'w1'] });
         expect(r?.floor).toBe('sand');
         expect(r?.points).toHaveLength(4);
+        expect(r?.wallIds).toEqual(['w0', 'w1']);
+    });
+
+    it('defaults wall ids to empty when absent', () => {
+        expect(parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts })?.wallIds).toEqual([]);
     });
 
     it('rejects non-rooms, unknown floors, and too-few points', () => {

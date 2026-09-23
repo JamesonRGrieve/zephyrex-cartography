@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import type { Segment } from '../geometry/wall';
 import type { Feature } from '../tools/feature';
 import type { CartographyPath } from '../tools/path';
 import { CartographyController, type SceneStore, type WallEmitter } from './controller';
@@ -39,8 +40,19 @@ class FakeStore implements SceneStore {
 
 class FakeWalls implements WallEmitter {
     readonly emitted: string[] = [];
+    readonly segmentCalls: number[] = [];
+    readonly deleted: string[][] = [];
     async emit(path: CartographyPath): Promise<void> {
         this.emitted.push(path.id);
+        await Promise.resolve();
+    }
+    async emitSegments(segments: readonly Segment[]): Promise<string[]> {
+        this.segmentCalls.push(segments.length);
+        await Promise.resolve();
+        return segments.map((_, i) => `w${i}`);
+    }
+    async deleteWalls(ids: readonly string[]): Promise<void> {
+        this.deleted.push([...ids]);
         await Promise.resolve();
     }
 }
@@ -96,6 +108,21 @@ describe('CartographyController', () => {
         expect(saved?.points[0]).toEqual({ x: 0, y: 0 });
         expect(saved?.points[1]).toEqual({ x: 100, y: 0 });
         expect(saved?.points[2]).toEqual({ x: 100, y: 100 });
+    });
+
+    it('generates native Foundry walls for a room and deletes them on removal', async () => {
+        const { c, w } = make();
+        c.begin({ type: 'room', floor: 'dirt' }, 'click');
+        c.addPoint({ x: 0, y: 0 });
+        c.addPoint({ x: 100, y: 0 });
+        c.addPoint({ x: 100, y: 100 });
+        await c.commit(); // p1 — a 3-point room => 3 perimeter segments
+        expect(w.segmentCalls).toEqual([3]);
+        const room = c.getFeature('p1');
+        const wallCount = room?.type === 'room' ? room.wallIds.length : -1;
+        expect(wallCount).toBe(3);
+        await c.remove('p1');
+        expect(w.deleted).toEqual([['w0', 'w1', 'w2']]);
     });
 
     it('commits a biome region', async () => {

@@ -21,6 +21,8 @@ export interface RoomFeature {
     readonly floor: BiomeKind;
     /** Grid-snapped boundary control points (>= 3). */
     readonly points: Point[];
+    /** Ids of the native Foundry WallDocuments this room generated (for lifecycle sync). */
+    readonly wallIds: string[];
 }
 
 /** Build a committed room from a boundary point stream, or null if fewer than 3 points. */
@@ -28,15 +30,20 @@ export function makeRoom(id: string, floor: BiomeKind, points: readonly Point[])
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id, floor, points: points.map((p) => ({ x: p.x, y: p.y })) };
+    return { type: 'room', id, floor, points: points.map((p) => ({ x: p.x, y: p.y })), wallIds: [] };
 }
 
-/** Rebuild a room with new boundary points (edit ops), or null if < 3. */
+/** Rebuild a room with new boundary points (edit ops), preserving floor + wall links, or null if < 3. */
 export function withRoomPoints(room: RoomFeature, points: readonly Point[]): RoomFeature | null {
     if (points.length < 3) {
         return null;
     }
     return { ...room, points: points.map((p) => ({ x: p.x, y: p.y })) };
+}
+
+/** Record the ids of the Foundry walls this room generated. */
+export function withRoomWalls(room: RoomFeature, wallIds: readonly string[]): RoomFeature {
+    return { ...room, wallIds: [...wallIds] };
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses one untyped scene-flag entry, validating shape and returning a narrow RoomFeature or null
@@ -48,5 +55,9 @@ export function parseRoom(v: unknown): RoomFeature | null {
         return null;
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
-    return makeRoom(v['id'], v['floor'], points);
+    if (points.length < 3) {
+        return null;
+    }
+    const wallIds = Array.isArray(v['wallIds']) ? v['wallIds'].filter((s): s is string => typeof s === 'string') : [];
+    return { type: 'room', id: v['id'], floor: v['floor'], points: points.map((p) => ({ x: p.x, y: p.y })), wallIds };
 }
