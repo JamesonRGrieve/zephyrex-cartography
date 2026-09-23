@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { NO_DOCS } from '../tools/documents';
 import type { Feature } from '../tools/feature';
+import type { CartographyPath } from '../tools/path';
+import type { RegionFeature } from '../tools/region';
 import { GraphicsFeatureRenderer, type DrawSurface } from './renderer';
 
 class FakeSurface implements DrawSurface {
@@ -22,7 +25,7 @@ class FakeSurface implements DrawSurface {
     }
 }
 
-const road: Feature = {
+const road: CartographyPath = {
     type: 'path',
     id: 'a',
     kind: 'road',
@@ -32,9 +35,10 @@ const road: Feature = {
     ],
     halfWidths: [5, 5],
     walls: false,
+    docs: NO_DOCS,
 };
 const river: Feature = { ...road, id: 'r', kind: 'river' };
-const lake: Feature = {
+const lake: RegionFeature = {
     type: 'region',
     id: 'b',
     biome: 'water',
@@ -44,6 +48,7 @@ const lake: Feature = {
         { x: 10, y: 10 },
         { x: 0, y: 10 },
     ],
+    docs: NO_DOCS,
 };
 const meadow: Feature = { ...lake, id: 'm', biome: 'grassland' };
 const swath: Feature = {
@@ -55,6 +60,7 @@ const swath: Feature = {
         { x: 40, y: 0 },
     ],
     radius: 15,
+    docs: NO_DOCS,
 };
 const room: Feature = {
     type: 'room',
@@ -67,8 +73,7 @@ const room: Feature = {
         { x: 0, y: 100 },
     ],
     doors: [],
-    wallIds: [],
-    lightIds: [],
+    docs: NO_DOCS,
 };
 
 describe('GraphicsFeatureRenderer', () => {

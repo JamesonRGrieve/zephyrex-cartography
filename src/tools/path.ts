@@ -6,6 +6,8 @@
  * than trusting the blob.
  */
 import type { Point } from '../geometry/spline';
+import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { isPoint, isRecord, numberArray } from './guards';
 
 /** Scene-flag key (under the module-id scope) holding the persisted feature blob. */
 export const FLAG_KEY = 'features';
@@ -22,29 +24,12 @@ export interface CartographyPath {
     readonly halfWidths: number[];
     /** Emit Foundry walls along the centerline when true. */
     readonly walls: boolean;
+    readonly docs: GeneratedDocs;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: a persisted path kind arrives as untyped scene-flag JSON; this guard is the validation that narrows it to PathKind
 function isPathKind(v: unknown): v is PathKind {
     return v === 'road' || v === 'river';
-}
-
-// eslint-disable-next-line no-restricted-syntax -- boundary: narrows an untyped scene-flag value to an indexable record so downstream field reads need no unchecked cast
-export function isRecord(v: unknown): v is Record<string, unknown> {
-    return typeof v === 'object' && v !== null;
-}
-
-// eslint-disable-next-line no-restricted-syntax -- boundary: array elements from a scene-flag blob are unknown; this guard narrows each to Point
-export function isPoint(v: unknown): v is Point {
-    if (!isRecord(v)) {
-        return false;
-    }
-    return typeof v['x'] === 'number' && typeof v['y'] === 'number';
-}
-
-// eslint-disable-next-line no-restricted-syntax -- boundary: a persisted width list is untyped scene-flag JSON; this validates and narrows it to number[]
-function toNumberArray(v: unknown): number[] {
-    return Array.isArray(v) ? v.filter((n): n is number => typeof n === 'number') : [];
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses one untyped scene-flag entry, validating the shape and returning a narrow CartographyPath or null
@@ -60,9 +45,9 @@ export function parsePath(v: unknown): CartographyPath | null {
         return null;
     }
     // A missing/short width list is normalised to a uniform default per point.
-    const rawWidths = toNumberArray(v['halfWidths']);
+    const rawWidths = numberArray(v['halfWidths']);
     const halfWidths = points.map((_, i) => rawWidths[i] ?? rawWidths[0] ?? DEFAULT_HALF_WIDTH);
-    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: v['walls'] === true };
+    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: v['walls'] === true, docs: parseGeneratedDocs(v['docs']) };
 }
 
 /** Default half-width (scene px) for a freshly drawn path. */
@@ -80,6 +65,7 @@ export function makePath(id: string, kind: PathKind, points: readonly Point[], h
         points: points.map((p) => ({ x: p.x, y: p.y })),
         halfWidths: points.map(() => halfWidth),
         walls,
+        docs: NO_DOCS,
     };
 }
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FLOOR, makeRoom, parseRoom, roomWalls, withRoomDoors, withRoomLights, withRoomPoints, withRoomWalls } from './room';
+import { NO_DOCS } from './documents';
+import { withDocs } from './feature';
+import { DEFAULT_FLOOR, makeRoom, parseRoom, roomLight, roomWalls, withRoomDoors, withRoomPoints } from './room';
 
 const pts = [
     { x: 0, y: 0 },
@@ -15,8 +17,7 @@ describe('makeRoom', () => {
         expect(r?.type).toBe('room');
         expect(r?.floor).toBe(DEFAULT_FLOOR);
         expect(r?.points).toHaveLength(4);
-        expect(r?.wallIds).toEqual([]);
-        expect(r?.lightIds).toEqual([]);
+        expect(r?.docs).toEqual(NO_DOCS);
     });
 
     it('returns null for fewer than three points', () => {
@@ -58,39 +59,37 @@ describe('doors + roomWalls', () => {
     });
 });
 
-describe('withRoomWalls', () => {
-    it('records the generated wall ids', () => {
+describe('document links', () => {
+    it('survive a points edit', () => {
         const r = makeRoom('r', 'dirt', pts);
-        expect(r).not.toBeNull();
-        const walled = r ? withRoomWalls(r, ['w0', 'w1', 'w2', 'w3']) : null;
-        expect(walled?.wallIds).toEqual(['w0', 'w1', 'w2', 'w3']);
-        // Re-editing points preserves the wall links.
-        const moved = walled ? withRoomPoints(walled, pts.slice(0, 3)) : null;
-        expect(moved?.wallIds).toEqual(['w0', 'w1', 'w2', 'w3']);
+        const linked = r ? withDocs(r, { walls: ['w0'], lights: ['L0'], tiles: [], regions: [] }) : null;
+        const moved = linked ? withRoomPoints(linked, pts.slice(0, 3)) : null;
+        expect(moved?.docs).toEqual({ walls: ['w0'], lights: ['L0'], tiles: [], regions: [] });
     });
+});
 
-    it('records the generated light ids', () => {
+describe('roomLight', () => {
+    it('centres on the vertex average and reaches the farthest corner', () => {
         const r = makeRoom('r', 'dirt', pts);
-        const lit = r ? withRoomLights(r, ['L0']) : null;
-        expect(lit?.lightIds).toEqual(['L0']);
-        // Wall + light links coexist and survive a points edit.
-        const both = lit ? withRoomWalls(lit, ['w0']) : null;
-        const moved = both ? withRoomPoints(both, pts.slice(0, 3)) : null;
-        expect(moved?.lightIds).toEqual(['L0']);
-        expect(moved?.wallIds).toEqual(['w0']);
+        expect(r ? roomLight(r) : null).toEqual({ x: 50, y: 50, dim: Math.hypot(50, 50), bright: Math.hypot(50, 50) / 2 });
     });
 });
 
 describe('parseRoom', () => {
-    it('parses a valid room and its wall ids', () => {
-        const r = parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts, wallIds: ['w0', 'w1'] });
+    it('parses a valid room and its document links', () => {
+        const r = parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts, docs: { walls: ['w0', 'w1'], lights: ['L0'] } });
         expect(r?.floor).toBe('sand');
         expect(r?.points).toHaveLength(4);
-        expect(r?.wallIds).toEqual(['w0', 'w1']);
+        expect(r?.docs).toEqual({ walls: ['w0', 'w1'], lights: ['L0'], tiles: [], regions: [] });
     });
 
-    it('defaults wall ids to empty when absent', () => {
-        expect(parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts })?.wallIds).toEqual([]);
+    it('reads the legacy flat wallIds / lightIds fields', () => {
+        const r = parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts, wallIds: ['w0', 'w1'], lightIds: ['L0'] });
+        expect(r?.docs).toEqual({ walls: ['w0', 'w1'], lights: ['L0'], tiles: [], regions: [] });
+    });
+
+    it('defaults document links to empty when absent', () => {
+        expect(parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts })?.docs).toEqual(NO_DOCS);
     });
 
     it('parses door indices', () => {

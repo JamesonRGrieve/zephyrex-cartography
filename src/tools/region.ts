@@ -5,7 +5,8 @@
  * + defensive parser + the smoothed fill outline. Pure and unit-tested.
  */
 import { closedSpline, type Point } from '../geometry/spline';
-import { isPoint, isRecord } from './path';
+import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { isPoint, isRecord } from './guards';
 
 export type BiomeKind = 'water' | 'grassland' | 'forest' | 'sand' | 'rock' | 'snow' | 'dirt' | 'lava' | 'marsh' | 'ice' | 'ash' | 'tundra' | 'ocean';
 
@@ -42,6 +43,7 @@ export interface RegionFeature {
     readonly biome: BiomeKind;
     /** Closed boundary control points (>= 3). */
     readonly points: Point[];
+    readonly docs: GeneratedDocs;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: a persisted biome value is untyped scene-flag JSON; this guard narrows it to BiomeKind
@@ -54,7 +56,7 @@ export function makeRegion(id: string, biome: BiomeKind, points: readonly Point[
     if (points.length < 3) {
         return null;
     }
-    return { type: 'region', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })) };
+    return { type: 'region', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })), docs: NO_DOCS };
 }
 
 /** Rebuild a region with new boundary points (edit ops), preserving id/biome, or null if < 3. */
@@ -85,5 +87,6 @@ export function parseRegion(v: unknown): RegionFeature | null {
         return null;
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
-    return makeRegion(v['id'], v['biome'], points);
+    const region = makeRegion(v['id'], v['biome'], points);
+    return region && { ...region, docs: parseGeneratedDocs(v['docs']) };
 }

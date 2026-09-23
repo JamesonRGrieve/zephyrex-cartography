@@ -4,6 +4,7 @@
  * (closed fills), and biome brush strokes (freehand swaths), discriminated by
  * `type`. `parseFeatures` validates the mixed scene-flag blob.
  */
+import type { GeneratedDocs } from './documents';
 import { parsePath, type CartographyPath } from './path';
 import { parseRegion, type RegionFeature } from './region';
 import { parseRoom, type RoomFeature } from './room';
@@ -21,6 +22,11 @@ export function isStroke(f: Feature): f is StrokeFeature {
 
 export function isRoom(f: Feature): f is RoomFeature {
     return f.type === 'room';
+}
+
+/** The same feature, recording the native documents it now owns. */
+export function withDocs<F extends Feature>(feature: F, docs: GeneratedDocs): F {
+    return { ...feature, docs };
 }
 
 /** Parse the mixed scene-flag blob into validated features (paths + regions + strokes). */

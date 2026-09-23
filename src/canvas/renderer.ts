@@ -5,14 +5,11 @@
  * Style is derived from the feature, so the controller just hands over features;
  * the concrete PIXI surface lives at the Foundry boundary, keeping this pure.
  */
-import { buildRibbon, ribbonOutline } from '../geometry/ribbon';
+import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import type { Feature } from '../tools/feature';
 import type { PathKind } from '../tools/path';
 import { BIOME_STYLES, regionOutline, type BiomeKind } from '../tools/region';
 import { BIOME_TEXTURE, BIOME_TINT, PATH_TEXTURE } from '../tools/texture';
-
-/** Samples per Catmull-Rom span when triangulating a ribbon. */
-export const RIBBON_SAMPLES = 12;
 
 /** Opacity for a textured fill — higher than a flat tint so the tile reads, but still blends. */
 const TEXTURE_ALPHA = 0.9;

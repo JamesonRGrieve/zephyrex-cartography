@@ -7,6 +7,9 @@
  */
 import { catmullRom, type Point } from './spline';
 
+/** Samples per Catmull-Rom span when smoothing a path (ribbon rendering and centerline walls). */
+export const RIBBON_SAMPLES = 12;
+
 export interface RibbonGeometry {
     /** Interleaved [x, y, …] — vertex 2j is the left rail, 2j+1 the right. */
     readonly positions: number[];

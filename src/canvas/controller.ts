@@ -9,14 +9,16 @@
 import { nearestVertex } from '../geometry/hit';
 import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
-import { centroid, nearestSegment, type WallSpec } from '../geometry/wall';
+import { nearestSegment } from '../geometry/wall';
+import { hasDocs, NO_DOCS, type GeneratedDocs, type LightDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
-import type { Feature } from '../tools/feature';
+import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
-import { DEFAULT_HALF_WIDTH, makePath, type CartographyPath, type PathKind } from '../tools/path';
+import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
+import { planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
-import { makeRoom, roomWalls, withRoomDoors, withRoomLights, withRoomWalls, type RoomFeature } from '../tools/room';
+import { makeRoom, withRoomDoors } from '../tools/room';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { FeatureRenderer } from './renderer';
 
@@ -25,19 +27,18 @@ export interface SceneStore {
     save: (features: readonly Feature[]) => Promise<void>;
 }
 
-export interface WallEmitter {
-    emit: (path: CartographyPath) => Promise<void>;
-    /** Create native Foundry walls (some flagged as doors); returns their document ids. */
-    emitSegments: (walls: readonly WallSpec[]) => Promise<string[]>;
-    /** Delete native Foundry walls by document id. */
-    deleteWalls: (ids: readonly string[]) => Promise<void>;
+export interface TileUpdate {
+    readonly id: string;
+    readonly tile: TileDoc;
 }
 
-export interface LightEmitter {
-    /** Create a native Foundry ambient light at (x, y); returns its document id or null. */
-    emitLight: (x: number, y: number) => Promise<string | null>;
-    /** Delete native Foundry ambient lights by document id. */
-    deleteLights: (ids: readonly string[]) => Promise<void>;
+/** Creates, updates and deletes the native Foundry documents features generate. Returns created ids in input order. */
+export interface DocumentSink {
+    createWalls: (walls: readonly WallDoc[]) => Promise<string[]>;
+    createLights: (lights: readonly LightDoc[]) => Promise<string[]>;
+    createTiles: (tiles: readonly TileDoc[]) => Promise<string[]>;
+    updateTiles: (updates: readonly TileUpdate[]) => Promise<void>;
+    deleteDocuments: (docs: GeneratedDocs) => Promise<void>;
 }
 
 export type Brush =
@@ -56,6 +57,18 @@ function swap(arr: Feature[], a: number, b: number): void {
         arr[a] = second;
         arr[b] = first;
     }
+}
+
+/** Pair existing tile ids with their new specs, index by index. */
+function pairTiles(ids: readonly string[], tiles: readonly TileDoc[]): TileUpdate[] {
+    const updates: TileUpdate[] = [];
+    ids.forEach((id, i) => {
+        const tile = tiles[i];
+        if (tile) {
+            updates.push({ id, tile });
+        }
+    });
+    return updates;
 }
 
 /** Do two feature lists carry the same ids in the same order? */
@@ -85,8 +98,7 @@ export class CartographyController {
     constructor(
         private readonly renderer: FeatureRenderer,
         private readonly store: SceneStore,
-        private readonly wallEmitter: WallEmitter,
-        private readonly lightEmitter: LightEmitter,
+        private readonly sink: DocumentSink,
         private readonly makeId: () => string,
     ) {}
 
@@ -131,19 +143,16 @@ export class CartographyController {
         if (!feature) {
             return;
         }
+        await this.add(feature);
+    }
+
+    /** Add a committed feature: render, persist, then generate its native documents. */
+    async add(feature: Feature): Promise<void> {
         this.snapshot();
         this.features.push(feature);
         this.renderer.set(feature.id, feature);
         await this.store.save(this.features);
-        if (feature.type === 'path' && feature.walls) {
-            await this.wallEmitter.emit(feature);
-        }
-        if (feature.type === 'room') {
-            // Rooms generate native Foundry walls + a centre light; track their ids for lifecycle sync.
-            const synced = await this.syncRoomDocs(feature);
-            this.features = this.features.map((f) => (f.id === feature.id ? synced : f));
-            await this.store.save(this.features);
-        }
+        await this.syncDocs(feature);
     }
 
     async remove(id: string): Promise<void> {
@@ -155,8 +164,8 @@ export class CartographyController {
         this.features = this.features.filter((f) => f.id !== id);
         this.renderer.remove(id);
         await this.store.save(this.features);
-        if (target.type === 'room') {
-            await this.deleteRoomDocs(target);
+        if (hasDocs(target.docs)) {
+            await this.sink.deleteDocuments(target.docs);
         }
     }
 
@@ -338,33 +347,39 @@ export class CartographyController {
         this.features = this.features.map((f) => (f.id === id ? next : f));
         this.renderer.set(id, next);
         await this.store.save(this.features);
-        if (next.type === 'room') {
-            // Re-sync native docs: drop the room's old walls/lights, re-emit from the new geometry.
-            if (old.type === 'room') {
-                await this.deleteRoomDocs(old);
-            }
-            const synced = await this.syncRoomDocs(next);
-            this.features = this.features.map((f) => (f.id === id ? synced : f));
-            await this.store.save(this.features);
-        }
+        await this.syncDocs(next);
     }
 
-    /** Emit a room's native Foundry walls + centre light, returning the room stamped with their ids. */
-    private async syncRoomDocs(room: RoomFeature): Promise<RoomFeature> {
-        const wallIds = await this.wallEmitter.emitSegments(roomWalls(room));
-        const c = centroid(room.points);
-        const lightId = await this.lightEmitter.emitLight(c.x, c.y);
-        return withRoomLights(withRoomWalls(room, wallIds), lightId !== null ? [lightId] : []);
-    }
-
-    /** Delete the native Foundry walls + lights a room generated. */
-    private async deleteRoomDocs(room: RoomFeature): Promise<void> {
-        if (room.wallIds.length > 0) {
-            await this.wallEmitter.deleteWalls(room.wallIds);
+    /**
+     * Bring a feature's native documents in line with its plan: tiles are
+     * updated in place when the count is unchanged (keeping their ids, and
+     * anything a GM set on them), everything else is replaced. Records the
+     * resulting ids on the feature and persists.
+     */
+    private async syncDocs(feature: Feature): Promise<void> {
+        const plan = planDocuments(feature);
+        const old = feature.docs;
+        const planned = plan.walls.length + plan.lights.length + plan.tiles.length;
+        if (planned === 0 && !hasDocs(old)) {
+            return;
         }
-        if (room.lightIds.length > 0) {
-            await this.lightEmitter.deleteLights(room.lightIds);
+        const keepTiles = old.tiles.length > 0 && old.tiles.length === plan.tiles.length;
+        await this.sink.deleteDocuments({ ...old, tiles: keepTiles ? [] : old.tiles });
+        let tiles: readonly string[];
+        if (keepTiles) {
+            await this.sink.updateTiles(pairTiles(old.tiles, plan.tiles));
+            tiles = old.tiles;
+        } else {
+            tiles = plan.tiles.length > 0 ? await this.sink.createTiles(plan.tiles) : [];
         }
+        const docs: GeneratedDocs = {
+            ...NO_DOCS,
+            walls: plan.walls.length > 0 ? await this.sink.createWalls(plan.walls) : [],
+            lights: plan.lights.length > 0 ? await this.sink.createLights(plan.lights) : [],
+            tiles,
+        };
+        this.features = this.features.map((f) => (f.id === feature.id ? withDocs(f, docs) : f));
+        await this.store.save(this.features);
     }
 
     /** Record the current feature list for undo, capped, and drop the redo stack. */
