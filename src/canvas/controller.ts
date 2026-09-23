@@ -13,7 +13,17 @@ import { nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
-import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type LightDoc, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import {
+    hasDocs,
+    NO_DOCS,
+    type DoorState,
+    type GeneratedDocs,
+    type LightDoc,
+    type RegionDoc,
+    type SoundDoc,
+    type TileDoc,
+    type WallDoc,
+} from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
@@ -117,6 +127,7 @@ export interface TileUpdate {
 export interface DocumentSink {
     createWalls: (walls: readonly WallDoc[]) => Promise<string[]>;
     createLights: (lights: readonly LightDoc[]) => Promise<string[]>;
+    createSounds: (sounds: readonly SoundDoc[]) => Promise<string[]>;
     createTiles: (tiles: readonly TileDoc[]) => Promise<string[]>;
     updateTiles: (updates: readonly TileUpdate[]) => Promise<void>;
     /** Create regions, wiring each `teleport.targets` index to the created region it names. */
@@ -987,7 +998,7 @@ export class CartographyController {
     private async syncDocs(feature: Feature): Promise<void> {
         const plan = planDocuments(feature, this.planContext());
         const old = feature.docs;
-        const planned = plan.walls.length + plan.lights.length + plan.tiles.length + plan.regions.length;
+        const planned = plan.walls.length + plan.lights.length + plan.tiles.length + plan.regions.length + plan.sounds.length;
         if (planned === 0 && !hasDocs(old)) {
             return;
         }
@@ -1006,6 +1017,7 @@ export class CartographyController {
             lights: plan.lights.length > 0 ? await this.sink.createLights(plan.lights) : [],
             tiles,
             regions: plan.regions.length > 0 ? await this.sink.createRegions(plan.regions) : [],
+            sounds: plan.sounds.length > 0 ? await this.sink.createSounds(plan.sounds) : [],
         };
         this.features = this.features.map((f) => (f.id === feature.id ? withDocs(f, docs) : f));
         await this.store.save(this.features);

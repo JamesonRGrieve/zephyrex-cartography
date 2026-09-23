@@ -54,6 +54,20 @@ export interface TileCreateData extends OnLevels {
     readonly flags: Readonly<Record<string, { readonly featureId: string }>>;
 }
 
+export interface SoundCreateData extends OnLevels {
+    readonly name: string;
+    readonly x: number;
+    readonly y: number;
+    readonly elevation: number;
+    /** Scene distance units. */
+    readonly radius: number;
+    readonly path: string;
+    readonly volume: number;
+    readonly repeat: boolean;
+    readonly walls: boolean;
+    readonly easing: boolean;
+}
+
 interface TileUpdateData extends TileCreateData {
     readonly _id: string;
 }
@@ -88,9 +102,9 @@ interface LevelUpdateData {
     readonly elevation?: { readonly bottom: number; readonly top: number };
 }
 
-export type EmbeddedName = 'Wall' | 'AmbientLight' | 'Tile' | 'Region' | 'Level';
+export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level';
 
-type EmbeddedCreateData = WallCreateData | LightCreateData | TileCreateData | RegionCreateData | LevelCreateData;
+type EmbeddedCreateData = WallCreateData | LightCreateData | SoundCreateData | TileCreateData | RegionCreateData | LevelCreateData;
 
 export interface EmbeddedCollection {
     readonly has: (id: string) => boolean;
@@ -125,6 +139,7 @@ export interface FoundryScene {
     readonly grid: { readonly size: number; readonly distance: number };
     readonly walls: EmbeddedCollection;
     readonly lights: EmbeddedCollection;
+    readonly sounds: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
     readonly regions: EmbeddedCollection;
     readonly levels: { readonly contents: readonly NativeLevel[]; readonly size: number };

@@ -30,6 +30,22 @@ test('a placed stamp is a native tile centred on its point, with its light', asy
     await expect(world.locator('#board')).toHaveScreenshot('lamp-placed.png');
 });
 
+test('a stamp emits its ambient sound as a native AmbientSound, silenced by a variant that sets none', async ({ world }) => {
+    const sound = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const id = await controller?.placeStamp({ stamp: 'zc-e2e-pack:lamp', x: 500, y: 400 });
+        const placed = canvas?.scene?.sounds.contents[0];
+        const before = placed && { name: placed.name, x: placed.x, y: placed.y, radius: placed.radius, path: placed.path, volume: placed.volume };
+        if (id !== undefined && id !== null) {
+            await controller?.setStampVariant(id, 1);
+        }
+        return { before, after: canvas?.scene?.sounds.size };
+    });
+    // 3 grid units at the scene's 5 distance units per square; the path served from the pack module.
+    expect(sound.before).toEqual({ name: 'Lamp sound', x: 500, y: 400, radius: 15, path: 'modules/zc-e2e-pack/sounds/silence.wav', volume: 0.5 });
+    expect(sound.after).toBe(0);
+});
+
 test('switching to an unlit variant swaps the image and removes the light', async ({ world }) => {
     const after = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();

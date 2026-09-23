@@ -95,6 +95,26 @@ export interface LightDoc {
     readonly level: string | null;
 }
 
+/** A native ambient sound, emitted by a stamp. */
+export interface SoundDoc {
+    /** The emitting stamp's pack name. */
+    readonly name: string;
+    readonly x: number;
+    readonly y: number;
+    /** Audible radius in scene px. */
+    readonly radius: number;
+    /** Served audio URL. */
+    readonly path: string;
+    readonly volume: number;
+    readonly repeat: boolean;
+    /** Walls muffle the sound. */
+    readonly walls: boolean;
+    /** Volume falls off with distance. */
+    readonly easing: boolean;
+    readonly elevation: number;
+    readonly level: string | null;
+}
+
 export interface TileDoc {
     /** The stamp's pack name, so the tile reads clearly in Foundry's Placeables tab. */
     readonly name: string;
@@ -145,12 +165,13 @@ export interface GeneratedDocs {
     readonly lights: readonly string[];
     readonly tiles: readonly string[];
     readonly regions: readonly string[];
+    readonly sounds: readonly string[];
 }
 
-export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], regions: [] };
+export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], regions: [], sounds: [] };
 
 export function hasDocs(docs: GeneratedDocs): boolean {
-    return docs.walls.length + docs.lights.length + docs.tiles.length + docs.regions.length > 0;
+    return docs.walls.length + docs.lights.length + docs.tiles.length + docs.regions.length + docs.sounds.length > 0;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses the persisted generated-docs record of a scene-flag feature entry
@@ -158,5 +179,12 @@ export function parseGeneratedDocs(v: unknown): GeneratedDocs {
     if (!isRecord(v)) {
         return NO_DOCS;
     }
-    return { walls: stringArray(v['walls']), lights: stringArray(v['lights']), tiles: stringArray(v['tiles']), regions: stringArray(v['regions']) };
+    return {
+        walls: stringArray(v['walls']),
+        lights: stringArray(v['lights']),
+        tiles: stringArray(v['tiles']),
+        regions: stringArray(v['regions']),
+        // Recorded since stamps emit sounds; an older record has none.
+        sounds: stringArray(v['sounds']),
+    };
 }

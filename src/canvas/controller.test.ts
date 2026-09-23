@@ -51,7 +51,7 @@ describe('CartographyController', () => {
         await c.commit(); // p1 — a 3-point room => 3 perimeter segments + 1 centre light
         expect(d.walls.map((batch) => batch.length)).toEqual([3]);
         expect(d.lights).toHaveLength(1);
-        expect(c.getFeature('p1')?.docs).toEqual({ walls: ['w0', 'w1', 'w2'], lights: ['L0'], tiles: [], regions: [] });
+        expect(c.getFeature('p1')?.docs).toEqual({ walls: ['w0', 'w1', 'w2'], lights: ['L0'], tiles: [], regions: [], sounds: [] });
         expect(s.last()[0]?.docs.walls).toEqual(['w0', 'w1', 'w2']);
         await c.remove('p1');
         expect(d.deletedIds()).toEqual(['w0', 'w1', 'w2', 'L0']);
@@ -185,7 +185,7 @@ describe('CartographyController', () => {
                 ],
                 halfWidths: [10, 10],
                 walls: false,
-                docs: { walls: [], lights: [], tiles: [], regions: [] },
+                docs: { walls: [], lights: [], tiles: [], regions: [], sounds: [] },
                 level: null,
             },
         ];
@@ -206,7 +206,7 @@ describe('CartographyController', () => {
                     { x: 5, y: 0 },
                     { x: 5, y: 5 },
                 ],
-                docs: { walls: [], lights: [], tiles: [], regions: [] },
+                docs: { walls: [], lights: [], tiles: [], regions: [], sounds: [] },
                 level: null,
             },
         ];

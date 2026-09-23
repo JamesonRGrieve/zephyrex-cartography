@@ -7,7 +7,7 @@
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, loadPacks } from '../stamps/catalog';
 import type { PileSpec } from '../tools/containers';
-import type { GeneratedDocs, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
+import type { GeneratedDocs, LightDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
 import type { SceneFrame } from '../tools/submap';
@@ -65,10 +65,11 @@ class FakeSink implements DocumentSink {
     readonly tiles: TileDoc[][] = [];
     readonly tileUpdates: TileUpdate[][] = [];
     readonly regions: RegionDoc[][] = [];
+    readonly sounds: SoundDoc[][] = [];
     readonly deleted: GeneratedDocs[] = [];
-    private readonly counters = { w: 0, L: 0, t: 0, r: 0 };
+    private readonly counters = { w: 0, L: 0, t: 0, r: 0, s: 0 };
 
-    private issue(prefix: 'w' | 'L' | 't' | 'r', count: number): string[] {
+    private issue(prefix: 'w' | 'L' | 't' | 'r' | 's', count: number): string[] {
         return Array.from({ length: count }, () => {
             const id = `${prefix}${this.counters[prefix]}`;
             this.counters[prefix] += 1;
@@ -85,6 +86,11 @@ class FakeSink implements DocumentSink {
         this.lights.push([...lights]);
         await Promise.resolve();
         return this.issue('L', lights.length);
+    }
+    async createSounds(sounds: readonly SoundDoc[]): Promise<string[]> {
+        this.sounds.push([...sounds]);
+        await Promise.resolve();
+        return this.issue('s', sounds.length);
     }
     async createTiles(tiles: readonly TileDoc[]): Promise<string[]> {
         this.tiles.push([...tiles]);
@@ -106,7 +112,7 @@ class FakeSink implements DocumentSink {
     }
     /** Every id deleted so far, flattened across document types. */
     deletedIds(): string[] {
-        return this.deleted.flatMap((d) => [...d.walls, ...d.lights, ...d.tiles, ...d.regions]);
+        return this.deleted.flatMap((d) => [...d.walls, ...d.lights, ...d.tiles, ...d.regions, ...d.sounds]);
     }
 }
 

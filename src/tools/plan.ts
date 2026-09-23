@@ -11,7 +11,17 @@ import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { catmullRom, distanceToSegment, type Point } from '../geometry/spline';
 import { cutSegment, perimeterSegments, type Segment, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
-import { BLOCKS_ALL, type LightDoc, type RegionDoc, type SenseBlock, senseLevel, type TileDoc, type WallDoc, type WallThreshold } from './documents';
+import {
+    BLOCKS_ALL,
+    type LightDoc,
+    type RegionDoc,
+    type SenseBlock,
+    senseLevel,
+    type SoundDoc,
+    type TileDoc,
+    type WallDoc,
+    type WallThreshold,
+} from './documents';
 import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
 import type { Feature } from './feature';
 import { adjacentLevel, findLevel, levelElevation, type Level } from './levels';
@@ -26,9 +36,10 @@ export interface DocumentPlan {
     readonly lights: readonly LightDoc[];
     readonly tiles: readonly TileDoc[];
     readonly regions: readonly RegionDoc[];
+    readonly sounds: readonly SoundDoc[];
 }
 
-const EMPTY_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [] };
+const EMPTY_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [], sounds: [] };
 
 /** What a feature's plan may depend on besides the feature itself. */
 export interface PlanContext {
@@ -234,15 +245,39 @@ function entranceRegion(stamp: StampFeature, levels: readonly Level[]): RegionDo
     };
 }
 
+/** The stamp's ambient sound, if its current variant emits one. The radius goes from grid units to px. */
+function stampSound(stamp: StampFeature, floor: Floor): SoundDoc | null {
+    const sound = stamp.behaviour.sound;
+    if (sound === null || sound === undefined) {
+        return null;
+    }
+    const at = stampPoint(stamp, sound.offset ?? CENTRE);
+    return {
+        name: stamp.name,
+        x: at.x,
+        y: at.y,
+        radius: sound.radius * stamp.gridSize,
+        path: sound.path,
+        volume: sound.volume,
+        repeat: sound.repeat,
+        walls: sound.walls,
+        easing: sound.easing,
+        elevation: floor.elevation + stamp.elevation,
+        level: floor.level,
+    };
+}
+
 function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
     const floor = floorOf(stamp, context);
     const light = stampLight(stamp, floor);
+    const sound = stampSound(stamp, floor);
     const door = stampDoorWall(stamp, floor);
     return {
         walls: [...(door ? [door] : []), ...stampWalls(stamp, floor)],
         tiles: [stampTile(stamp, floor)],
         lights: light ? [light] : [],
         regions: [...transitionRegions(stamp, context.levels), ...[entranceRegion(stamp, context.levels)].filter((r): r is RegionDoc => r !== null)],
+        sounds: sound ? [sound] : [],
     };
 }
 
@@ -285,6 +320,7 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
         lights: light.dim > 0 ? [{ source: { kind: 'room' }, ...light, elevation: floor.elevation, level: floor.level }] : [],
         tiles: [],
         regions: [],
+        sounds: [],
     };
 }
 

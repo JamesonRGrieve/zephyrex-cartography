@@ -6,10 +6,10 @@
  * this is only the create/update/delete boundary.
  */
 import type { DocumentSink, TileUpdate } from '../canvas/controller';
-import type { GeneratedDocs, LightDoc, LightSource, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
+import type { GeneratedDocs, LightDoc, LightSource, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
 import { isRecord } from '../tools/guards';
 import type { EmbeddedCollection, EmbeddedName, FoundryScene } from './boundary';
-import { lightCreateData, regionCreateData, tileCreateData, wallCreateData } from './translate';
+import { lightCreateData, regionCreateData, soundCreateData, tileCreateData, wallCreateData } from './translate';
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses Foundry's createEmbeddedDocuments result (an array of created documents) to collect their ids
 function extractIds(created: unknown): string[] {
@@ -32,6 +32,8 @@ export interface SinkOptions {
     readonly regionName: (region: RegionDoc) => string;
     /** The display name of a generated light. */
     readonly lightName: (source: LightSource) => string;
+    /** The display name of a stamp's sound, from the stamp's name. */
+    readonly soundName: (stampName: string) => string;
 }
 
 export class FoundryDocumentSink implements DocumentSink {
@@ -56,6 +58,18 @@ export class FoundryDocumentSink implements DocumentSink {
                   await scene.createEmbeddedDocuments(
                       'AmbientLight',
                       lights.map((l) => lightCreateData(l, scene.grid, this.options.lightName(l.source))),
+                  ),
+              )
+            : [];
+    }
+
+    async createSounds(sounds: readonly SoundDoc[]): Promise<string[]> {
+        const scene = this.getScene();
+        return scene
+            ? extractIds(
+                  await scene.createEmbeddedDocuments(
+                      'AmbientSound',
+                      sounds.map((s) => soundCreateData(s, scene.grid, this.options.soundName(s.name))),
                   ),
               )
             : [];
@@ -96,6 +110,7 @@ export class FoundryDocumentSink implements DocumentSink {
         const batches: [EmbeddedName, EmbeddedCollection, readonly string[]][] = [
             ['Wall', scene.walls, docs.walls],
             ['AmbientLight', scene.lights, docs.lights],
+            ['AmbientSound', scene.sounds, docs.sounds],
             ['Tile', scene.tiles, docs.tiles],
             ['Region', scene.regions, docs.regions],
         ];

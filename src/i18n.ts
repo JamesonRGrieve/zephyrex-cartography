@@ -80,6 +80,9 @@ export const I18N = {
         stamp: key('Lights.Stamp'),
         room: key('Lights.Room'),
     },
+    sounds: {
+        stamp: key('Sounds.Stamp'),
+    },
     regions: {
         transition: key('Regions.Transition'),
         entrance: key('Regions.Entrance'),

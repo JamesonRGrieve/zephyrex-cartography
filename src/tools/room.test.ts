@@ -92,9 +92,9 @@ describe('doors + roomWalls', () => {
 describe('document links', () => {
     it('survive a points edit', () => {
         const r = makeRoom('r', 'dirt', pts);
-        const linked = r ? withDocs(r, { walls: ['w0'], lights: ['L0'], tiles: [], regions: [] }) : null;
+        const linked = r ? withDocs(r, { walls: ['w0'], lights: ['L0'], tiles: [], regions: [], sounds: [] }) : null;
         const moved = linked ? withRoomPoints(linked, pts.slice(0, 3)) : null;
-        expect(moved?.docs).toEqual({ walls: ['w0'], lights: ['L0'], tiles: [], regions: [] });
+        expect(moved?.docs).toEqual({ walls: ['w0'], lights: ['L0'], tiles: [], regions: [], sounds: [] });
     });
 });
 
@@ -110,12 +110,12 @@ describe('parseRoom', () => {
         const r = parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts, docs: { walls: ['w0', 'w1'], lights: ['L0'] } });
         expect(r?.floor).toBe('sand');
         expect(r?.points).toHaveLength(4);
-        expect(r?.docs).toEqual({ walls: ['w0', 'w1'], lights: ['L0'], tiles: [], regions: [] });
+        expect(r?.docs).toEqual({ walls: ['w0', 'w1'], lights: ['L0'], tiles: [], regions: [], sounds: [] });
     });
 
     it('reads the legacy flat wallIds / lightIds fields', () => {
         const r = parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts, wallIds: ['w0', 'w1'], lightIds: ['L0'] });
-        expect(r?.docs).toEqual({ walls: ['w0', 'w1'], lights: ['L0'], tiles: [], regions: [] });
+        expect(r?.docs).toEqual({ walls: ['w0', 'w1'], lights: ['L0'], tiles: [], regions: [], sounds: [] });
     });
 
     it('defaults document links to empty when absent', () => {

@@ -8,8 +8,8 @@
 import type { TileFrame } from '../canvas/controller';
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
-import type { DoorState, DoorType, LightDoc, RegionDoc, SenseLevel, TileDoc, WallDirection, WallDoc, WallThreshold } from '../tools/documents';
-import type { LightCreateData, RegionCreateData, TileCreateData, WallCreateData } from './boundary';
+import type { DoorState, DoorType, LightDoc, RegionDoc, SenseLevel, SoundDoc, TileDoc, WallDirection, WallDoc, WallThreshold } from '../tools/documents';
+import type { LightCreateData, RegionCreateData, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
 
 /** `CONST.WALL_DOOR_TYPES`. */
 const DOOR_TYPES: Record<DoorType, number> = { none: 0, door: 1, secret: 2 };
@@ -96,6 +96,22 @@ export function lightCreateData(light: LightDoc, grid: SceneGrid, displayName: s
             ...(light.animation === undefined ? {} : { animation: light.animation }),
         },
         ...levelsField(light.level),
+    };
+}
+
+export function soundCreateData(sound: SoundDoc, grid: SceneGrid, displayName: string): SoundCreateData {
+    return {
+        name: displayName,
+        x: sound.x,
+        y: sound.y,
+        elevation: sound.elevation,
+        radius: pxToDistance(sound.radius, grid),
+        path: sound.path,
+        volume: sound.volume,
+        repeat: sound.repeat,
+        walls: sound.walls,
+        easing: sound.easing,
+        ...levelsField(sound.level),
     };
 }
 

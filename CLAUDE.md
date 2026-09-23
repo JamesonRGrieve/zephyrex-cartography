@@ -587,8 +587,10 @@ imports).
     `direction` and `threshold`, and `container` pile options (type, state,
     distance, inspection, sounds). A variant's `container` override is
     followed too: switching to a variant that is not a container removes the
-    pile, and switching back (or undoing) makes a fresh one.
-  - Not yet realised: the other new fields (particles, sound, tile, surface,
+    pile, and switching back (or undoing) makes a fresh one. `sound` becomes
+    a native AmbientSound ("<stamp> sound") at its offset, on the stamp's
+    level, removed by a variant with `sound: null`.
+  - Not yet realised: the other new fields (particles, tile, surface,
     terrain, the new light and door fields, transition movement, and pile
     `states`). The engine takes each one up as its roadmap priority lands.
     Packs may author them now; they are validated and snapshotted on placed

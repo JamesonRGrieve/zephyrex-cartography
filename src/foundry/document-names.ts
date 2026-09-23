@@ -21,6 +21,11 @@ export function regionName(region: RegionDoc): string {
     return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
 }
 
+/** A stamp's sound's display name: "Generator sound". */
+export function soundName(stampName: string): string {
+    return format(I18N.sounds.stamp, { name: stampName });
+}
+
 /** A generated light's display name: "Brass Lamp light", or "Room light". */
 export function lightName(source: LightSource): string {
     return source.kind === 'stamp' ? format(I18N.lights.stamp, { name: source.name }) : localize(I18N.lights.room);

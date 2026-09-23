@@ -4,12 +4,17 @@ import { hasDocs, NO_DOCS, parseGeneratedDocs } from './documents';
 
 describe('generated docs', () => {
     it('parses a persisted record, dropping junk ids', () => {
-        expect(parseGeneratedDocs({ walls: ['a', 3], lights: ['b'], tiles: 'x' })).toEqual({ walls: ['a'], lights: ['b'], tiles: [], regions: [] });
+        expect(parseGeneratedDocs({ walls: ['a', 3], lights: ['b'], tiles: 'x' })).toEqual({ walls: ['a'], lights: ['b'], tiles: [], regions: [], sounds: [] });
         expect(parseGeneratedDocs(null)).toEqual(NO_DOCS);
     });
 
     it('reports whether any documents are owned', () => {
         expect(hasDocs(NO_DOCS)).toBe(false);
         expect(hasDocs({ ...NO_DOCS, regions: ['r'] })).toBe(true);
+        expect(hasDocs({ ...NO_DOCS, sounds: ['s'] })).toBe(true);
+    });
+
+    it('reads recorded sounds', () => {
+        expect(parseGeneratedDocs({ sounds: ['s0', 7] }).sounds).toEqual(['s0']);
     });
 });

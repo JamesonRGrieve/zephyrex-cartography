@@ -204,6 +204,47 @@ describe('CartographyController door stamps', () => {
 });
 
 describe('CartographyController stamps', () => {
+    it('emits its ambient sound at the offset, radius in px, and silences it for a variant that sets none', async () => {
+        const humming = catalogStamps([
+            {
+                id: 'generator',
+                name: 'Generator',
+                category: 'Machinery',
+                scale: 'interior',
+                perspective: 'top-down',
+                sound: { path: 'hum.ogg', radius: 2, volume: 0.3, offset: { x: 1, y: 0.5 } },
+                variants: [
+                    { state: 'running', image: 'on.png', width: 100, height: 100 },
+                    { state: 'off', image: 'off.png', width: 100, height: 100, sound: null },
+                ],
+            },
+        ]);
+        const { c, d } = makeHarness(humming);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:generator', x: 250, y: 250 });
+        expect(d.sounds).toEqual([
+            [
+                {
+                    name: 'Generator',
+                    x: 300,
+                    y: 250,
+                    radius: 200,
+                    path: 'modules/pack/hum.ogg',
+                    volume: 0.3,
+                    repeat: true,
+                    walls: true,
+                    easing: true,
+                    elevation: 0,
+                    level: null,
+                },
+            ],
+        ]);
+        expect(c.getFeature('p1')?.docs.sounds).toEqual(['s0']);
+        await c.setStampVariant('p1', 1);
+        expect(c.getFeature('p1')?.docs.sounds).toEqual([]);
+        expect(d.deletedIds()).toContain('s0');
+    });
+
     it('places a stamp as a tracked native tile and removes it with the feature', async () => {
         const { c, d, s } = makeHarness(stamps);
         c.grid = { size: 100, originX: 0, originY: 0 };

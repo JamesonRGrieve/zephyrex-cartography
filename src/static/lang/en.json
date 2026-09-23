@@ -92,6 +92,9 @@
             "Stamp": "{name} light",
             "Room": "Room light"
         },
+        "Sounds": {
+            "Stamp": "{name} sound"
+        },
         "Regions": {
             "Entrance": "Enter {scene}",
             "Exit": "Back to {scene}",

@@ -42,7 +42,7 @@ describe('undo and redo with generated documents', () => {
         await c.undo();
         expect(d.deletedIds()).toEqual(['w0', 'w1', 'w2', 'L0']);
         await c.redo();
-        expect(c.getFeature('p1')?.docs).toEqual({ walls: ['w3', 'w4', 'w5'], lights: ['L1'], tiles: [], regions: [] });
+        expect(c.getFeature('p1')?.docs).toEqual({ walls: ['w3', 'w4', 'w5'], lights: ['L1'], tiles: [], regions: [], sounds: [] });
     });
 
     it('undoing a delete brings the documents back', async () => {

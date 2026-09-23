@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
-import { doorStateFromDs, lightCreateData, pxToDistance, regionCreateData, regionUuid, tileCreateData, tileFrame, wallCreateData } from './translate';
+import {
+    doorStateFromDs,
+    lightCreateData,
+    pxToDistance,
+    regionCreateData,
+    regionUuid,
+    soundCreateData,
+    tileCreateData,
+    tileFrame,
+    wallCreateData,
+} from './translate';
 
 const GRID = { size: 100, distance: 5 };
 
@@ -132,6 +142,30 @@ describe('tileCreateData', () => {
             rotation: 90,
             elevation: 5,
             flags: { 'zephyrex-cartography': { featureId: 'f1' } },
+            levels: ['L1'],
+        });
+    });
+});
+
+describe('soundCreateData', () => {
+    it('converts the radius to distance units and keeps the level', () => {
+        expect(
+            soundCreateData(
+                { name: 'Lamp', x: 1, y: 2, radius: 300, path: 'hum.ogg', volume: 0.4, repeat: true, walls: false, easing: true, elevation: 3, level: 'L1' },
+                GRID,
+                'Lamp sound',
+            ),
+        ).toEqual({
+            name: 'Lamp sound',
+            x: 1,
+            y: 2,
+            elevation: 3,
+            radius: 15,
+            path: 'hum.ogg',
+            volume: 0.4,
+            repeat: true,
+            walls: false,
+            easing: true,
             levels: ['L1'],
         });
     });

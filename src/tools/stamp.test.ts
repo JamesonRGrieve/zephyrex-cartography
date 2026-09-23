@@ -64,7 +64,7 @@ describe('makeStamp', () => {
 describe('variants and frames', () => {
     it('changes variant keeping centre, rotation and elevation', () => {
         const s = stampOf(lamp, { rotation: 45, elevation: 3 });
-        const next = lamp ? withStampVariant({ ...s, docs: { walls: [], lights: [], tiles: ['t0'], regions: [] } }, lamp, 1, 50) : null;
+        const next = lamp ? withStampVariant({ ...s, docs: { walls: [], lights: [], tiles: ['t0'], regions: [], sounds: [] } }, lamp, 1, 50) : null;
         expect(next).toMatchObject({ variant: 1, src: 'modules/pack/stamps/unlit.png', width: 25, height: 25, rotation: 45, elevation: 3 });
         expect(next?.points).toEqual(s.points);
         expect(next?.behaviour.light).toBeNull();
