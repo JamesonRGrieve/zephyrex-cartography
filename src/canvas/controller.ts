@@ -297,13 +297,24 @@ export class CartographyController {
 
     /** Swap the feature with `id` for `next`, snapshotting for undo, then persist + redraw it. */
     private async replaceFeature(id: string, next: Feature): Promise<void> {
-        if (!this.features.some((f) => f.id === id)) {
+        const old = this.features.find((f) => f.id === id);
+        if (!old) {
             return;
         }
         this.snapshot();
         this.features = this.features.map((f) => (f.id === id ? next : f));
         this.renderer.set(id, next);
         await this.store.save(this.features);
+        if (next.type === 'room') {
+            // Re-sync native walls: drop the room's old walls, re-emit from the new perimeter.
+            if (old.type === 'room' && old.wallIds.length > 0) {
+                await this.wallEmitter.deleteWalls(old.wallIds);
+            }
+            const wallIds = await this.wallEmitter.emitSegments(perimeterSegments(next.points));
+            const walled = withRoomWalls(next, wallIds);
+            this.features = this.features.map((f) => (f.id === id ? walled : f));
+            await this.store.save(this.features);
+        }
     }
 
     /** Record the current feature list for undo, capped, and drop the redo stack. */

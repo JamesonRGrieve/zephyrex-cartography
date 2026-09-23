@@ -125,6 +125,18 @@ describe('CartographyController', () => {
         expect(w.deleted).toEqual([['w0', 'w1', 'w2']]);
     });
 
+    it('re-syncs native walls when a room vertex moves', async () => {
+        const { c, w } = make();
+        c.begin({ type: 'room', floor: 'dirt' }, 'click');
+        c.addPoint({ x: 0, y: 0 });
+        c.addPoint({ x: 100, y: 0 });
+        c.addPoint({ x: 100, y: 100 });
+        await c.commit(); // p1 — 3 walls
+        await c.moveVertex('p1', 1, { x: 120, y: 0 });
+        expect(w.deleted).toEqual([['w0', 'w1', 'w2']]); // old walls dropped
+        expect(w.segmentCalls).toEqual([3, 3]); // emitted on commit, then re-emitted on edit
+    });
+
     it('commits a biome region', async () => {
         const { c, r, s } = make();
         c.begin({ type: 'region', biome: 'water' }, 'click');
