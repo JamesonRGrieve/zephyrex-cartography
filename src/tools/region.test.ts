@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { BIOMES, BIOME_STYLES, makeRegion, parseRegion, regionOutline } from './region';
+import { makeRegion, parseRegion, regionOutline } from './region';
 
 describe('makeRegion', () => {
     it('builds a region from >= 3 points', () => {
@@ -66,25 +66,5 @@ describe('regionOutline', () => {
         ]);
         expect(o.length).toBeGreaterThanOrEqual(6);
         expect(o.length % 2).toBe(0);
-    });
-
-    it('exposes a fill colour per biome', () => {
-        expect(BIOME_STYLES.water.fill).toBeTypeOf('number');
-        expect(BIOME_STYLES.snow.fill).toBeTypeOf('number');
-    });
-});
-
-describe('BIOMES', () => {
-    it('every biome has a fill+alpha style (the maps stay in lockstep)', () => {
-        for (const biome of BIOMES) {
-            expect(BIOME_STYLES[biome].fill).toBeTypeOf('number');
-            expect(BIOME_STYLES[biome].alpha).toBeGreaterThan(0);
-        }
-    });
-
-    it('includes the extended terrain set', () => {
-        for (const biome of ['lava', 'marsh', 'ice', 'ash', 'tundra', 'ocean'] as const) {
-            expect(BIOMES).toContain(biome);
-        }
     });
 });

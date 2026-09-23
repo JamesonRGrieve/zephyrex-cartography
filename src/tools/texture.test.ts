@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { BIOMES } from './region';
+import { BIOMES } from './biome';
 import { BIOME_TEXTURE, BIOME_TINT, PATH_TEXTURE, pickTextureSet, textureResolver, textureSetChoices } from './texture';
 
 const sets = [

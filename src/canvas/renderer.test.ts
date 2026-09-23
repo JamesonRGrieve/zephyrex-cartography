@@ -4,6 +4,7 @@ import type { Feature } from '../tools/feature';
 import { NEW_FEATURE } from '../tools/feature-common';
 import type { CartographyPath } from '../tools/path';
 import type { RegionFeature } from '../tools/region';
+import type { RoomFeature } from '../tools/room';
 import type { TextureResolver } from '../tools/texture';
 import { GraphicsFeatureRenderer, type DrawSurface } from './renderer';
 
@@ -66,10 +67,11 @@ const swath: Feature = {
     radius: 15,
     ...NEW_FEATURE,
 };
-const room: Feature = {
+const room: RoomFeature = {
     type: 'room',
     id: 'rm',
     floor: 'dirt',
+    wall: null,
     points: [
         { x: 0, y: 0 },
         { x: 100, y: 0 },
@@ -120,12 +122,36 @@ describe('GraphicsFeatureRenderer', () => {
         expect(s.textured[0]?.feather).toBe(true);
     });
 
-    it('renders a room floor textured with a crisp (unfeathered) edge', () => {
+    it('renders a room floor textured with a crisp (unfeathered) edge on its exact polygon', () => {
         const s = new FakeSurface();
         new GraphicsFeatureRenderer(s, RESOLVE).set('rm', room);
         expect(s.textured).toHaveLength(1);
         expect(s.textured[0]?.textureFile).toBe('dirt.jpg');
         expect(s.textured[0]?.feather).toBe(false);
+        expect(s.textured[0]?.n).toBe(8);
+    });
+
+    it('fills a pack floor material by role, or a flat colour when the set lacks it', () => {
+        const s = new FakeSurface();
+        new GraphicsFeatureRenderer(s, (role) => (role === 'floor.oak' ? 'oak.jpg' : null)).set('rm', { ...room, floor: 'floor.oak' });
+        expect(s.textured[0]?.textureFile).toBe('oak.jpg');
+        const flat = new FakeSurface();
+        new GraphicsFeatureRenderer(flat, () => null).set('rm', { ...room, floor: 'floor.oak' });
+        expect(flat.filled).toHaveLength(1);
+    });
+
+    it('draws one wall band per perimeter segment in the wall material, and removes them with the room', () => {
+        const s = new FakeSurface();
+        const gr = new GraphicsFeatureRenderer(s, (role) => (role === 'wall.brick' ? 'brick.jpg' : null));
+        gr.set('rm', { ...room, wall: 'wall.brick' });
+        const bands = s.textured.filter((t) => t.id.startsWith('rm:wall:'));
+        expect(bands.map((b) => b.textureFile)).toEqual(['brick.jpg', 'brick.jpg', 'brick.jpg', 'brick.jpg']);
+        gr.set('rm', room); // walls no longer drawn
+        expect(s.removed.filter((id) => id.startsWith('rm:wall:'))).toHaveLength(4);
+        gr.set('rm', { ...room, wall: 'wall.missing' });
+        expect(s.filled.filter((f) => f.id.startsWith('rm:wall:'))).toHaveLength(4);
+        gr.remove('rm');
+        expect(s.removed.filter((id) => id.startsWith('rm:wall:'))).toHaveLength(8);
     });
 
     it('feathers region edges but keeps paths crisp', () => {

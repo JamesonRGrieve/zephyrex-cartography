@@ -242,7 +242,13 @@ in a hall) always draws above the room containing it and is picked first,
 whatever the drawing order. Nesting is derived from geometry on every draw
 (`tools/nesting.ts`), never stored, so edits cannot leave it stale.
 
-Follow-ups: floor/wall materials beyond biomes.
+**Room materials [done]:** a room's floor is a biome or a pack `floor.<name>`
+texture role; its walls are either not drawn or a textured band along the
+perimeter in a `wall.<name>` role (`tools/materials.ts`). The materials tool
+sets both on a clicked room, and they are the defaults for new rooms. The
+choices are whatever the active texture set provides. A role the set lacks
+draws as flat colour. Materials are visual only: the native walls and doors
+are the same whatever the wall material.
 
 **Generative map builder [intent — last]:** build real maps
 *declaratively* with this module's own tools, not by generating images. A
@@ -298,7 +304,7 @@ imports only `zod` so Node can load it directly via type stripping.
 they render as a translucent tint. Every other biome is a tiled texture.
 
 **Adding or renaming a biome requires lockstep updates**, or the build breaks /
-tests fail: `tools/region.ts` (`BiomeKind`, `BIOMES`, `BIOME_STYLES`) →
+tests fail: `tools/biome.ts` (`BiomeKind`, `BIOMES`, `BIOME_STYLES`) →
 `tools/texture.ts` (`BIOME_TEXTURE`, `BIOME_TINT`) → `i18n.ts`
 (`BIOME_TITLE_KEYS`) + `static/lang/en.json` → the entry (`BIOME_ICONS`).
 `region.test.ts`, `texture.test.ts` and `i18n.test.ts` enforce it. A new biome's

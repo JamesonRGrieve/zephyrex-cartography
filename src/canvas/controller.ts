@@ -11,6 +11,7 @@ import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
+import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
 import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type LightDoc, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
@@ -19,11 +20,22 @@ import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
+import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { drawOrder } from '../tools/nesting';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
 import { type PlanContext, planDocuments } from '../tools/plan';
-import { makeRegion, type BiomeKind } from '../tools/region';
-import { type DoorSettings, doorOn, makeRoom, NEW_DOOR, type RoomDoor, type RoomFeature, withRoomDoor } from '../tools/room';
+import { makeRegion } from '../tools/region';
+import {
+    type DoorSettings,
+    doorOn,
+    makeRoom,
+    NEW_DOOR,
+    type RoomDoor,
+    type RoomFeature,
+    type RoomMaterials,
+    withRoomDoor,
+    withRoomMaterials,
+} from '../tools/room';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
@@ -119,7 +131,7 @@ export type Brush =
     | { readonly type: 'path'; readonly kind: PathKind }
     | { readonly type: 'region'; readonly biome: BiomeKind }
     | { readonly type: 'stroke'; readonly biome: BiomeKind }
-    | { readonly type: 'room'; readonly floor: BiomeKind };
+    | { readonly type: 'room'; readonly floor: FloorMaterial; readonly wall?: WallMaterial };
 
 /** Cap on retained undo snapshots — bounds memory on a long editing session. */
 const MAX_HISTORY = 50;
@@ -736,6 +748,22 @@ export class CartographyController {
     }
 
     /** Put a door with `settings` on a room's perimeter segment, or clear it with null; re-syncs the native walls. */
+    /** A room's floor and wall materials, or null for anything else. */
+    roomMaterials(id: string): RoomMaterials | null {
+        const f = this.getFeature(id);
+        return f?.type === 'room' ? { floor: f.floor, wall: f.wall } : null;
+    }
+
+    /** Give a room other floor and wall materials; false if it is not a room. */
+    async setRoomMaterials(id: string, materials: RoomMaterials): Promise<boolean> {
+        const f = this.getFeature(id);
+        if (f?.type !== 'room') {
+            return false;
+        }
+        await this.replaceFeature(id, withRoomMaterials(f, materials));
+        return true;
+    }
+
     async setRoomDoor(id: string, index: number, settings: DoorSettings | null): Promise<boolean> {
         const f = this.getFeature(id);
         if (f?.type !== 'room' || index < 0 || index >= f.points.length) {
@@ -975,7 +1003,7 @@ export class CartographyController {
             return makeRegion(id, this.brush.biome, pts);
         }
         if (this.brush.type === 'room') {
-            return makeRoom(id, this.brush.floor, pts);
+            return makeRoom(id, this.brush.floor, pts, this.brush.wall ?? null);
         }
         return makeStroke(id, this.brush.biome, pts, this.brushRadius);
     }

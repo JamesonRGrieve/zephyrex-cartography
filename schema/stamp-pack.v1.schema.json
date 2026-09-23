@@ -536,7 +536,7 @@
                             "type": "string",
                             "minLength": 1
                         },
-                        "description": "Texture role (biome name or \"road\") → image path."
+                        "description": "Texture role → image path. Roles: a biome name or \"road\" (terrain), \"floor.<name>\" (a room floor material) or \"wall.<name>\" (a room wall material)."
                     }
                 },
                 "required": [

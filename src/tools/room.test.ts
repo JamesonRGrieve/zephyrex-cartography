@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { NO_DOCS } from './documents';
 import { withDocs } from './feature';
-import { DEFAULT_FLOOR, doorOn, makeRoom, NEW_DOOR, parseRoom, roomLight, roomWalls, withRoomDoor, withRoomPoints } from './room';
+import { DEFAULT_FLOOR, doorOn, makeRoom, NEW_DOOR, parseRoom, roomLight, roomWalls, withRoomDoor, withRoomMaterials, withRoomPoints } from './room';
 
 const pts = [
     { x: 0, y: 0 },
@@ -22,7 +22,7 @@ describe('makeRoom', () => {
 
     it('returns null for fewer than three points', () => {
         expect(
-            makeRoom('r', 'stone' as never, [
+            makeRoom('r', 'dirt', [
                 { x: 0, y: 0 },
                 { x: 1, y: 1 },
             ]),
@@ -38,6 +38,24 @@ describe('withRoomPoints', () => {
         expect(shrunk?.points).toHaveLength(3);
         expect(shrunk?.floor).toBe('rock');
         expect(r ? withRoomPoints(r, pts.slice(0, 2)) : 'x').toBeNull();
+    });
+});
+
+describe('materials', () => {
+    it('defaults to no drawn wall and swaps floor and wall together', () => {
+        const r = makeRoom('r', 'dirt', pts);
+        expect(r?.wall).toBeNull();
+        const dressed = r ? withRoomMaterials(r, { floor: 'floor.oak', wall: 'wall.brick' }) : null;
+        expect(dressed?.floor).toBe('floor.oak');
+        expect(dressed?.wall).toBe('wall.brick');
+        expect(dressed?.points).toEqual(r?.points);
+    });
+
+    it('keeps materials through a points edit', () => {
+        const r = makeRoom('r', 'floor.oak', pts, 'wall.brick');
+        const moved = r ? withRoomPoints(r, pts.slice(0, 3)) : null;
+        expect(moved?.floor).toBe('floor.oak');
+        expect(moved?.wall).toBe('wall.brick');
     });
 });
 
@@ -117,6 +135,15 @@ describe('parseRoom', () => {
             { segment: 2, type: 'secret', state: 'open' },
             { segment: 3, type: 'door', state: 'closed' },
         ]);
+    });
+
+    it('parses pack floor and wall materials, reading anything else as an undrawn wall', () => {
+        const dressed = parseRoom({ type: 'room', id: 'a', floor: 'floor.oak', wall: 'wall.brick', points: pts });
+        expect(dressed?.floor).toBe('floor.oak');
+        expect(dressed?.wall).toBe('wall.brick');
+        expect(parseRoom({ type: 'room', id: 'b', floor: 'dirt', wall: 'brick', points: pts })?.wall).toBeNull();
+        expect(parseRoom({ type: 'room', id: 'c', floor: 'dirt', points: pts })?.wall).toBeNull();
+        expect(parseRoom({ type: 'room', id: 'd', floor: 'floor.', points: pts })).toBeNull();
     });
 
     it('rejects non-rooms, unknown floors, and too-few points', () => {

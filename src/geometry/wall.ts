@@ -108,6 +108,29 @@ export function cutSegment(seg: Segment, cuts: readonly Segment[], tolerance: nu
         .map(({ a, b }) => ({ a, b }));
 }
 
+/**
+ * A band `thickness` wide centred on a segment, as a flat `[x, y, …]` quad,
+ * extended by half the thickness past each end so bands of adjoining segments
+ * overlap at the corners instead of leaving notches. Empty for a zero-length
+ * segment.
+ */
+export function segmentBand(seg: Segment, thickness: number): number[] {
+    const dx = seg.b.x - seg.a.x;
+    const dy = seg.b.y - seg.a.y;
+    const span = Math.hypot(dx, dy);
+    if (span === 0) {
+        return [];
+    }
+    const half = thickness / 2;
+    const ux = dx / span;
+    const uy = dy / span;
+    const nx = -uy * half;
+    const ny = ux * half;
+    const a = { x: seg.a.x - ux * half, y: seg.a.y - uy * half };
+    const b = { x: seg.b.x + ux * half, y: seg.b.y + uy * half };
+    return [a.x + nx, a.y + ny, b.x + nx, b.y + ny, b.x - nx, b.y - ny, a.x - nx, a.y - ny];
+}
+
 /** Average of a polygon's vertices — a good-enough light-placement centre for a room. */
 export function centroid(points: readonly Point[]): Point {
     if (points.length === 0) {

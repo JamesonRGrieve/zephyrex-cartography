@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rooms: the structure-mapping primitive. A room is a grid-snapped, closed
- * floor area of a single material. Its floor renders with a crisp edge,
- * because its walls cover the boundary, so there is no feathering. The floor
- * material reuses the biome texture set for now. Any perimeter segment can be
- * a door, with a Foundry door type and state. Model, defensive parser and edit
+ * floor area. Its floor is a biome or a pack floor material, rendered with a
+ * crisp edge because its walls cover the boundary. It can show its walls as a
+ * textured band in a pack wall material. Any perimeter segment can be a door,
+ * with a Foundry door type and state. Model, defensive parser and edit
  * constructors. Pure and unit-tested.
  */
 import { distance, type Point } from '../geometry/spline';
 import { centroid, perimeterSegments, type Segment } from '../geometry/wall';
+import type { BiomeKind } from './biome';
 import { NO_DOCS, parseGeneratedDocs, type DoorState, type GeneratedDocs } from './documents';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, stringArray } from './guards';
-import { isBiomeKind, type BiomeKind } from './region';
+import { type FloorMaterial, isFloorMaterial, parseWallMaterial, type WallMaterial } from './materials';
 
 /** Default floor material for a freshly drawn room. */
 export const DEFAULT_FLOOR: BiomeKind = 'dirt';
@@ -41,9 +42,17 @@ export const NEW_DOOR: DoorSettings = { type: 'door', state: 'closed' };
 /** A room; its `points` are the grid-snapped boundary (>= 3), its documents the perimeter walls and centre light. */
 export interface RoomFeature extends FeatureCommon {
     readonly type: 'room';
-    /** Floor material (reuses the biome texture set). */
-    readonly floor: BiomeKind;
+    /** Floor material: a biome, or a pack `floor.<name>` role. */
+    readonly floor: FloorMaterial;
+    /** Visible wall material (a pack `wall.<name>` role), or null for walls that are not drawn. */
+    readonly wall: WallMaterial;
     readonly doors: RoomDoor[];
+}
+
+/** A room's floor and wall materials. */
+export interface RoomMaterials {
+    readonly floor: FloorMaterial;
+    readonly wall: WallMaterial;
 }
 
 /** One perimeter segment of a room, and the door on it if any. */
@@ -53,11 +62,16 @@ export interface RoomWall extends Segment {
 }
 
 /** Build a committed room from a boundary point stream, or null if fewer than 3 points. */
-export function makeRoom(id: string, floor: BiomeKind, points: readonly Point[]): RoomFeature | null {
+export function makeRoom(id: string, floor: FloorMaterial, points: readonly Point[], wall: WallMaterial = null): RoomFeature | null {
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id, floor, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], ...NEW_FEATURE };
+    return { type: 'room', id, floor, wall, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], ...NEW_FEATURE };
+}
+
+/** The same room in other materials. */
+export function withRoomMaterials(room: RoomFeature, materials: RoomMaterials): RoomFeature {
+    return { ...room, floor: materials.floor, wall: materials.wall };
 }
 
 /** Rebuild a room with new boundary points (edit ops), preserving floor + doors + document links, or null if < 3. */
@@ -122,7 +136,7 @@ export function parseRoom(v: unknown): RoomFeature | null {
     if (!isRecord(v)) {
         return null;
     }
-    if (v['type'] !== 'room' || typeof v['id'] !== 'string' || !isBiomeKind(v['floor'])) {
+    if (v['type'] !== 'room' || typeof v['id'] !== 'string' || !isFloorMaterial(v['floor'])) {
         return null;
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
@@ -134,6 +148,7 @@ export function parseRoom(v: unknown): RoomFeature | null {
         type: 'room',
         id: v['id'],
         floor: v['floor'],
+        wall: parseWallMaterial(v['wall']),
         points: points.map((p) => ({ x: p.x, y: p.y })),
         doors,
         ...parseFeatureCommon(v),

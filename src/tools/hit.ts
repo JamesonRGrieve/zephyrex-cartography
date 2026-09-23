@@ -15,8 +15,15 @@ import { stampCorners } from './stamp';
 const PATH_HIT_PADDING = 4;
 
 export function featureHit(feature: Feature, pt: Point): boolean {
-    if (isRegion(feature) || isRoom(feature)) {
+    if (isRegion(feature)) {
         return pointInPolygon(pt, regionOutline(feature.points));
+    }
+    if (isRoom(feature)) {
+        // A room is its exact polygon (terrain regions are the smoothed ones).
+        return pointInPolygon(
+            pt,
+            feature.points.flatMap((p) => [p.x, p.y]),
+        );
     }
     if (isStamp(feature)) {
         return pointInPolygon(

@@ -6,9 +6,9 @@
  * parser + edit constructor. Pure and unit-tested.
  */
 import type { Point } from '../geometry/spline';
+import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr } from './guards';
-import { isBiomeKind, type BiomeKind } from './region';
 
 /** Default brush radius (scene px) for a freshly painted terrain stroke. */
 export const DEFAULT_BRUSH_RADIUS = 25;

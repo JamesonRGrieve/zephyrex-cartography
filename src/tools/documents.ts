@@ -9,8 +9,8 @@
  */
 import type { Point } from '../geometry/spline';
 import type { PlacedBehaviour } from '../stamps/schema';
+import type { BiomeKind } from './biome';
 import { isRecord, stringArray } from './guards';
-import type { BiomeKind } from './region';
 
 export type DoorType = 'none' | 'door' | 'secret';
 

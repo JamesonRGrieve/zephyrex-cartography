@@ -7,8 +7,8 @@
  * biome colour. Pure data plus set resolution; unit-tested. The concrete PIXI
  * tiling lives at the Foundry boundary.
  */
+import type { BiomeKind } from './biome';
 import type { PathKind } from './path';
-import type { BiomeKind } from './region';
 
 /** A pack texture set as the renderer needs it: role → module-served image URL. */
 export interface TextureSetRef {

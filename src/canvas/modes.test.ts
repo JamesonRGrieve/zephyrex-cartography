@@ -11,7 +11,7 @@ describe('modeForTool', () => {
     });
 
     it('maps the interaction tools to their own modes', () => {
-        expect(['erase', 'edit', 'door', 'stamp'].map((t) => modeForTool(t, true).kind)).toEqual(['erase', 'edit', 'door', 'stamp']);
+        expect(['erase', 'edit', 'door', 'stamp', 'materials'].map((t) => modeForTool(t, true).kind)).toEqual(['erase', 'edit', 'door', 'stamp', 'materials']);
     });
 
     it('is idle for an inactive or unknown tool', () => {

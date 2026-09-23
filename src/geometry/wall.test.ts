@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import type { Point } from './spline';
-import { centroid, cutSegment, nearestSegment, perimeterSegments, splitSegment } from './wall';
+import { centroid, cutSegment, nearestSegment, perimeterSegments, segmentBand, splitSegment } from './wall';
+
+describe('segmentBand', () => {
+    it('builds a centred band extended past both ends', () => {
+        expect(segmentBand({ a: { x: 0, y: 0 }, b: { x: 10, y: 0 } }, 4)).toEqual([-2, 2, 12, 2, 12, -2, -2, -2]);
+    });
+
+    it('is empty for a zero-length segment', () => {
+        expect(segmentBand({ a: { x: 1, y: 1 }, b: { x: 1, y: 1 } }, 4)).toEqual([]);
+    });
+});
 
 describe('splitSegment', () => {
     it('splits into covered and uncovered stretches in order, merging overlaps', () => {

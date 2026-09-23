@@ -13,7 +13,14 @@
             "Undo": "Undo",
             "Redo": "Redo",
             "Stamp": "Stamps (click the canvas to place the selected stamp)",
-            "Levels": "Levels"
+            "Levels": "Levels",
+            "Materials": "Room materials (click a room to set its floor and walls)"
+        },
+        "Materials": {
+            "Title": "Room materials",
+            "Floor": "Floor",
+            "Wall": "Walls",
+            "NoWall": "Not drawn"
         },
         "Levels": {
             "Title": "Levels",

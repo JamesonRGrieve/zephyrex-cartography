@@ -4,7 +4,7 @@
  * discriminated mode replaces a growing set of boolean flags, so the entry's
  * pointer handlers switch on a single value. Pure and unit-tested.
  */
-import { isBiomeKind } from '../tools/region';
+import { isBiomeKind } from '../tools/biome';
 import { DEFAULT_FLOOR } from '../tools/room';
 import type { Brush } from './controller';
 
@@ -14,7 +14,8 @@ export type Mode =
     | { readonly kind: 'erase' }
     | { readonly kind: 'edit' }
     | { readonly kind: 'door' }
-    | { readonly kind: 'stamp' };
+    | { readonly kind: 'stamp' }
+    | { readonly kind: 'materials' };
 
 export const IDLE: Mode = { kind: 'idle' };
 
@@ -36,7 +37,7 @@ export function modeForTool(toolName: string, active: boolean): Mode {
     if (!active) {
         return IDLE;
     }
-    if (toolName === 'erase' || toolName === 'edit' || toolName === 'door' || toolName === 'stamp') {
+    if (toolName === 'erase' || toolName === 'edit' || toolName === 'door' || toolName === 'stamp' || toolName === 'materials') {
         return { kind: toolName };
     }
     const brush = brushFor(toolName);

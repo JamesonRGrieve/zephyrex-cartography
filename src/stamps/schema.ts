@@ -125,7 +125,11 @@ const textureSetSchema = z
         name: text,
         license: text.describe('SPDX id or licence name covering every file in the set.'),
         credits: text.optional().describe('Path to the set attribution file.'),
-        textures: z.record(text, text).describe('Texture role (biome name or "road") → image path.'),
+        textures: z
+            .record(text, text)
+            .describe(
+                'Texture role → image path. Roles: a biome name or "road" (terrain), "floor.<name>" (a room floor material) or "wall.<name>" (a room wall material).',
+            ),
     })
     .strict();
 

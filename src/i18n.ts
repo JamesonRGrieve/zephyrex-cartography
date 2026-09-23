@@ -5,7 +5,7 @@
  * so a typo or a stale entry fails the gate instead of showing a raw key in
  * Foundry.
  */
-import type { BiomeKind } from './tools/region';
+import type { BiomeKind } from './tools/biome';
 
 /** Root namespace of every key (the top-level object in `static/lang/en.json`). */
 export const I18N_ROOT = 'ZEPHYREX-CARTOGRAPHY';
@@ -27,6 +27,7 @@ export const I18N = {
         redo: key('Tools.Redo'),
         stamp: key('Tools.Stamp'),
         levels: key('Tools.Levels'),
+        materials: key('Tools.Materials'),
     },
     levels: {
         title: key('Levels.Title'),
@@ -42,6 +43,12 @@ export const I18N = {
         empty: key('Levels.Empty'),
         removeBlocked: key('Levels.RemoveBlocked'),
         list: key('Levels.List'),
+    },
+    materials: {
+        title: key('Materials.Title'),
+        floor: key('Materials.Floor'),
+        wall: key('Materials.Wall'),
+        noWall: key('Materials.NoWall'),
     },
     doors: {
         title: key('Doors.Title'),

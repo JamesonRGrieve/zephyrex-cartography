@@ -17,6 +17,7 @@ import { registerDoorRuntime } from './foundry/door-runtime';
 import { createItemPilesContainers } from './foundry/item-piles';
 import { registerLevelRuntime, regionName } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
+import { registerMaterialsRuntime } from './foundry/materials-runtime';
 import { registerPackRuntime } from './foundry/pack-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { activeScene } from './foundry/scene-bridge';
@@ -28,7 +29,7 @@ import { NATIVE_LEVELS_GENERATION } from './foundry/translate';
 import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
 import { MODULE_ID } from './module-id';
-import { BIOMES, type BiomeKind } from './tools/region';
+import { BIOMES, type BiomeKind } from './tools/biome';
 
 interface DrawState {
     controller: CartographyController;
@@ -49,6 +50,8 @@ const levels = registerLevelRuntime(() => state?.controller ?? null);
 registerSubmapRuntime(() => state?.controller ?? null, packs.catalog);
 
 const doors = registerDoorRuntime(() => state?.controller ?? null);
+
+const materials = registerMaterialsRuntime(() => state?.controller ?? null, packs.textureRoles);
 
 // Newly loaded packs or another texture set re-render the layer.
 packs.onChange(() => {
@@ -147,6 +150,13 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
                 void st.controller.deleteVertex(hit.id, hit.index);
             } else if (hit && anchor) {
                 st.drag = { ...hit, kind: pointerEvent.shiftKey ? 'width' : 'move', anchor };
+            }
+            return;
+        }
+        case 'materials': {
+            const hit = st.controller.hitTest(pt);
+            if (hit !== null && st.controller.roomMaterials(hit)) {
+                materials.edit(hit);
             }
             return;
         }
@@ -325,6 +335,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
         ['river', I18N.tools.river, 'fa-solid fa-water'],
         ...BIOMES.map((biome): [string, string, string] => [biome, BIOME_TITLE_KEYS[biome], BIOME_ICONS[biome]]),
         ['room', I18N.tools.room, 'fa-solid fa-vector-square'],
+        ['materials', I18N.tools.materials, 'fa-solid fa-fill-drip'],
         ['door', I18N.tools.door, 'fa-solid fa-door-open'],
         ['stamp', I18N.tools.stamp, 'fa-solid fa-stamp'],
         ['edit', I18N.tools.edit, 'fa-solid fa-arrows-up-down-left-right'],
@@ -366,7 +377,10 @@ Hooks.on('getSceneControlButtons', (controls) => {
             if (!state) {
                 return;
             }
-            const mode = modeForTool(tool.name, active);
+            const picked = modeForTool(tool.name, active);
+            // New rooms get the materials last chosen in the materials panel.
+            const mode: Mode =
+                picked.kind === 'brush' && picked.brush.type === 'room' ? { kind: 'brush', brush: { type: 'room', ...materials.forNewRooms() } } : picked;
             enterMode(state, mode);
             if (mode.kind === 'stamp') {
                 packs.openBrowser();

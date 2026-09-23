@@ -47,6 +47,8 @@ export interface PackRuntime {
     readonly placeArmedAt: (point: Point) => void;
     /** Resolves texture roles against the GM's chosen texture set (flat colour until packs load). */
     readonly textures: () => TextureResolver;
+    /** Every texture role the chosen texture set provides (biomes, `road`, `floor.*`, `wall.*`). */
+    readonly textureRoles: () => string[];
     /** Run `listener` whenever the loaded packs or the chosen texture set change. */
     readonly onChange: (listener: () => void) => void;
 }
@@ -123,6 +125,12 @@ export function registerPackRuntime(controller: () => CartographyController | nu
     };
     // Foundry keeps a reference to this object; filling it once packs load populates the settings dropdown.
     const textureChoices: Record<string, string> = {};
+
+    /** The GM's chosen texture set, or the first loaded one. */
+    const activeSet = (): TextureSetRef | null => {
+        const chosen = game.settings?.get(MODULE_ID, TEXTURE_SET_SETTING);
+        return pickTextureSet(textureSets, typeof chosen === 'string' ? chosen : '');
+    };
 
     const place = (armed: ArmedStamp, point: Point): void => {
         const active = controller();
@@ -264,10 +272,8 @@ export function registerPackRuntime(controller: () => CartographyController | nu
     });
 
     return {
-        textures: () => {
-            const chosen = game.settings?.get(MODULE_ID, TEXTURE_SET_SETTING);
-            return textureResolver(pickTextureSet(textureSets, typeof chosen === 'string' ? chosen : ''));
-        },
+        textures: () => textureResolver(activeSet()),
+        textureRoles: () => Object.keys(activeSet()?.textures ?? {}),
         onChange: (listener) => {
             listeners.push(listener);
         },
