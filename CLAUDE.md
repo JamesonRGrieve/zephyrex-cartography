@@ -201,6 +201,30 @@ plus a link flag. It never rewrites content the plugin did not create.
 
 ## Feature scope and status
 
+**Scene controls [done]:** a tool that makes a native document type sits in
+that type's own control group, after Foundry's tools
+(`canvas/tool-placement.ts`).
+- **Walls:** room, door and materials. **Tiles:** stamp. Edit and erase
+  appear in both groups too, so what a group draws can be reshaped there.
+- **The module's own group** keeps what has no native home: roads, rivers,
+  biome brushes, edit, erase, undo/redo, levels and the generator.
+- **Names.** Tools in a native group are named `zephyrex-<tool>`, so they
+  never clash with Foundry's own (Walls has `doors`).
+- **Inert native layers.** The tools set none of `interaction`, `creation`
+  or `control`, so the native layer creates and selects nothing while one
+  is active.
+- **Redraws.** A canvas redraw re-activates the native layer with its tool
+  still selected, and the draw layer picks the tool straight back up.
+- **Pointer.** While a tool is active, the draw layer has a hit area over the
+  whole scene. Without it, a bare container is hit only through what it has
+  drawn, so clicks on empty canvas would never reach it. While idle it takes
+  no events.
+- **Left presses.** A tool's left press stops at the draw layer: reaching
+  the stage, Foundry would also run its own gestures on it, such as the
+  Shift long-press ping that pulls every view. The right button still pans.
+- `tests/e2e/pointer.spec.ts` drives every tool with the real mouse from its
+  group.
+
 **Terrain & paths [done]:** click + freehand paths (Catmull-Rom, RDP), variable
 width ribbons, river taper, 13-biome regions, freehand brush strokes, feathered
 edges, tiled textures from selectable packs, control-point editing, eraser,

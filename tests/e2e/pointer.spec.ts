@@ -58,13 +58,22 @@ async function dragScene(page: Page, from: Point, path: readonly Point[], option
     }
 }
 
-async function useTool(page: Page, tool: string, control = MODULE_ID): Promise<void> {
+/** Where a module tool sits among Foundry's groups; any other is in the module's own group. */
+const NATIVE_HOME: Readonly<Record<string, string>> = { room: 'walls', door: 'walls', materials: 'walls', stamp: 'tiles' };
+
+async function activate(page: Page, control: string, tool: string): Promise<void> {
     await page.evaluate(
         async ({ group, toolName }) => {
             await ui.controls?.activate({ control: group, tool: toolName });
         },
         { group: control, toolName: tool },
     );
+}
+
+/** Pick module tool `tool` from wherever it sits: rooms and doors with the Walls tools, stamps with the Tiles tools. */
+async function useTool(page: Page, tool: string): Promise<void> {
+    const home = NATIVE_HOME[tool];
+    await (home === undefined ? activate(page, MODULE_ID, tool) : activate(page, home, `zephyrex-${tool}`));
 }
 
 /** Click each point, then right-click to finish the shape. */
@@ -100,6 +109,78 @@ async function featureAt(page: Page, at: Point): Promise<{ type: string; halfWid
     }, at);
 }
 
+test('the room, door and materials tools sit with the Walls tools, and the stamp tool with the Tiles tools', async ({ world }) => {
+    const placed = await world.evaluate(() => {
+        const toolsOf = (group: string): string[] => Object.keys(ui.controls?.controls[group]?.tools ?? {});
+        return { walls: toolsOf('walls'), tiles: toolsOf('tiles'), own: toolsOf('zephyrex-cartography') };
+    });
+    expect(placed.walls).toEqual(expect.arrayContaining(['wall', 'zephyrex-room', 'zephyrex-door', 'zephyrex-materials', 'zephyrex-edit', 'zephyrex-erase']));
+    expect(placed.tiles).toEqual(expect.arrayContaining(['tile', 'zephyrex-stamp', 'zephyrex-erase']));
+    expect(placed.own).toEqual(expect.arrayContaining(['road', 'river', 'edit', 'erase']));
+    expect(placed.own).not.toContain('room');
+});
+
+// A redraw re-activates the layer that was active, keeping the tool selected in its group.
+test('a tool in a native group stays in hand across a redraw of the scene', async ({ world }) => {
+    await useTool(world, 'room');
+    await world.evaluate(async () => {
+        await canvas?.draw();
+    });
+    await holdView(world);
+    await drawShape(world, SQUARE.slice(0, 3));
+    await expect.poll(async () => wallCount(world)).toBe(3);
+});
+
+// The module's own group has no canvas layer, so a redraw falls back to Tokens: the draw layer must come back idle.
+test('a redraw under a tool of the module group leaves the pointer to Foundry', async ({ world }) => {
+    await useTool(world, 'road');
+    await world.evaluate(async () => {
+        await canvas?.draw();
+    });
+    const after = await world.evaluate(() => ({ control: ui.controls?.control?.name, layerMode: canvas?.stage?.children.at(-1)?.eventMode }));
+    expect(after).toEqual({ control: 'tokens', layerMode: 'none' });
+});
+
+// A group the module shares still has Foundry's own tools: with one of those in hand, a redraw must not wake the layer.
+test('a redraw under Foundry’s own Walls tool leaves the pointer to Foundry', async ({ world }) => {
+    await activate(world, 'walls', 'wall');
+    await world.evaluate(async () => {
+        await canvas?.draw();
+    });
+    const after = await world.evaluate(() => ({
+        control: ui.controls?.control?.name,
+        tool: ui.controls?.tool?.name,
+        layerMode: canvas?.stage?.children.at(-1)?.eventMode,
+    }));
+    expect(after).toEqual({ control: 'walls', tool: 'wall', layerMode: 'none' });
+});
+
+// Choosing another texture set rebuilds the draw layer while Foundry's controls stay put.
+test('a tool stays in hand when the draw layer rebuilds for another texture set', async ({ world }) => {
+    await useTool(world, 'road');
+    await world.evaluate(async () => {
+        await game.settings?.set('zephyrex-cartography', 'textureSet', 'another-set');
+    });
+    await holdView(world);
+    await drawShape(world, [
+        { x: 300, y: 1000 },
+        { x: 900, y: 1000 },
+    ]);
+    await expect.poll(async () => (await featureAt(world, { x: 600, y: 1000 }))?.type).toBe('path');
+});
+
+test('the Undo and Redo buttons take a drawn room back and bring it back', async ({ world }) => {
+    await useTool(world, 'room');
+    await holdView(world);
+    await drawShape(world, SQUARE);
+    await expect.poll(async () => wallCount(world)).toBe(4);
+    await activate(world, MODULE_ID, 'road');
+    await world.locator('button[data-tool="undo"]').click();
+    await expect.poll(async () => wallCount(world)).toBe(0);
+    await world.locator('button[data-tool="redo"]').click();
+    await expect.poll(async () => wallCount(world)).toBe(4);
+});
+
 test('the room tool draws on empty canvas with the real mouse', async ({ world }) => {
     await useTool(world, 'room');
     await holdView(world);
@@ -122,7 +203,7 @@ test('the layer takes the pointer only while one of its tools is active', async 
         }, probe);
     await useTool(world, 'road');
     expect(await ours()).toBe(true);
-    await useTool(world, 'wall', 'walls');
+    await activate(world, 'walls', 'wall');
     expect(await ours()).toBe(false);
 });
 

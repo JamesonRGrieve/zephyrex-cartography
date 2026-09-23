@@ -12,6 +12,7 @@ import './styles/entry.css';
 import { type Brush, CartographyController } from './canvas/controller';
 import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
+import { inOwnGroup, moduleTool, NATIVE_GROUPS, NATIVE_TOOLS, type NativeTool, nativeToolName } from './canvas/tool-placement';
 import { registerApi } from './foundry/api';
 import { lightName, regionName, soundName } from './foundry/document-names';
 import { FoundryDocumentSink } from './foundry/documents';
@@ -297,6 +298,13 @@ function setupDrawLayer(): void {
 
     const st: DrawState = { controller, container, mode: IDLE, drag: null, down: null, painting: false };
     state = st;
+    // A redraw keeps Foundry's control group and tool (it re-activates the layer that was active), so a module tool
+    // selected in Walls or Tiles is still in hand: pick it straight back up.
+    const control = ui.controls?.control;
+    const selected = control && ui.controls?.tool ? moduleTool(control.name, ui.controls.tool.name, MODULE_ID) : null;
+    if (selected !== null) {
+        enterMode(st, toolMode(selected, true));
+    }
 
     container.on('pointerdown', (pointerEvent: PIXI.FederatedPointerEvent) => {
         onPointerDown(st, pointerEvent);
@@ -359,20 +367,78 @@ function actionTool(toolName: string, order: number, title: string, icon: string
     };
 }
 
-Hooks.on('getSceneControlButtons', (controls) => {
-    const modeTools: [string, string, string][] = [
-        ['road', I18N.tools.road, 'fa-solid fa-road'],
-        ['river', I18N.tools.river, 'fa-solid fa-water'],
-        ...BIOMES.map((biome): [string, string, string] => [biome, BIOME_TITLE_KEYS[biome], BIOME_ICONS[biome]]),
-        ['room', I18N.tools.room, 'fa-solid fa-vector-square'],
-        ['materials', I18N.tools.materials, 'fa-solid fa-fill-drip'],
-        ['door', I18N.tools.door, 'fa-solid fa-door-open'],
-        ['stamp', I18N.tools.stamp, 'fa-solid fa-stamp'],
-        ['edit', I18N.tools.edit, 'fa-solid fa-arrows-up-down-left-right'],
-        ['erase', I18N.tools.erase, 'fa-solid fa-eraser'],
+/** Put the layer in the mode of the module tool `tool`, as it becomes active or inactive in any control group. */
+function activateTool(tool: string, active: boolean): void {
+    if (!state) {
+        return;
+    }
+    const mode = toolMode(tool, active);
+    enterMode(state, mode);
+    if (mode.kind === 'stamp') {
+        packs.openBrowser();
+    }
+}
+
+interface ToolLook {
+    readonly title: string;
+    readonly icon: string;
+}
+
+/** Title and icon of each tool that also sits in a native group. */
+const NATIVE_TOOL_LOOKS: Readonly<Record<NativeTool, ToolLook>> = {
+    room: { title: I18N.tools.room, icon: 'fa-solid fa-vector-square' },
+    materials: { title: I18N.tools.materials, icon: 'fa-solid fa-fill-drip' },
+    door: { title: I18N.tools.door, icon: 'fa-solid fa-door-open' },
+    stamp: { title: I18N.tools.stamp, icon: 'fa-solid fa-stamp' },
+    edit: { title: I18N.tools.edit, icon: 'fa-solid fa-arrows-up-down-left-right' },
+    erase: { title: I18N.tools.erase, icon: 'fa-solid fa-eraser' },
+};
+
+/** Every pointer tool, by name, in toolbar order: paths, biomes, then the tools native groups share. */
+function pointerTools(): [string, ToolLook][] {
+    return [
+        ['road', { title: I18N.tools.road, icon: 'fa-solid fa-road' }],
+        ['river', { title: I18N.tools.river, icon: 'fa-solid fa-water' }],
+        ...BIOMES.map((biome): [string, ToolLook] => [biome, { title: BIOME_TITLE_KEYS[biome], icon: BIOME_ICONS[biome] }]),
+        ...Object.entries(NATIVE_TOOL_LOOKS),
     ];
+}
+
+/**
+ * Add the module's tools to Foundry's own groups (rooms and doors with the
+ * Walls tools, stamps with the Tiles tools), after Foundry's tools. They set
+ * none of `interaction`, `creation` or `control`, so the native layer stays
+ * inert while one is active and the draw layer takes the pointer.
+ */
+function addNativeTools(controls: Record<string, foundry.applications.ui.SceneControls.Control>): void {
+    for (const group of NATIVE_GROUPS) {
+        // Every v14 group comes with its tools; one without (another module's rewrite) is left alone.
+        const groupTools = controls[group]?.tools;
+        if (!groupTools) {
+            continue;
+        }
+        const after = Math.max(0, ...Object.values(groupTools).map((tool) => tool.order)) + 1;
+        NATIVE_TOOLS[group].forEach((tool, i) => {
+            const look = NATIVE_TOOL_LOOKS[tool];
+            const toolName = nativeToolName(tool);
+            groupTools[toolName] = {
+                name: toolName,
+                order: after + i,
+                title: look.title,
+                icon: look.icon,
+                onChange: (_event, active): void => {
+                    activateTool(tool, active);
+                },
+            };
+        });
+    }
+}
+
+Hooks.on('getSceneControlButtons', (controls) => {
+    addNativeTools(controls);
+    const modeTools = pointerTools().filter(([toolName]) => inOwnGroup(toolName));
     const tools: Record<string, Tool> = {};
-    modeTools.forEach(([toolName, title, icon], order) => {
+    modeTools.forEach(([toolName, { title, icon }], order) => {
         tools[toolName] = { name: toolName, order, title, icon };
     });
     tools['undo'] = actionTool('undo', modeTools.length, I18N.tools.undo, 'fa-solid fa-rotate-left', (controller) => {
@@ -414,14 +480,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
             }
         },
         onToolChange: (_event, tool, active): void => {
-            if (!state) {
-                return;
-            }
-            const mode = toolMode(tool.name, active);
-            enterMode(state, mode);
-            if (mode.kind === 'stamp') {
-                packs.openBrowser();
-            }
+            activateTool(tool.name, active);
         },
     };
 });

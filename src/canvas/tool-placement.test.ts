@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { describe, expect, it } from 'vitest';
+import { inOwnGroup, moduleTool, NATIVE_GROUPS, NATIVE_TOOLS, nativeToolName } from './tool-placement';
+
+const OWN = 'zephyrex-cartography';
+
+describe('tool placement', () => {
+    it('puts room, door and materials with the Walls tools, and stamps with the Tiles tools', () => {
+        expect(NATIVE_TOOLS.walls).toEqual(expect.arrayContaining(['room', 'door', 'materials']));
+        expect(NATIVE_TOOLS.tiles).toContain('stamp');
+    });
+
+    it('places tools in the Walls and Tiles groups only', () => {
+        expect(NATIVE_GROUPS).toEqual(['walls', 'tiles']);
+        expect(Object.keys(NATIVE_TOOLS).sort()).toEqual([...NATIVE_GROUPS].sort());
+    });
+
+    it('also offers edit and erase in each native group', () => {
+        expect(NATIVE_TOOLS.walls).toEqual(expect.arrayContaining(['edit', 'erase']));
+        expect(NATIVE_TOOLS.tiles).toContain('erase');
+    });
+
+    it('keeps a native-only tool out of the module group, and the rest in it', () => {
+        expect(['room', 'door', 'materials', 'stamp'].map(inOwnGroup)).toEqual([false, false, false, false]);
+        expect(['road', 'river', 'forest', 'edit', 'erase', 'undo', 'levels'].map(inOwnGroup)).toEqual([true, true, true, true, true, true, true]);
+    });
+
+    it('names a native tool apart from Foundry’s own', () => {
+        expect(nativeToolName('door')).toBe('zephyrex-door');
+        expect(nativeToolName('door')).not.toBe('doors');
+    });
+
+    it('reads a scene-control selection back as the module tool it is', () => {
+        expect(moduleTool(OWN, 'road', OWN)).toBe('road');
+        expect(moduleTool('walls', 'zephyrex-room', OWN)).toBe('room');
+        expect(moduleTool('tiles', 'zephyrex-stamp', OWN)).toBe('stamp');
+    });
+
+    it('is null for Foundry’s tools, a tool placed in another group, and other groups', () => {
+        expect(moduleTool('walls', 'wall', OWN)).toBeNull();
+        expect(moduleTool('tiles', 'zephyrex-room', OWN)).toBeNull();
+        expect(moduleTool('tokens', 'zephyrex-room', OWN)).toBeNull();
+    });
+});

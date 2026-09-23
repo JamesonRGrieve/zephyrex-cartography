@@ -10,7 +10,7 @@ const BROWSER = '#zephyrex-cartography-stamp-browser';
 
 async function openBrowser(page: Page): Promise<Locator> {
     await page.evaluate(async () => {
-        await ui.controls?.activate({ control: 'zephyrex-cartography', tool: 'stamp' });
+        await ui.controls?.activate({ control: 'tiles', tool: 'zephyrex-stamp' });
     });
     const browser = page.locator(BROWSER);
     await expect(browser).toBeVisible();
