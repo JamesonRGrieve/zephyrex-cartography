@@ -21,9 +21,14 @@ test('an enterable stamp opens into a new interior scene, each side teleporting 
             exitTo: destinations(exit),
             entranceUuid: entrance?.uuid,
             exitUuid: exit?.uuid,
+            locked: [entrance?.locked, exit?.locked],
+            visibility: [entrance?.visibility, exit?.visibility],
         };
     });
     expect(result.interiorName).toBe('Hab interior');
     expect(result.entranceTo).toEqual([result.exitUuid]);
     expect(result.exitTo).toEqual([result.entranceUuid]);
+    // The entrance follows the stamp, so it is locked; the exit is the GM's to place. Both show on the Regions layer.
+    expect(result.locked).toEqual([true, false]);
+    expect(result.visibility).toEqual([0, 0]);
 });

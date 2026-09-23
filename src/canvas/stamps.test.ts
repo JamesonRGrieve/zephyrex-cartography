@@ -177,7 +177,20 @@ describe('CartographyController stamps', () => {
         const id = await c.placeStamp({ stamp: 'pack:door', x: 250, y: 250 });
         expect(id).toBe('p1');
         expect(d.tiles).toEqual([
-            [{ src: 'modules/pack/closed.png', x: 200, y: 200, width: 100, height: 100, rotation: 0, elevation: 0, level: null, featureId: 'p1' }],
+            [
+                {
+                    name: 'Door',
+                    src: 'modules/pack/closed.png',
+                    x: 200,
+                    y: 200,
+                    width: 100,
+                    height: 100,
+                    rotation: 0,
+                    elevation: 0,
+                    level: null,
+                    featureId: 'p1',
+                },
+            ],
         ]);
         expect(c.getFeature('p1')?.docs.tiles).toEqual(['t0']);
         expect(s.last()[0]?.docs.tiles).toEqual(['t0']);

@@ -9,14 +9,23 @@ test('a placed stamp is a native tile centred on its point, with its light', asy
         const light = canvas?.scene?.lights.contents[0];
         return {
             id,
-            tile: tile && { x: tile.x, y: tile.y, width: tile.width, height: tile.height, anchorX: tile.texture.anchorX, anchorY: tile.texture.anchorY },
-            light: light && { x: light.x, y: light.y },
+            tile: tile && {
+                name: tile.name,
+                x: tile.x,
+                y: tile.y,
+                width: tile.width,
+                height: tile.height,
+                anchorX: tile.texture.anchorX,
+                anchorY: tile.texture.anchorY,
+            },
+            light: light && { name: light.name, x: light.x, y: light.y },
         };
     });
     expect(placed.id).toEqual(expect.any(String));
     // v14 places a tile by its anchor: the stamp's centre, not its top-left.
-    expect(placed.tile).toEqual({ x: 500, y: 400, width: 100, height: 100, anchorX: 0.5, anchorY: 0.5 });
-    expect(placed.light).toEqual({ x: 500, y: 400 });
+    // Named after the stamp, so they read clearly in Foundry's Placeables tab.
+    expect(placed.tile).toEqual({ name: 'Lamp', x: 500, y: 400, width: 100, height: 100, anchorX: 0.5, anchorY: 0.5 });
+    expect(placed.light).toEqual({ name: 'Lamp light', x: 500, y: 400 });
     await frameScene(world);
     await expect(world.locator('#board')).toHaveScreenshot('lamp-placed.png');
 });

@@ -76,6 +76,10 @@ export const I18N = {
         types: { door: key('Doors.Types.Door'), secret: key('Doors.Types.Secret') },
         states: { closed: key('Doors.States.Closed'), open: key('Doors.States.Open'), locked: key('Doors.States.Locked') },
     },
+    lights: {
+        stamp: key('Lights.Stamp'),
+        room: key('Lights.Room'),
+    },
     regions: {
         transition: key('Regions.Transition'),
         entrance: key('Regions.Entrance'),

@@ -44,7 +44,11 @@ interface LightAnimation {
     readonly intensity?: number;
 }
 
+/** What emits a generated light; the boundary names the light after it. */
+export type LightSource = { readonly kind: 'stamp'; readonly name: string } | { readonly kind: 'room' };
+
 export interface LightDoc {
+    readonly source: LightSource;
     readonly x: number;
     readonly y: number;
     /** Dim radius in scene px. */
@@ -63,6 +67,8 @@ export interface LightDoc {
 }
 
 export interface TileDoc {
+    /** The stamp's pack name, so the tile reads clearly in Foundry's Placeables tab. */
+    readonly name: string;
     readonly src: string;
     readonly x: number;
     readonly y: number;

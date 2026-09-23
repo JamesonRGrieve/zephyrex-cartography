@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * Localised names for the native documents the plugin generates, so a GM can
+ * tell them apart in Foundry's Placeables tab and palette: regions after what
+ * they connect or cover, lights after what emits them. Tiles take their
+ * stamp's pack name as it is, and v14 walls have no name.
+ */
+import { BIOME_TITLE_KEYS, I18N, TRANSITION_KIND_KEYS } from '../i18n';
+import type { LightSource, RegionDoc } from '../tools/documents';
+import { format, localize } from './localize';
+
+/** A generated region's display name, e.g. "Stairs: Ground floor → Upper floor" or "Enter Hab 12". */
+export function regionName(region: RegionDoc): string {
+    const label = region.label;
+    if ('scene' in label) {
+        return format(label.kind === 'entrance' ? I18N.regions.entrance : I18N.regions.exit, { scene: label.scene });
+    }
+    if ('biome' in label) {
+        return localize(BIOME_TITLE_KEYS[label.biome]);
+    }
+    return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
+}
+
+/** A generated light's display name: "Brass Lamp light", or "Room light". */
+export function lightName(source: LightSource): string {
+    return source.kind === 'stamp' ? format(I18N.lights.stamp, { name: source.name }) : localize(I18N.lights.room);
+}

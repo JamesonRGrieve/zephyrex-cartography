@@ -13,11 +13,12 @@ import { type Brush, CartographyController } from './canvas/controller';
 import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
 import { registerApi } from './foundry/api';
+import { lightName, regionName } from './foundry/document-names';
 import { FoundryDocumentSink } from './foundry/documents';
 import { registerDoorRuntime } from './foundry/door-runtime';
 import { registerGeneratorRuntime } from './foundry/generator-runtime';
 import { createItemPilesContainers } from './foundry/item-piles';
-import { registerLevelRuntime, regionName } from './foundry/level-runtime';
+import { registerLevelRuntime } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
 import { registerMaterialsRuntime } from './foundry/materials-runtime';
 import { registerPackRuntime } from './foundry/pack-runtime';
@@ -252,7 +253,7 @@ function setupDrawLayer(): void {
     const controller = new CartographyController({
         renderer,
         store: new FoundrySceneStore(activeScene),
-        sink: new FoundryDocumentSink(activeScene, { makeId, regionName }),
+        sink: new FoundryDocumentSink(activeScene, { makeId, regionName, lightName }),
         levels: createLevelStore(activeScene),
         scenes: createWorldScenes({ regionName }),
         containers: createItemPilesContainers(() => activeScene()?.id ?? null),

@@ -22,6 +22,7 @@ export interface WallCreateData extends OnLevels {
 }
 
 export interface LightCreateData extends OnLevels {
+    readonly name: string;
     readonly x: number;
     readonly y: number;
     readonly elevation: number;
@@ -37,6 +38,7 @@ export interface LightCreateData extends OnLevels {
 }
 
 export interface TileCreateData extends OnLevels {
+    readonly name: string;
     /** The anchor is the point `x`, `y` names and the tile rotates about. */
     readonly texture: { readonly src: string; readonly anchorX: number; readonly anchorY: number };
     readonly x: number;
@@ -66,6 +68,9 @@ export interface RegionCreateData extends OnLevels {
     /** A null bound is open-ended. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
     readonly behaviors: readonly { readonly type: 'teleportToken'; readonly system: TeleportSystem }[];
+    readonly locked: boolean;
+    /** A `CONST.REGION_VISIBILITY` value. */
+    readonly visibility: number;
 }
 
 interface LevelCreateData {

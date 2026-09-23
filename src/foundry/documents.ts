@@ -6,7 +6,7 @@
  * this is only the create/update/delete boundary.
  */
 import type { DocumentSink, TileUpdate } from '../canvas/controller';
-import type { GeneratedDocs, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
+import type { GeneratedDocs, LightDoc, LightSource, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
 import { isRecord } from '../tools/guards';
 import type { EmbeddedCollection, EmbeddedName, FoundryScene } from './boundary';
 import { lightCreateData, regionCreateData, tileCreateData, wallCreateData } from './translate';
@@ -30,6 +30,8 @@ export interface SinkOptions {
     readonly makeId: () => string;
     /** The display name of a generated region. */
     readonly regionName: (region: RegionDoc) => string;
+    /** The display name of a generated light. */
+    readonly lightName: (source: LightSource) => string;
 }
 
 export class FoundryDocumentSink implements DocumentSink {
@@ -46,7 +48,7 @@ export class FoundryDocumentSink implements DocumentSink {
             ? extractIds(
                   await scene.createEmbeddedDocuments(
                       'AmbientLight',
-                      lights.map((l) => lightCreateData(l, scene.grid)),
+                      lights.map((l) => lightCreateData(l, scene.grid, this.options.lightName(l.source))),
                   ),
               )
             : [];

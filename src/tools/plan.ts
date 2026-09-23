@@ -64,10 +64,11 @@ function pathWalls(path: CartographyPath, floor: Floor): WallDoc[] {
     return walls;
 }
 
-/** A stamp's own tile: Foundry positions a tile by its unrotated top-left and rotates it about its centre. */
+/** A stamp's own tile, as its unrotated top-left, rotated about its centre (the boundary anchors it for v14). */
 function stampTile(stamp: StampFeature, floor: Floor): TileDoc {
     const c = stampCentre(stamp);
     return {
+        name: stamp.name,
         src: stamp.src,
         x: c.x - stamp.width / 2,
         y: c.y - stamp.height / 2,
@@ -104,6 +105,7 @@ function stampLight(stamp: StampFeature, floor: Floor): LightDoc | null {
     }
     const at = stampPoint(stamp, light.offset ?? CENTRE);
     return {
+        source: { kind: 'stamp', name: stamp.name },
         x: at.x,
         y: at.y,
         dim: light.dim * stamp.gridSize,
@@ -261,7 +263,7 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
                 ),
             ),
         ),
-        lights: light.dim > 0 ? [{ ...light, elevation: floor.elevation, level: floor.level }] : [],
+        lights: light.dim > 0 ? [{ source: { kind: 'room' }, ...light, elevation: floor.elevation, level: floor.level }] : [],
         tiles: [],
         regions: [],
     };

@@ -88,6 +88,10 @@
             "Hud": "Interior",
             "DefaultName": "{stamp} interior"
         },
+        "Lights": {
+            "Stamp": "{name} light",
+            "Room": "Room light"
+        },
         "Regions": {
             "Entrance": "Enter {scene}",
             "Exit": "Back to {scene}",

@@ -105,7 +105,18 @@ describe('planDocuments for a stamp', () => {
     it('plans its tile from the unrotated top-left, owned by the feature', () => {
         const plan = planDocuments({ ...stampOf(lamp), rotation: 30, elevation: 2 });
         expect(plan.tiles).toEqual([
-            { src: 'modules/pack/stamps/lit.png', x: 475, y: 450, width: 50, height: 100, rotation: 30, elevation: 2, level: null, featureId: 's1' },
+            {
+                name: 'Lamp',
+                src: 'modules/pack/stamps/lit.png',
+                x: 475,
+                y: 450,
+                width: 50,
+                height: 100,
+                rotation: 30,
+                elevation: 2,
+                level: null,
+                featureId: 's1',
+            },
         ]);
     });
 });
@@ -113,7 +124,7 @@ describe('planDocuments for a stamp', () => {
 describe('planDocuments for a lit stamp', () => {
     it('emits the variant light at the centre, radii in px, following elevation', () => {
         const plan = planDocuments({ ...stampOf(lamp), elevation: 4 });
-        expect(plan.lights).toEqual([{ x: 500, y: 500, dim: 200, bright: 100, elevation: 4, level: null }]);
+        expect(plan.lights).toEqual([{ source: { kind: 'stamp', name: 'Lamp' }, x: 500, y: 500, dim: 200, bright: 100, elevation: 4, level: null }]);
     });
 
     it('emits nothing for an unlit variant', () => {
@@ -147,6 +158,12 @@ describe('parseStamp', () => {
     it('defaults the grid size of a stamp persisted without one', () => {
         const { gridSize: _omitted, ...legacy } = stampOf(lamp);
         expect(parseStamp(legacy)?.gridSize).toBe(100);
+    });
+
+    it('keeps the pack name, and names a stamp saved without one after its id in the pack', () => {
+        expect(parseStamp(stampOf(lamp))?.name).toBe('Lamp');
+        const { name: _omitted, ...legacy } = stampOf(lamp);
+        expect(parseStamp(legacy)?.name).toBe('lamp');
     });
 
     it('round-trips a placed stamp through JSON', () => {

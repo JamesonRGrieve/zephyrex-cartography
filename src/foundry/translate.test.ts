@@ -55,10 +55,24 @@ describe('lightCreateData', () => {
     it('converts radii to distance units and passes optional styling through', () => {
         expect(
             lightCreateData(
-                { x: 1, y: 2, dim: 400, bright: 200, color: '#ff0000', angle: 90, rotation: 45, animation: { type: 'torch' }, elevation: 3, level: 'L2' },
+                {
+                    source: { kind: 'stamp', name: 'Lamp' },
+                    x: 1,
+                    y: 2,
+                    dim: 400,
+                    bright: 200,
+                    color: '#ff0000',
+                    angle: 90,
+                    rotation: 45,
+                    animation: { type: 'torch' },
+                    elevation: 3,
+                    level: 'L2',
+                },
                 GRID,
+                'Lamp light',
             ),
         ).toEqual({
+            name: 'Lamp light',
             x: 1,
             y: 2,
             elevation: 3,
@@ -69,7 +83,8 @@ describe('lightCreateData', () => {
     });
 
     it('omits absent optional styling and defaults rotation to 0', () => {
-        expect(lightCreateData({ x: 0, y: 0, dim: 100, bright: 0, elevation: 0, level: null }, GRID)).toEqual({
+        expect(lightCreateData({ source: { kind: 'room' }, x: 0, y: 0, dim: 100, bright: 0, elevation: 0, level: null }, GRID, 'Room light')).toEqual({
+            name: 'Room light',
             x: 0,
             y: 0,
             elevation: 0,
@@ -81,7 +96,10 @@ describe('lightCreateData', () => {
 
 describe('tileCreateData', () => {
     it('places the tile by its centre anchor, with its level and owning feature flag', () => {
-        expect(tileCreateData({ src: 'a.png', x: 10, y: 20, width: 30, height: 40, rotation: 90, elevation: 5, level: 'L1', featureId: 'f1' })).toEqual({
+        expect(
+            tileCreateData({ name: 'Lamp', src: 'a.png', x: 10, y: 20, width: 30, height: 40, rotation: 90, elevation: 5, level: 'L1', featureId: 'f1' }),
+        ).toEqual({
+            name: 'Lamp',
             texture: { src: 'a.png', anchorX: 0.5, anchorY: 0.5 },
             x: 25,
             y: 40,
@@ -97,7 +115,7 @@ describe('tileCreateData', () => {
 
 describe('tileFrame', () => {
     it('reads back the top-left the tile was created from', () => {
-        const tile = { src: 'a.png', x: 10, y: 20, width: 30, height: 40, rotation: 45, elevation: 0, level: null, featureId: 'f1' };
+        const tile = { name: 'Lamp', src: 'a.png', x: 10, y: 20, width: 30, height: 40, rotation: 45, elevation: 0, level: null, featureId: 'f1' };
         expect(tileFrame(tileCreateData(tile))).toEqual({ x: 10, y: 20, width: 30, height: 40, rotation: 45 });
     });
 
@@ -112,7 +130,7 @@ describe('tileFrame', () => {
     });
 
     it('rounds a fractional centre to the integer Foundry stores', () => {
-        const data = tileCreateData({ src: 'a.png', x: 0, y: 0, width: 5, height: 3, rotation: 0, elevation: 0, level: null, featureId: 'f' });
+        const data = tileCreateData({ name: 'Lamp', src: 'a.png', x: 0, y: 0, width: 5, height: 3, rotation: 0, elevation: 0, level: null, featureId: 'f' });
         expect([data.x, data.y]).toEqual([3, 2]);
     });
 });
@@ -139,6 +157,8 @@ describe('regionCreateData', () => {
             shapes: [{ type: 'polygon', points: [0, 0, 10, 0, 10, 10], hole: false }],
             elevation: { bottom: 0, top: 10 },
             behaviors: [{ type: 'teleportToken', system: { destinations: ['Scene.s.Region.r1', 'Scene.s.Region.r2'], placement: 'relative', choice: true } }],
+            locked: true,
+            visibility: 0,
             levels: ['A'],
         });
         expect(end?.behaviors[0]?.system).toEqual({ destinations: ['Scene.s.Region.r0'], placement: 'relative', choice: false });
@@ -159,5 +179,12 @@ describe('regionCreateData', () => {
         expect(data?.elevation).toEqual({ bottom: null, top: null });
         expect(data?.behaviors[0]?.system).toEqual({ destinations: ['Scene.hab.Region.out1'], placement: 'relative', choice: false });
         expect(regionUuid('a', 'b')).toBe('Scene.a.Region.b');
+    });
+
+    it('locks regions drawn from features, but leaves an interior exit for the GM to move', () => {
+        const exit: RegionDoc = { id: 'out1', label: { kind: 'exit', scene: 'Town' }, polygon: square, bottom: null, top: null, level: null, teleport: null };
+        const [entrance, back] = regionCreateData([{ ...exit, id: 'in1', label: { kind: 'entrance', scene: 'Hab' } }, exit], ['in1', 'out1'], 's', nameOf);
+        expect([entrance?.locked, back?.locked]).toEqual([true, false]);
+        expect([entrance?.visibility, back?.visibility]).toEqual([0, 0]);
     });
 });

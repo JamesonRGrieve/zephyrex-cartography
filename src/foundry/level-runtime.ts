@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Foundry wiring for levels: the levels panel window, the localised names of
- * generated transition regions, and re-reading levels when a GM edits native
- * Level documents directly. The level logic itself is the controller's.
+ * Foundry wiring for levels: the levels panel window, and re-reading levels
+ * when a GM edits native Level documents directly. The level logic itself is
+ * the controller's.
  */
 import type { CartographyController } from '../canvas/controller';
-import { BIOME_TITLE_KEYS, I18N, TRANSITION_KIND_KEYS } from '../i18n';
-import type { RegionDoc } from '../tools/documents';
+import { I18N } from '../i18n';
 import { levelPanel } from '../tools/levels';
 import { renderLevelPanel, type LevelPanelLabels } from '../ui/level-panel-view';
 import { format, localize } from './localize';
@@ -36,18 +35,6 @@ function panelLabels(): LevelPanelLabels {
         removeBlocked: localize(l.removeBlocked),
         list: localize(l.list),
     };
-}
-
-/** A generated region's display name, e.g. "Stairs: Ground floor → Upper floor" or "Enter Hab 12". */
-export function regionName(region: RegionDoc): string {
-    const label = region.label;
-    if ('scene' in label) {
-        return format(label.kind === 'entrance' ? I18N.regions.entrance : I18N.regions.exit, { scene: label.scene });
-    }
-    if ('biome' in label) {
-        return localize(BIOME_TITLE_KEYS[label.biome]);
-    }
-    return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
 }
 
 export function registerLevelRuntime(controller: () => CartographyController | null): LevelRuntime {

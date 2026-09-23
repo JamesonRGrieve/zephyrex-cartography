@@ -37,6 +37,8 @@ export interface StampFeature extends FeatureCommon {
     readonly type: 'stamp';
     /** Catalog key, `<moduleId>:<stamp id>`. */
     readonly stamp: string;
+    /** The stamp's pack name at placement, for its documents' names. */
+    readonly name: string;
     readonly variant: number;
     /** Module-served image URL of the current variant. */
     readonly src: string;
@@ -105,6 +107,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         type: 'stamp',
         id,
         stamp: stamp.key,
+        name: stamp.name,
         variant,
         src: image.image,
         points: [{ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }],
@@ -211,6 +214,8 @@ export function parseStamp(v: unknown): StampFeature | null {
         type: 'stamp',
         id: v['id'],
         stamp: v['stamp'],
+        // A stamp saved before names were kept falls back to its id within the pack.
+        name: stringOrNull(v['name']) ?? v['stamp'].slice(v['stamp'].indexOf(':') + 1),
         variant: Math.max(0, Math.trunc(numberOr(v['variant'], 0))),
         src: v['src'],
         points: [{ x: centre.x, y: centre.y }],

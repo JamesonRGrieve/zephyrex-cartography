@@ -362,12 +362,15 @@ These make everything after them cheaper and safer, so they come first.
   transaction. `syncDocs`, `restore()` (undo/redo) and `realizeSpec` should
   each become one atomic write instead of dozens, with no half-applied state
   if one step fails. The `DocumentSink` port becomes a batch of operations.
-- **Name every generated document** (walls, lights, tiles, regions), after
-  its feature. Foundry's Placeables sidebar tab and Placeables palette [14.354,
-  14.355] list and bulk-edit placeables by name.
-- **Generated regions set `locked` and a deliberate `visibility`.** From
-  14.356, the default visibility for non-template regions is only on the
-  Region layer when unlocked.
+- **[done] Name every generated document** after its feature, for
+  Foundry's Placeables sidebar tab and palette [14.354, 14.355]. Tiles take
+  the stamp's pack name, which the stamp keeps. Lights are "<stamp> light" or
+  "Room light". Regions describe what they connect or cover
+  (`foundry/document-names.ts`). v14 walls have no name.
+- **[done] Generated regions are `locked`** with visibility `LAYER`, since a
+  feature owns their geometry. An interior exit stays unlocked for the GM to
+  place. (From 14.356 the default visibility for non-template regions is
+  only on the Region layer when unlocked, which would hide a locked region.)
 - **Level bands from the grid.** A Level's default top is 4 × the grid
   distance [14.368], not 20. `nextLevelBand` should use the scene's grid
   distance instead of the fixed `DEFAULT_LEVEL_HEIGHT`.

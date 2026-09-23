@@ -23,6 +23,9 @@ const DOOR_STATE_NAMES: readonly DoorState[] = ['closed', 'open', 'locked'];
 const SENSE_NONE = 0;
 const SENSE_NORMAL = 20;
 
+/** `CONST.REGION_VISIBILITY.LAYER`: shown on the Regions layer, locked or not. */
+const REGION_VISIBILITY_LAYER = 0;
+
 /** `CONST.WALL_MOVEMENT_TYPES`: NONE and NORMAL. */
 const MOVE_NONE = 0;
 const MOVE_NORMAL = 20;
@@ -66,8 +69,9 @@ export function pxToDistance(px: number, grid: SceneGrid): number {
     return grid.size > 0 ? (px / grid.size) * grid.distance : 0;
 }
 
-export function lightCreateData(light: LightDoc, grid: SceneGrid): LightCreateData {
+export function lightCreateData(light: LightDoc, grid: SceneGrid, displayName: string): LightCreateData {
     return {
+        name: displayName,
         x: light.x,
         y: light.y,
         elevation: light.elevation,
@@ -114,6 +118,7 @@ export function tileFrame(tile: TileSource): TileFrame {
 
 export function tileCreateData(tile: TileDoc): TileCreateData {
     return {
+        name: tile.name,
         texture: { src: tile.src, anchorX: TILE_ANCHOR, anchorY: TILE_ANCHOR },
         // Foundry stores tile positions as integers; round here so the read-back matches.
         x: Math.round(tile.x + tile.width * TILE_ANCHOR),
@@ -171,6 +176,10 @@ export function regionCreateData(
             shapes: [{ type: 'polygon', points: flatten(region.polygon), hole: false }],
             elevation: { bottom: region.bottom, top: region.top },
             behaviors: destinations.length > 0 ? [teleportBehaviour(destinations)] : [],
+            // A region drawn from a feature is edited through the feature, so it is locked and
+            // shown on the Regions layer. An interior exit is the GM's to place, so it stays free.
+            locked: region.label.kind !== 'exit',
+            visibility: REGION_VISIBILITY_LAYER,
             ...levelsField(region.level),
         };
     });
