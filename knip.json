@@ -7,9 +7,6 @@
     "project": [
         "src/**/*.ts"
     ],
-    "ignoreDependencies": [
-        "lint-staged"
-    ],
     "vitest": {
         "config": "vitest.config.ts"
     }

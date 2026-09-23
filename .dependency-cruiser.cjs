@@ -26,6 +26,13 @@ module.exports = {
             to: { path: '^src/(canvas|tools)/' },
         },
         {
+            name: 'stamps-is-pure',
+            comment: 'The stamp engine core (schema, catalog, placement math) is Foundry-agnostic.',
+            severity: 'warn',
+            from: { path: '^src/stamps/' },
+            to: { path: '^src/(canvas|foundry)/' },
+        },
+        {
             name: 'tools-must-not-import-canvas',
             comment: 'Tool/path state is Foundry-agnostic; the canvas layer depends on it, not the reverse.',
             severity: 'warn',

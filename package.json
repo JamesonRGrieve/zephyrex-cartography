@@ -27,6 +27,8 @@
         "deps:check": "depcruise --config .dependency-cruiser.cjs src",
         "size-limit": "size-limit",
         "assets:textures": "node scripts/fetch-textures.mjs",
+        "schema:gen": "node scripts/gen-schema.mjs",
+        "schema:check": "node scripts/gen-schema.mjs --check",
         "lint:ratchet": "node scripts/lint-ratchet.mjs",
         "lint:ratchet:update": "node scripts/lint-ratchet.mjs --update",
         "biome:ratchet": "node scripts/biome-ratchet.mjs",
@@ -39,7 +41,7 @@
         "deps:ratchet": "node scripts/depcruise-ratchet.mjs",
         "lockfile:validate": "node scripts/lockfile-validate.mjs",
         "check": "pnpm lint && pnpm lint:biome && pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test && pnpm type-coverage && pnpm knip && pnpm deps:check && pnpm build && pnpm size-limit",
-        "gate": "pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test && pnpm lint:ratchet && pnpm biome:ratchet && pnpm ts:ratchet && pnpm strict:ratchet && pnpm test:typecheck:ratchet && pnpm type-coverage:ratchet && pnpm knip:ratchet && pnpm deps:ratchet && pnpm lockfile:validate && pnpm build && pnpm size-limit",
+        "gate": "pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test && pnpm schema:check && pnpm lint:ratchet && pnpm biome:ratchet && pnpm ts:ratchet && pnpm strict:ratchet && pnpm test:typecheck:ratchet && pnpm type-coverage:ratchet && pnpm knip:ratchet && pnpm deps:ratchet && pnpm lockfile:validate && pnpm build && pnpm size-limit",
         "prepare": "husky"
     },
     "devDependencies": {
@@ -96,5 +98,8 @@
             "path": "dist/zephyrex-cartography.js",
             "limit": "120 kB"
         }
-    ]
+    ],
+    "dependencies": {
+        "zod": "^4.6.5"
+    }
 }

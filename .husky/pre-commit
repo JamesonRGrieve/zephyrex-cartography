@@ -89,6 +89,7 @@ run_bg "deps"           pnpm -s deps:ratchet
 run_bg "format"         pnpm -s format
 run_bg "stylelint"      pnpm -s stylelint
 run_bg "lockfile"       pnpm -s lockfile:validate
+run_bg "schema"         pnpm -s schema:check
 
 # Bundle: build then size-limit (size-limit needs dist/).
 run_bg "size"           bash -c 'pnpm -s build && pnpm -s size-limit'

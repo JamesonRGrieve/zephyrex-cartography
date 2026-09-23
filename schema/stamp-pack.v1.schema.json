@@ -1,0 +1,559 @@
+{
+    "$id": "https://raw.githubusercontent.com/JamesonRGrieve/zephyrex-cartography/main/schema/stamp-pack.v1.schema.json",
+    "title": "Zephyrex Cartography stamp pack (v1)",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "schemaVersion": {
+            "type": "number",
+            "const": 1
+        },
+        "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pack id (conventionally the providing module id)."
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "license": {
+            "type": "string",
+            "minLength": 1
+        },
+        "referenceGridSize": {
+            "default": 100,
+            "description": "Grid size (px per square) the stamp pixel sizes were authored at.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+        },
+        "stamps": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Unique within the pack."
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "category": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "tags": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    },
+                    "scale": {
+                        "type": "string",
+                        "enum": [
+                            "system",
+                            "planet",
+                            "regional",
+                            "city",
+                            "exterior",
+                            "interior"
+                        ]
+                    },
+                    "perspective": {
+                        "type": "string",
+                        "enum": [
+                            "top-down",
+                            "isometric"
+                        ]
+                    },
+                    "defaultVariant": {
+                        "default": 0,
+                        "description": "Index into variants.",
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                    },
+                    "variants": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "state": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "Display label for this variant, e.g. \"intact\", \"open\", \"lit\"."
+                                },
+                                "image": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "Image path relative to the pack module root."
+                                },
+                                "width": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "description": "Pixel width at the pack referenceGridSize."
+                                },
+                                "height": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "description": "Pixel height at the pack referenceGridSize."
+                                },
+                                "perspective": {
+                                    "description": "Overrides the stamp perspective.",
+                                    "type": "string",
+                                    "enum": [
+                                        "top-down",
+                                        "isometric"
+                                    ]
+                                },
+                                "doorState": {
+                                    "description": "Door state this variant represents (door stamps).",
+                                    "type": "string",
+                                    "enum": [
+                                        "closed",
+                                        "open",
+                                        "locked"
+                                    ]
+                                },
+                                "light": {
+                                    "description": "Overrides the stamp light; null means this variant emits none (e.g. \"unlit\").",
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "dim": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "description": "Dim light radius, in grid units."
+                                                },
+                                                "bright": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "description": "Bright light radius, in grid units."
+                                                },
+                                                "color": {
+                                                    "description": "Light colour as #rrggbb.",
+                                                    "type": "string",
+                                                    "pattern": "^#[0-9a-fA-F]{6}$"
+                                                },
+                                                "alpha": {
+                                                    "description": "Colour intensity.",
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                },
+                                                "angle": {
+                                                    "description": "Emission cone in degrees (360 = omnidirectional).",
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 360
+                                                },
+                                                "offset": {
+                                                    "description": "Emitter position as a fraction of the footprint (default: centre).",
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "x": {
+                                                            "type": "number",
+                                                            "minimum": 0,
+                                                            "maximum": 1
+                                                        },
+                                                        "y": {
+                                                            "type": "number",
+                                                            "minimum": 0,
+                                                            "maximum": 1
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "x",
+                                                        "y"
+                                                    ],
+                                                    "additionalProperties": false
+                                                },
+                                                "animation": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "type": {
+                                                            "type": "string",
+                                                            "minLength": 1,
+                                                            "description": "Foundry light animation key, e.g. \"torch\", \"flame\", \"pulse\"."
+                                                        },
+                                                        "speed": {
+                                                            "type": "integer",
+                                                            "minimum": 1,
+                                                            "maximum": 10
+                                                        },
+                                                        "intensity": {
+                                                            "type": "integer",
+                                                            "minimum": 1,
+                                                            "maximum": 10
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "type"
+                                                    ],
+                                                    "additionalProperties": false
+                                                }
+                                            },
+                                            "required": [
+                                                "dim",
+                                                "bright"
+                                            ],
+                                            "additionalProperties": false,
+                                            "description": "A native ambient light emitted by the placed stamp."
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                },
+                                "occlusion": {
+                                    "description": "Overrides the stamp occlusion.",
+                                    "type": "object",
+                                    "properties": {
+                                        "shape": {
+                                            "type": "string",
+                                            "enum": [
+                                                "none",
+                                                "bounds",
+                                                "alpha"
+                                            ],
+                                            "description": "How the stamp is wrapped in native walls: not at all, its bounding box, or its traced alpha silhouette."
+                                        },
+                                        "sight": {
+                                            "default": true,
+                                            "description": "The generated walls block sight.",
+                                            "type": "boolean"
+                                        },
+                                        "movement": {
+                                            "default": true,
+                                            "description": "The generated walls block movement.",
+                                            "type": "boolean"
+                                        },
+                                        "light": {
+                                            "default": true,
+                                            "description": "The generated walls block light.",
+                                            "type": "boolean"
+                                        },
+                                        "sound": {
+                                            "default": true,
+                                            "description": "The generated walls block sound.",
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "shape"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "physical": {
+                                    "description": "Overrides the stamp physical body.",
+                                    "type": "object",
+                                    "properties": {
+                                        "height": {
+                                            "description": "Height above the stamp base, in grid units (cover and elevation bands).",
+                                            "type": "number",
+                                            "minimum": 0
+                                        },
+                                        "cover": {
+                                            "description": "Cover density: 0 none, 0.5 half, 0.75 three-quarter, 1 full.",
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 1
+                                        },
+                                        "blocksMovement": {
+                                            "description": "Tokens cannot move through the stamp footprint.",
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                }
+                            },
+                            "required": [
+                                "state",
+                                "image",
+                                "width",
+                                "height"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "physical": {
+                        "type": "object",
+                        "properties": {
+                            "height": {
+                                "description": "Height above the stamp base, in grid units (cover and elevation bands).",
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "cover": {
+                                "description": "Cover density: 0 none, 0.5 half, 0.75 three-quarter, 1 full.",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "blocksMovement": {
+                                "description": "Tokens cannot move through the stamp footprint.",
+                                "type": "boolean"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The physical body of the stamp."
+                    },
+                    "occlusion": {
+                        "type": "object",
+                        "properties": {
+                            "shape": {
+                                "type": "string",
+                                "enum": [
+                                    "none",
+                                    "bounds",
+                                    "alpha"
+                                ],
+                                "description": "How the stamp is wrapped in native walls: not at all, its bounding box, or its traced alpha silhouette."
+                            },
+                            "sight": {
+                                "default": true,
+                                "description": "The generated walls block sight.",
+                                "type": "boolean"
+                            },
+                            "movement": {
+                                "default": true,
+                                "description": "The generated walls block movement.",
+                                "type": "boolean"
+                            },
+                            "light": {
+                                "default": true,
+                                "description": "The generated walls block light.",
+                                "type": "boolean"
+                            },
+                            "sound": {
+                                "default": true,
+                                "description": "The generated walls block sound.",
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "shape"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Automatic occlusion walls around the placed stamp."
+                    },
+                    "light": {
+                        "type": "object",
+                        "properties": {
+                            "dim": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Dim light radius, in grid units."
+                            },
+                            "bright": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Bright light radius, in grid units."
+                            },
+                            "color": {
+                                "description": "Light colour as #rrggbb.",
+                                "type": "string",
+                                "pattern": "^#[0-9a-fA-F]{6}$"
+                            },
+                            "alpha": {
+                                "description": "Colour intensity.",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "angle": {
+                                "description": "Emission cone in degrees (360 = omnidirectional).",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 360
+                            },
+                            "offset": {
+                                "description": "Emitter position as a fraction of the footprint (default: centre).",
+                                "type": "object",
+                                "properties": {
+                                    "x": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    },
+                                    "y": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    }
+                                },
+                                "required": [
+                                    "x",
+                                    "y"
+                                ],
+                                "additionalProperties": false
+                            },
+                            "animation": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "description": "Foundry light animation key, e.g. \"torch\", \"flame\", \"pulse\"."
+                                    },
+                                    "speed": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 10
+                                    },
+                                    "intensity": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 10
+                                    }
+                                },
+                                "required": [
+                                    "type"
+                                ],
+                                "additionalProperties": false
+                            }
+                        },
+                        "required": [
+                            "dim",
+                            "bright"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A native ambient light emitted by the placed stamp."
+                    },
+                    "door": {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "door",
+                                    "secret"
+                                ],
+                                "description": "Foundry door type of the wall this stamp sits on."
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ],
+                        "additionalProperties": false,
+                        "description": "The stamp is a door: placing it on a wall makes that wall a Foundry door."
+                    },
+                    "transition": {
+                        "type": "object",
+                        "properties": {
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "stairs",
+                                    "ladder",
+                                    "lift",
+                                    "hatch"
+                                ]
+                            },
+                            "direction": {
+                                "type": "string",
+                                "enum": [
+                                    "up",
+                                    "down",
+                                    "both"
+                                ],
+                                "description": "Which level(s) the stamp leads to."
+                            }
+                        },
+                        "required": [
+                            "kind",
+                            "direction"
+                        ],
+                        "additionalProperties": false,
+                        "description": "The stamp moves tokens between elevation levels."
+                    },
+                    "enterable": {
+                        "default": false,
+                        "description": "Can open into a linked interior scene (submap).",
+                        "type": "boolean"
+                    },
+                    "container": {
+                        "default": false,
+                        "description": "Placed as an Item Piles container by default.",
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "category",
+                    "scale",
+                    "perspective",
+                    "variants"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "textureSets": {
+            "default": [],
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "license": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "SPDX id or licence name covering every file in the set."
+                    },
+                    "credits": {
+                        "description": "Path to the set attribution file.",
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "textures": {
+                        "type": "object",
+                        "propertyNames": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "Texture role (biome name or \"road\") → image path."
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "license",
+                    "textures"
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+    "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "stamps"
+    ],
+    "additionalProperties": false
+}
