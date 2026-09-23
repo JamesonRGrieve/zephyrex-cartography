@@ -27,7 +27,7 @@ function computeCounts() {
     let raw = '';
     try {
         raw = execSync(
-            './node_modules/.bin/depcruise --config .dependency-cruiser.cjs --output-type json src/module',
+            './node_modules/.bin/depcruise --config .dependency-cruiser.cjs --output-type json src',
             { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 },
         );
     } catch (err) {

@@ -37,8 +37,8 @@ export function pathLength(points: readonly Point[]): number {
     return total;
 }
 
-/** Perpendicular distance from `p` to the segment `a`→`b`. */
-function perpendicularDistance(p: Point, a: Point, b: Point): number {
+/** Shortest distance from `p` to the segment `a`→`b` (clamped to the endpoints). */
+export function distanceToSegment(p: Point, a: Point, b: Point): number {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const lenSq = dx * dx + dy * dy;
@@ -74,7 +74,7 @@ export function simplify(points: readonly Point[], epsilon: number): Point[] {
         if (p === undefined) {
             continue;
         }
-        const d = perpendicularDistance(p, first, last);
+        const d = distanceToSegment(p, first, last);
         if (d > maxDist) {
             maxDist = d;
             index = i;

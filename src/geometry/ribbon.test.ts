@@ -35,4 +35,31 @@ describe('buildRibbon', () => {
         const pairs = g.positions.length / 4;
         expect(g.indices.length).toBe((pairs - 1) * 6);
     });
+
+    it('tapers both ends to a point while keeping full width in the middle', () => {
+        const line: Point[] = [
+            { x: 0, y: 0 },
+            { x: 50, y: 0 },
+            { x: 100, y: 0 },
+        ];
+        const tapered = buildRibbon(line, [10, 10, 10], 8, true);
+        const pairs = tapered.positions.length / 4;
+        // End rails collapse onto the centerline (near-zero half-width)...
+        const startHalf = Math.abs(tapered.positions[1] ?? 0);
+        const endHalf = Math.abs(tapered.positions[(pairs - 1) * 4 + 1] ?? 0);
+        expect(startHalf).toBeLessThan(1);
+        expect(endHalf).toBeLessThan(1);
+        // ...while the mid sample retains (close to) the authored half-width.
+        const mid = Math.floor(pairs / 2);
+        expect(Math.abs(tapered.positions[mid * 4 + 1] ?? 0)).toBeCloseTo(10, 1);
+    });
+
+    it('leaves width uniform when taper is off (default)', () => {
+        const line: Point[] = [
+            { x: 0, y: 0 },
+            { x: 100, y: 0 },
+        ];
+        const flat = buildRibbon(line, [10, 10], 8);
+        expect(Math.abs(flat.positions[1] ?? 0)).toBeCloseTo(10);
+    });
 });

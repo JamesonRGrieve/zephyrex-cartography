@@ -1,0 +1,15 @@
+{
+  "strict": [
+    "any",
+    "asAny",
+    "tsExpectError",
+    "tsIgnore"
+  ],
+  "totals": {
+    "any": 0,
+    "asAny": 0,
+    "tsExpectError": 0,
+    "tsIgnore": 0
+  },
+  "byDir": {}
+}

@@ -18,6 +18,21 @@ export interface RibbonGeometry {
 
 const EMPTY: RibbonGeometry = { positions: [], uvs: [], indices: [] };
 
+/** Fraction of the arc over which a tapered end ramps from a point to full width. */
+const TAPER_FRACTION = 0.18;
+
+/**
+ * Smooth 0→1→0 width multiplier along the ribbon: for a tapered feature the two
+ * ends narrow to a point (a river's source/mouth) while the middle keeps its
+ * authored width. `j` is the sample index, `n` the sample count.
+ */
+function taperFactor(j: number, n: number): number {
+    const t = n > 1 ? j / (n - 1) : 0.5;
+    const ramp = Math.min(t, 1 - t) / TAPER_FRACTION;
+    const c = Math.min(1, Math.max(0, ramp));
+    return c * c * (3 - 2 * c); // smoothstep
+}
+
 /** Half-width at densified sample `j`, interpolated across the control widths. */
 function widthAt(halfWidths: readonly number[], j: number, samples: number): number {
     if (halfWidths.length === 0) {
@@ -39,7 +54,7 @@ function widthAt(halfWidths: readonly number[], j: number, samples: number): num
  * array), smoothing with `samplesPerSegment` samples per span. Degenerate input
  * (< 2 points) yields empty arrays.
  */
-export function buildRibbon(centerline: readonly Point[], halfWidths: readonly number[], samplesPerSegment: number): RibbonGeometry {
+export function buildRibbon(centerline: readonly Point[], halfWidths: readonly number[], samplesPerSegment: number, taperEnds = false): RibbonGeometry {
     if (centerline.length < 2) {
         return EMPTY;
     }
@@ -73,7 +88,7 @@ export function buildRibbon(centerline: readonly Point[], halfWidths: readonly n
         const len = Math.hypot(dx, dy) || 1;
         const nx = -dy / len;
         const ny = dx / len;
-        const hw = widthAt(halfWidths, j, n);
+        const hw = widthAt(halfWidths, j, n) * (taperEnds ? taperFactor(j, n) : 1);
         const u = (cumulative[j] ?? 0) * invTotal;
         positions.push(cur.x + nx * hw, cur.y + ny * hw); // left rail
         positions.push(cur.x - nx * hw, cur.y - ny * hw); // right rail

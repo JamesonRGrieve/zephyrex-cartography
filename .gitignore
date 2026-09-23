@@ -4,3 +4,10 @@ coverage/
 *.log
 .DS_Store
 .foundry-test-data-*/
+
+# Ratchet run reports — regenerated on every gate run; the committed source of
+# truth is the paired `.*-baseline` file, not these detail dumps.
+.ts-coverage.json
+.strict-coverage.json
+.test-typecheck-coverage.json
+.husky/_logs/

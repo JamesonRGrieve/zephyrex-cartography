@@ -1,0 +1,54 @@
+{
+    "note": "Bundled FOSS terrain-texture packs. Each pack fills the same biome/role keys so the GM can switch packs at runtime; only the pack subdirectory changes. Water, ocean, and river are intentionally untextured (translucent tint). Every source licence is verified CC0 (public domain) with redistribution/bundling explicitly permitted; regenerate files + CREDITS with `pnpm assets:textures`.",
+    "untextured": [
+        "water",
+        "ocean",
+        "river"
+    ],
+    "packs": {
+        "polyhaven": {
+            "provider": "Poly Haven",
+            "provider_url": "https://polyhaven.com",
+            "license": "CC0-1.0",
+            "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "type": "polyhaven",
+            "resolution": "1k",
+            "assets": {
+                "grassland": "grass_ground",
+                "forest": "forrest_ground_01",
+                "sand": "coast_sand_01",
+                "rock": "aerial_rocks_02",
+                "snow": "snow_02",
+                "dirt": "brown_mud_02",
+                "lava": "volcanic_rock_tiles",
+                "marsh": "brown_mud_leaves_01",
+                "ice": "snow_04",
+                "ash": "burned_ground_01",
+                "tundra": "aerial_grass_rock",
+                "road": "bicolour_gravel"
+            }
+        },
+        "ambientcg": {
+            "provider": "ambientCG",
+            "provider_url": "https://ambientcg.com",
+            "license": "CC0-1.0",
+            "license_url": "https://docs.ambientcg.com/license/",
+            "type": "ambientcg",
+            "resolution": "1K",
+            "assets": {
+                "grassland": "Grass005",
+                "forest": "Ground078",
+                "sand": "Ground080",
+                "rock": "Rock064",
+                "snow": "Snow015",
+                "dirt": "Ground110",
+                "lava": "Lava004",
+                "marsh": "Ground109",
+                "ice": "Ice003",
+                "ash": "Ground108",
+                "tundra": "Ground037",
+                "road": "Gravel043"
+            }
+        }
+    }
+}

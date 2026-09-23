@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { isRegion, parseFeatures } from './feature';
+import { isRegion, isStroke, parseFeatures } from './feature';
 
 describe('parseFeatures', () => {
     it('parses a mixed blob of paths and regions, dropping junk', () => {
@@ -23,13 +23,23 @@ describe('parseFeatures', () => {
                     { x: 0, y: 1 },
                 ],
             },
+            {
+                type: 'stroke',
+                id: 's',
+                biome: 'grassland',
+                points: [
+                    { x: 0, y: 0 },
+                    { x: 10, y: 5 },
+                ],
+            },
             42,
             null,
             { id: 'bad', kind: 'nope' },
         ];
         const features = parseFeatures(raw);
-        expect(features).toHaveLength(2);
+        expect(features).toHaveLength(3);
         expect(features.filter(isRegion)).toHaveLength(1);
+        expect(features.filter(isStroke)).toHaveLength(1);
     });
 
     it('returns [] for non-array input', () => {

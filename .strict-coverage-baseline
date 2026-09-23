@@ -1,0 +1,8 @@
+{
+  "strict": [],
+  "config": "tsconfig.strict.json",
+  "totals": {
+    "totalErrors": 0
+  },
+  "byCode": {}
+}

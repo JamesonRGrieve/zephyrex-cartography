@@ -1,7 +1,16 @@
 {
-  "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/cartography-draw.ts", "scripts/*.mjs", "src/**/*.test.ts"],
-  "project": ["src/**/*.ts"],
-  "ignoreDependencies": ["lint-staged"],
-  "vitest": { "config": "vitest.config.ts" }
+    "$schema": "https://unpkg.com/knip@6/schema.json",
+    "entry": [
+        "scripts/*.mjs",
+        "src/**/*.test.ts"
+    ],
+    "project": [
+        "src/**/*.ts"
+    ],
+    "ignoreDependencies": [
+        "lint-staged"
+    ],
+    "vitest": {
+        "config": "vitest.config.ts"
+    }
 }
