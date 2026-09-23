@@ -381,10 +381,13 @@ These make everything after them cheaper and safer, so they come first.
   the controller's `levelHeight` from the scene's grid distance, and a
   native Level with an open top is closed at that height.
   `DEFAULT_LEVEL_HEIGHT` is only the fallback for a scene with no grid.
-- **Emitter elevation.** Lights and sounds are no longer unbounded vertically;
-  they reach by elevation and level [14.353, 14.355]. A stamp's light (and
-  later its sound) belongs at its level's base plus its height, and every
-  emitter needs a test that proves it.
+- **[done] Emitter elevation.** Lights and sounds are no longer unbounded
+  vertically; they reach by elevation and level [14.353, 14.355]. A stamp's
+  light and sound sit on its level, at that level's floor plus the stamp's
+  own elevation, and `tests/e2e/emitters.spec.ts` proves it in Foundry. Any
+  new emitter (particles) follows the same rule and gets the same proof.
+  A fresh v14 scene already has a default Level; nothing may assume level
+  bands start at 0.
 - **Level-aware helpers for the UI:** `CanvasDocument#locatedInLevel`
   [14.364] and `PlaceableObject#isFilteredOut` [14.364].
 
