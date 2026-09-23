@@ -42,6 +42,9 @@
             "id": "chest",
             "name": "Chest",
             "category": "Storage",
+            "tags": [
+                "loot"
+            ],
             "scale": "interior",
             "perspective": "top-down",
             "container": true,
@@ -84,6 +87,9 @@
             "id": "crate",
             "name": "Crate",
             "category": "Storage",
+            "tags": [
+                "loot"
+            ],
             "scale": "interior",
             "perspective": "top-down",
             "occlusion": {

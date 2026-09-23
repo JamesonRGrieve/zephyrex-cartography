@@ -111,8 +111,26 @@ function teardown(): void {
     }
 }
 
+/**
+ * Take the pointer over the whole scene while a tool is active, and give it
+ * back to Foundry's own layers while idle. A PIXI container without a hit
+ * area is hit only through what it has drawn, so clicks on empty canvas
+ * would never reach the tools.
+ */
+function capturePointer(container: PIXI.Container, capture: boolean): void {
+    container.eventMode = capture ? 'static' : 'none';
+    container.hitArea = capture ? canvas?.dimensions?.rect ?? null : null;
+}
+
+/** The mode a scene-control tool puts the layer in; new rooms get the materials last chosen in the materials panel. */
+function toolMode(toolName: string, active: boolean): Mode {
+    const picked = modeForTool(toolName, active);
+    return picked.kind === 'brush' && picked.brush.type === 'room' ? { kind: 'brush', brush: { type: 'room', ...materials.forNewRooms() } } : picked;
+}
+
 /** Enter `mode`, dropping any in-flight gesture. */
 function enterMode(st: DrawState, mode: Mode): void {
+    capturePointer(st.container, mode.kind !== 'idle');
     st.mode = mode;
     st.drag = null;
     st.down = null;
@@ -130,6 +148,11 @@ async function commitAndContinue(st: DrawState, brush: Brush): Promise<void> {
 }
 
 function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent): void {
+    // A tool's left press is the tool's: left to reach the stage, Foundry would also run its own gestures on it (a
+    // Shift long-press pings and pulls every view there, mid-drag). The right button still pans the canvas.
+    if (pointerEvent.button === PRIMARY_BUTTON) {
+        pointerEvent.stopPropagation();
+    }
     const mode = st.mode;
     const pt = localPoint(pointerEvent, st.container);
     switch (mode.kind) {
@@ -246,7 +269,7 @@ function setupDrawLayer(): void {
         return;
     }
     const container = new PIXI.Container();
-    container.eventMode = 'static';
+    capturePointer(container, false);
     canvas.stage.addChild(container);
 
     const renderer = new GraphicsFeatureRenderer(createPixiSurface(container), packs.textures());
@@ -394,10 +417,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
             if (!state) {
                 return;
             }
-            const picked = modeForTool(tool.name, active);
-            // New rooms get the materials last chosen in the materials panel.
-            const mode: Mode =
-                picked.kind === 'brush' && picked.brush.type === 'room' ? { kind: 'brush', brush: { type: 'room', ...materials.forNewRooms() } } : picked;
+            const mode = toolMode(tool.name, active);
             enterMode(state, mode);
             if (mode.kind === 'stamp') {
                 packs.openBrowser();

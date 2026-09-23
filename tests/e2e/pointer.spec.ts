@@ -1,0 +1,215 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * The tools as a GM uses them: a real mouse on the canvas, through the scene
+ * controls. The other specs drive the controller's API, which cannot catch a
+ * tool that never receives the pointer.
+ */
+import type { Page } from '@playwright/test';
+import { expect, test } from './lib/foundry';
+
+type Point = { readonly x: number; readonly y: number };
+
+const MODULE_ID = 'zephyrex-cartography';
+
+/** Hold the view still (the canvas otherwise settles after load), so scene points stay where the mouse is sent. */
+async function holdView(page: Page): Promise<void> {
+    await page.evaluate(async () => {
+        await canvas?.animatePan({ x: 1000, y: 750, scale: 0.5, duration: 0 });
+    });
+}
+
+/** Where scene point `at` is in the viewport, for a real mouse. */
+async function clientPoint(page: Page, at: Point): Promise<Point> {
+    return page.evaluate((scenePoint) => {
+        const point = canvas?.clientCoordinatesFromCanvas(scenePoint);
+        return { x: point?.x ?? 0, y: point?.y ?? 0 };
+    }, at);
+}
+
+async function clickScene(page: Page, at: Point, button: 'left' | 'right' = 'left'): Promise<void> {
+    const client = await clientPoint(page, at);
+    await page.mouse.click(client.x, client.y, { button });
+}
+
+/** Past Foundry's long-press threshold (`MouseInteractionManager.LONG_PRESS_DURATION_MS`, 500). */
+const LONG_PRESS_MS = 700;
+
+/** Press at `from`, move through `path`, release at the last point; with Shift held, and the press held first, if asked. */
+async function dragScene(page: Page, from: Point, path: readonly Point[], options: { shift?: boolean; holdMs?: number } = {}): Promise<void> {
+    const shift = options.shift === true;
+    if (shift) {
+        await page.keyboard.down('Shift');
+    }
+    const start = await clientPoint(page, from);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    if (options.holdMs !== undefined) {
+        await page.waitForTimeout(options.holdMs);
+    }
+    for (const at of path) {
+        // eslint-disable-next-line no-await-in-loop -- a drag is sequential by nature
+        const next = await clientPoint(page, at);
+        // eslint-disable-next-line no-await-in-loop -- see above
+        await page.mouse.move(next.x, next.y, { steps: 4 });
+    }
+    await page.mouse.up();
+    if (shift) {
+        await page.keyboard.up('Shift');
+    }
+}
+
+async function useTool(page: Page, tool: string, control = MODULE_ID): Promise<void> {
+    await page.evaluate(
+        async ({ group, toolName }) => {
+            await ui.controls?.activate({ control: group, tool: toolName });
+        },
+        { group: control, toolName: tool },
+    );
+}
+
+/** Click each point, then right-click to finish the shape. */
+async function drawShape(page: Page, points: readonly Point[]): Promise<void> {
+    for (const at of points) {
+        // eslint-disable-next-line no-await-in-loop -- clicks are sequential by nature
+        await clickScene(page, at);
+    }
+    await clickScene(page, points[0] ?? { x: 0, y: 0 }, 'right');
+}
+
+const SQUARE: readonly Point[] = [
+    { x: 300, y: 300 },
+    { x: 600, y: 300 },
+    { x: 600, y: 600 },
+    { x: 300, y: 600 },
+];
+
+async function wallCount(page: Page): Promise<number> {
+    return page.evaluate(() => canvas?.scene?.walls.size ?? 0);
+}
+
+/** The feature under scene point `at`, as the controller sees it. */
+async function featureAt(page: Page, at: Point): Promise<{ type: string; halfWidths: readonly number[] } | null> {
+    return page.evaluate((point) => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const id = controller?.hitTest(point) ?? null;
+        const feature = id === null ? undefined : controller?.getFeature(id);
+        if (!feature) {
+            return null;
+        }
+        return { type: feature.type, halfWidths: feature.type === 'path' ? feature.halfWidths : [] };
+    }, at);
+}
+
+test('the room tool draws on empty canvas with the real mouse', async ({ world }) => {
+    await useTool(world, 'room');
+    await holdView(world);
+    await drawShape(world, SQUARE.slice(0, 3));
+    await expect.poll(async () => wallCount(world)).toBe(3);
+});
+
+test('the layer takes the pointer only while one of its tools is active', async ({ world }) => {
+    await holdView(world);
+    const probe = await clientPoint(world, { x: 1000, y: 750 });
+    const ours = async (): Promise<boolean> =>
+        world.evaluate(({ x, y }) => {
+            // The draw layer is the last child of the stage; is it what a click at (x, y) lands on?
+            const layer = canvas?.stage?.children.at(-1);
+            let hit = canvas?.app?.renderer.events.rootBoundary.hitTest(x, y) ?? null;
+            while (hit && hit !== layer) {
+                hit = hit.parent;
+            }
+            return hit !== null && hit === layer;
+        }, probe);
+    await useTool(world, 'road');
+    expect(await ours()).toBe(true);
+    await useTool(world, 'wall', 'walls');
+    expect(await ours()).toBe(false);
+});
+
+test('a biome tool draws a region by clicks and paints a stroke by dragging', async ({ world }) => {
+    await useTool(world, 'forest');
+    await holdView(world);
+    await drawShape(world, SQUARE);
+    await expect.poll(async () => (await featureAt(world, { x: 450, y: 450 }))?.type).toBe('region');
+    await dragScene(world, { x: 1000, y: 300 }, [
+        { x: 1100, y: 320 },
+        { x: 1200, y: 300 },
+        { x: 1300, y: 340 },
+    ]);
+    await expect.poll(async () => (await featureAt(world, { x: 1100, y: 320 }))?.type).toBe('stroke');
+});
+
+test('the edit tool drags a room corner, and right-click deletes one', async ({ world }) => {
+    await useTool(world, 'room');
+    await holdView(world);
+    await drawShape(world, SQUARE);
+    await expect.poll(async () => wallCount(world)).toBe(4);
+    await useTool(world, 'edit');
+    await dragScene(world, { x: 600, y: 600 }, [{ x: 700, y: 700 }]);
+    const corners = async (): Promise<boolean> =>
+        world.evaluate(() => (canvas?.scene?.walls.contents ?? []).some((wall) => wall.c[0] === 700 && wall.c[1] === 700));
+    await expect.poll(corners).toBe(true);
+    await clickScene(world, { x: 700, y: 700 }, 'right');
+    await expect.poll(async () => wallCount(world)).toBe(3);
+});
+
+// A GM who holds the press before dragging makes a Shift long-press, which Foundry would turn into a ping that pulls
+// every view to the point, mid-drag. The tool's press must be the tool's alone.
+test('the edit tool sets a road width by Shift-dragging a point, however long the press', async ({ world }) => {
+    await useTool(world, 'road');
+    await holdView(world);
+    await drawShape(world, [
+        { x: 300, y: 1000 },
+        { x: 900, y: 1000 },
+    ]);
+    await expect.poll(async () => (await featureAt(world, { x: 600, y: 1000 }))?.type).toBe('path');
+    await useTool(world, 'edit');
+    await dragScene(world, { x: 900, y: 1000 }, [{ x: 900, y: 1080 }], { shift: true, holdMs: LONG_PRESS_MS });
+    // The pointer maps back from a zoomed view, so the width is 80 to within float error.
+    await expect.poll(async () => Math.round((await featureAt(world, { x: 600, y: 1000 }))?.halfWidths[1] ?? 0)).toBe(80);
+});
+
+test('the door tool makes a room wall a door, then opens its panel', async ({ world }) => {
+    await useTool(world, 'room');
+    await holdView(world);
+    await drawShape(world, SQUARE);
+    await useTool(world, 'door');
+    await clickScene(world, { x: 450, y: 300 });
+    await expect.poll(async () => world.evaluate(() => (canvas?.scene?.walls.contents ?? []).filter((wall) => wall.door === 1).length)).toBe(1);
+    await clickScene(world, { x: 450, y: 300 });
+    await expect(world.locator(`#${MODULE_ID}-door`)).toBeVisible();
+});
+
+test('the materials tool opens a room’s materials, and the erase tool removes the room', async ({ world }) => {
+    await useTool(world, 'room');
+    await holdView(world);
+    await drawShape(world, SQUARE);
+    await expect.poll(async () => wallCount(world)).toBe(4);
+    await useTool(world, 'materials');
+    await clickScene(world, { x: 450, y: 450 });
+    await expect(world.locator(`#${MODULE_ID}-materials`)).toBeVisible();
+    await useTool(world, 'erase');
+    await clickScene(world, { x: 450, y: 450 });
+    await expect.poll(async () => wallCount(world)).toBe(0);
+});
+
+test('the stamp tool places the stamp armed in the browser where the GM clicks', async ({ world }) => {
+    await useTool(world, 'stamp');
+    await holdView(world);
+    const card = world.locator(`#${MODULE_ID}-stamp-browser [data-stamp-key="zc-e2e-pack:crate"]`);
+    await card.click();
+    await expect(card).toHaveAttribute('aria-pressed', 'true');
+    // Tuck the browser away, as a GM would, so the click lands on the canvas; the stamp stays armed.
+    await world.evaluate(async (id) => {
+        await foundry.applications.instances.get(id)?.minimize();
+    }, `${MODULE_ID}-stamp-browser`);
+    await clickScene(world, { x: 350, y: 350 });
+    await expect
+        .poll(async () =>
+            world.evaluate(() => {
+                const tile = canvas?.scene?.tiles.contents[0];
+                return tile ? { x: tile.x, y: tile.y } : null;
+            }),
+        )
+        .toEqual({ x: 350, y: 350 });
+});

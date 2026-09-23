@@ -26,6 +26,8 @@ declare global {
     interface SettingConfig {
         /** Item Piles' Actor type for piles, which a GM chooses on a system Item Piles does not know. */
         'item-piles.actorClassType': string;
+        /** Whether a GM has seen Item Piles' modal "System Not Recognized" warning, which otherwise covers the page. */
+        'item-piles.systemNotFoundWarningShown': boolean;
     }
 }
 
@@ -92,14 +94,20 @@ async function activateModules(page: Page): Promise<void> {
         await page.reload();
         await page.waitForFunction(() => game.ready === true, undefined, { timeout: READY_TIMEOUT_MS });
     }
-    // Item Piles does not know the e2e system, so it needs the GM's usual setup: which Actor type a pile is.
+    // Item Piles does not know the e2e system, so it needs the GM's usual setup: which Actor type a pile is, and its
+    // modal unknown-system warning dismissed (it covers the page, so real pointer input would never reach the canvas).
     if (await moduleActive(page, 'item-piles')) {
         const configured = await page.evaluate(async (actorType) => {
-            if (game.settings?.get('item-piles', 'actorClassType') === actorType) {
-                return false;
+            let updated = false;
+            if (game.settings?.get('item-piles', 'systemNotFoundWarningShown') !== true) {
+                await game.settings?.set('item-piles', 'systemNotFoundWarningShown', true);
+                updated = true;
             }
-            await game.settings?.set('item-piles', 'actorClassType', actorType);
-            return true;
+            if (game.settings?.get('item-piles', 'actorClassType') !== actorType) {
+                await game.settings?.set('item-piles', 'actorClassType', actorType);
+                updated = true;
+            }
+            return updated;
         }, E2E_ACTOR_TYPE);
         // The setting asks for a reload; take it now, before a scene is set up, rather than mid-test.
         if (configured) {
