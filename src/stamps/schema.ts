@@ -144,7 +144,19 @@ export const stampPackSchema = z
 
 type StampPack = z.infer<typeof stampPackSchema>;
 
-interface PackIssue {
+export type Stamp = StampPack['stamps'][number];
+
+export type StampVariant = Stamp['variants'][number];
+
+export type StampLight = z.infer<typeof lightSchema>;
+
+export type StampOcclusion = z.infer<typeof occlusionSchema>;
+
+export type StampPhysical = z.infer<typeof physicalSchema>;
+
+export type TextureSet = StampPack['textureSets'][number];
+
+export interface PackIssue {
     readonly path: string;
     readonly message: string;
 }
