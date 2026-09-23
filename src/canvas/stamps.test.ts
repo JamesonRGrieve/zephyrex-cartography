@@ -100,6 +100,76 @@ describe('CartographyController stamp occlusion', () => {
     });
 });
 
+const doors = catalogStamps([
+    {
+        id: 'door',
+        name: 'Door',
+        category: 'Doors',
+        scale: 'interior',
+        perspective: 'top-down',
+        door: { type: 'door' },
+        variants: [
+            { state: 'shut', image: 'shut.png', width: 100, height: 20, doorState: 'closed' },
+            { state: 'open', image: 'open.png', width: 100, height: 20, doorState: 'open' },
+        ],
+    },
+]);
+
+async function roomWithDoor(): Promise<ReturnType<typeof makeHarness>> {
+    const h = makeHarness(doors);
+    h.c.grid = { size: 100, originX: 0, originY: 0 };
+    h.c.begin({ type: 'room', floor: 'dirt' }, 'click');
+    for (const p of [
+        { x: 0, y: 0 },
+        { x: 400, y: 0 },
+        { x: 400, y: 300 },
+        { x: 0, y: 300 },
+    ]) {
+        h.c.addPoint(p);
+    }
+    await h.c.commit(); // p1: 4 walls w0..w3 + light
+    await h.c.placeStamp({ stamp: 'pack:door', x: 200, y: 30 }); // p2, snaps onto the top wall
+    return h;
+}
+
+describe('CartographyController door stamps', () => {
+    it('snaps onto a room wall, supplies the door wall, and cuts the room wall around it', async () => {
+        const { c, d } = await roomWithDoor();
+        expect(c.getFeature('p2')?.points).toEqual([{ x: 200, y: 0 }]);
+        expect(d.walls[1]).toEqual([expect.objectContaining({ a: { x: 150, y: 0 }, b: { x: 250, y: 0 }, door: 'door', doorState: 'closed' })]);
+        const resynced = d.walls[2] ?? [];
+        expect(resynced).toHaveLength(5);
+        expect(c.getFeature('p1')?.docs.walls).toEqual(['w5', 'w6', 'w7', 'w8', 'w9']);
+        expect(d.deletedIds()).toEqual(['w0', 'w1', 'w2', 'w3', 'L0']);
+    });
+
+    it('closes the wall again when the door is removed', async () => {
+        const { c, d } = await roomWithDoor();
+        await c.remove('p2');
+        expect(d.walls[d.walls.length - 1]).toHaveLength(4);
+    });
+
+    it('does not touch rooms for changes to other stamps or door edits that leave the openings alone', async () => {
+        const { c, d } = await roomWithDoor();
+        const batches = d.walls.length;
+        await c.setStampVariant('p2', 1); // same axis → the room keeps its walls
+        expect(d.walls.length).toBe(batches + 1);
+        expect(d.walls[d.walls.length - 1]?.[0]?.doorState).toBe('open');
+    });
+
+    it('follows a door opened in play by switching the stamp variant', async () => {
+        const { c } = await roomWithDoor();
+        const doorWall = c.getFeature('p2')?.docs.walls[0] ?? '';
+        expect(await c.applyDoorState(doorWall, 'open')).toBe(true);
+        const opened = c.getFeature('p2');
+        expect(opened?.type === 'stamp' ? opened.variant : -1).toBe(1);
+        const newWall = opened?.docs.walls[0] ?? '';
+        expect(await c.applyDoorState(newWall, 'open')).toBe(false); // already open
+        expect(await c.applyDoorState(newWall, 'locked')).toBe(false); // no variant shows it
+        expect(await c.applyDoorState('w0', 'open')).toBe(false); // not a door stamp's wall
+    });
+});
+
 describe('CartographyController stamps', () => {
     it('places a stamp as a tracked native tile and removes it with the feature', async () => {
         const { c, d, s } = makeHarness(stamps);

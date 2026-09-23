@@ -15,6 +15,13 @@ const DOOR_TYPES: Record<DoorType, number> = { none: 0, door: 1, secret: 2 };
 /** `CONST.WALL_DOOR_STATES`. */
 const DOOR_STATES: Record<DoorState, number> = { closed: 0, open: 1, locked: 2 };
 
+/** The door state for a wall's `ds` value, or null for a value Foundry does not define. */
+export function doorStateFromDs(ds: number): DoorState | null {
+    return DOOR_STATE_NAMES.find((state) => DOOR_STATES[state] === ds) ?? null;
+}
+
+const DOOR_STATE_NAMES: readonly DoorState[] = ['closed', 'open', 'locked'];
+
 /** `CONST.EDGE_SENSE_TYPES` (v14) / `WALL_SENSE_TYPES` (v13): NONE and NORMAL. */
 const SENSE_NONE = 0;
 const SENSE_NORMAL = 20;

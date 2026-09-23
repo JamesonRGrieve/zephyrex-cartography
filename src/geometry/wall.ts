@@ -34,6 +34,58 @@ export function perimeterSegments(points: readonly Point[]): Segment[] {
     return out;
 }
 
+/** Where point `p` projects onto the line through `seg`, as a parameter (0 = a, 1 = b), and how far it is from that line. */
+function project(seg: Segment, p: Point): { t: number; offset: number } {
+    const dx = seg.b.x - seg.a.x;
+    const dy = seg.b.y - seg.a.y;
+    const span = Math.hypot(dx, dy);
+    if (span === 0) {
+        return { t: 0, offset: Math.hypot(p.x - seg.a.x, p.y - seg.a.y) };
+    }
+    const t = ((p.x - seg.a.x) * dx + (p.y - seg.a.y) * dy) / (span * span);
+    const offset = Math.abs((p.x - seg.a.x) * dy - (p.y - seg.a.y) * dx) / span;
+    return { t, offset };
+}
+
+function pointAt(seg: Segment, t: number): Point {
+    return { x: seg.a.x + (seg.b.x - seg.a.x) * t, y: seg.a.y + (seg.b.y - seg.a.y) * t };
+}
+
+/**
+ * `seg` with every collinear cut removed: each cut whose endpoints both lie
+ * within `tolerance` of the segment's line is an opening. The pieces of the
+ * segment outside every opening are returned in order. Cuts that are not
+ * collinear leave the segment whole.
+ */
+export function cutSegment(seg: Segment, cuts: readonly Segment[], tolerance: number): Segment[] {
+    const openings: [number, number][] = [];
+    for (const cut of cuts) {
+        const a = project(seg, cut.a);
+        const b = project(seg, cut.b);
+        if (a.offset > tolerance || b.offset > tolerance) {
+            continue;
+        }
+        const from = Math.max(0, Math.min(a.t, b.t));
+        const to = Math.min(1, Math.max(a.t, b.t));
+        if (to > from) {
+            openings.push([from, to]);
+        }
+    }
+    openings.sort((p, q) => p[0] - q[0]);
+    const pieces: Segment[] = [];
+    let cursor = 0;
+    for (const [from, to] of openings) {
+        if (from > cursor) {
+            pieces.push({ a: pointAt(seg, cursor), b: pointAt(seg, from) });
+        }
+        cursor = Math.max(cursor, to);
+    }
+    if (cursor < 1) {
+        pieces.push({ a: pointAt(seg, cursor), b: pointAt(seg, 1) });
+    }
+    return pieces;
+}
+
 /** Average of a polygon's vertices — a good-enough light-placement centre for a room. */
 export function centroid(points: readonly Point[]): Point {
     if (points.length === 0) {

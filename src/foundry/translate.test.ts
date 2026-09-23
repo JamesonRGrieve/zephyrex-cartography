@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL } from '../tools/documents';
-import { lightCreateData, pxToDistance, tileCreateData, wallCreateData } from './translate';
+import { doorStateFromDs, lightCreateData, pxToDistance, tileCreateData, wallCreateData } from './translate';
 
 const GRID = { size: 100, distance: 5 };
 
@@ -33,6 +33,13 @@ describe('wallCreateData', () => {
         expect(data.light).toBe(0);
         expect(data.sound).toBe(20);
         expect(data.move).toBe(20);
+    });
+});
+
+describe('doorStateFromDs', () => {
+    it('maps Foundry door states back, and rejects unknown values', () => {
+        expect([0, 1, 2].map(doorStateFromDs)).toEqual(['closed', 'open', 'locked']);
+        expect(doorStateFromDs(7)).toBeNull();
     });
 });
 

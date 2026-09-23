@@ -15,6 +15,7 @@ import { isRecord, stringOrNull } from '../tools/guards';
 import type { BrowserLabels } from '../ui/stamp-browser-view';
 import { fetchPacks } from './packs';
 import { type ArmedStamp, createStampBrowser } from './stamp-browser';
+import { doorStateFromDs } from './translate';
 
 const SNAP_SETTING = 'stampSnap';
 const SCALE_SETTING = 'stampScale';
@@ -203,6 +204,20 @@ export function registerStampRuntime(controller: () => CartographyController | n
         const featureId = tileOwner(active, tile);
         if (featureId !== null) {
             void active.syncStampFrame(featureId, { x: tile.x, y: tile.y, width: tile.width, height: tile.height, rotation: tile.rotation });
+        }
+    });
+
+    // A door opened, closed or locked in play shows on its door stamp. Only the active GM rewrites the
+    // stamp: players cannot edit tiles or walls, and several GMs acting would race.
+    Hooks.on('updateWall', (wall, changed) => {
+        const active = controller();
+        const ds = 'ds' in changed ? changed.ds : undefined;
+        if (!active || typeof ds !== 'number' || wall.id === null || game.users?.activeGM?.isSelf !== true) {
+            return;
+        }
+        const state = doorStateFromDs(ds);
+        if (state) {
+            void active.applyDoorState(wall.id, state);
         }
     });
 

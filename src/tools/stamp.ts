@@ -151,6 +151,13 @@ export function stampPoint(feature: StampFeature, fraction: Point): Point {
     return { x: c.x + lx * cos - ly * sin, y: c.y + lx * sin + ly * cos };
 }
 
+/** A door stamp's wall: through the centre along the footprint's long side, so a door image spans its doorway. */
+export function stampDoorAxis(feature: StampFeature): { readonly a: Point; readonly b: Point } {
+    return feature.width >= feature.height
+        ? { a: stampPoint(feature, { x: 0, y: 0.5 }), b: stampPoint(feature, { x: 1, y: 0.5 }) }
+        : { a: stampPoint(feature, { x: 0.5, y: 0 }), b: stampPoint(feature, { x: 0.5, y: 1 }) };
+}
+
 /** The footprint's four corners, clockwise from top-left, with rotation applied about the centre. */
 export function stampCorners(feature: StampFeature): Point[] {
     return [

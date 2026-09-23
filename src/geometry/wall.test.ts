@@ -1,7 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import type { Point } from './spline';
-import { centroid, nearestSegment, perimeterSegments } from './wall';
+import { centroid, cutSegment, nearestSegment, perimeterSegments } from './wall';
+
+describe('cutSegment', () => {
+    const seg = { a: { x: 0, y: 0 }, b: { x: 100, y: 0 } };
+
+    it('leaves the segment whole with no collinear cuts', () => {
+        expect(cutSegment(seg, [], 2)).toEqual([seg]);
+        expect(cutSegment(seg, [{ a: { x: 40, y: -20 }, b: { x: 60, y: 20 } }], 2)).toEqual([seg]);
+    });
+
+    it('opens a gap where a collinear cut lies, in either direction and within tolerance', () => {
+        expect(cutSegment(seg, [{ a: { x: 60, y: 1 }, b: { x: 40, y: -1 } }], 2)).toEqual([
+            { a: { x: 0, y: 0 }, b: { x: 40, y: 0 } },
+            { a: { x: 60, y: 0 }, b: { x: 100, y: 0 } },
+        ]);
+    });
+
+    it('merges overlapping cuts and clips cuts past the ends', () => {
+        const cuts = [
+            { a: { x: 10, y: 0 }, b: { x: 30, y: 0 } },
+            { a: { x: 20, y: 0 }, b: { x: 40, y: 0 } },
+            { a: { x: 90, y: 0 }, b: { x: 150, y: 0 } },
+        ];
+        expect(cutSegment(seg, cuts, 1)).toEqual([
+            { a: { x: 0, y: 0 }, b: { x: 10, y: 0 } },
+            { a: { x: 40, y: 0 }, b: { x: 90, y: 0 } },
+        ]);
+    });
+
+    it('removes a segment covered entirely, and ignores a degenerate target', () => {
+        expect(cutSegment(seg, [{ a: { x: -5, y: 0 }, b: { x: 105, y: 0 } }], 1)).toEqual([]);
+        const point = { a: { x: 5, y: 5 }, b: { x: 5, y: 5 } };
+        expect(cutSegment(point, [{ a: { x: 0, y: 0 }, b: { x: 1, y: 0 } }], 1)).toEqual([point]);
+    });
+});
 
 describe('perimeterSegments', () => {
     it('produces one segment per edge of a closed polygon, including the closing edge', () => {

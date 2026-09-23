@@ -8,13 +8,14 @@
  */
 import { RIBBON_SAMPLES } from '../geometry/ribbon';
 import { catmullRom, type Point } from '../geometry/spline';
-import { perimeterSegments } from '../geometry/wall';
+import { cutSegment, perimeterSegments } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
 import { BLOCKS_ALL, type LightDoc, type SenseBlock, type TileDoc, type WallDoc, wallDocFromSpec } from './documents';
+import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
 import type { Feature } from './feature';
 import type { CartographyPath } from './path';
 import { roomLight, roomWalls, type RoomFeature } from './room';
-import { stampCentre, stampCorners, stampPoint, type StampFeature } from './stamp';
+import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 
 export interface DocumentPlan {
     readonly walls: readonly WallDoc[];
@@ -112,24 +113,44 @@ function stampWalls(stamp: StampFeature): WallDoc[] {
     );
 }
 
-function stampPlan(stamp: StampFeature): DocumentPlan {
-    const light = stampLight(stamp);
-    return { walls: stampWalls(stamp), tiles: [stampTile(stamp)], lights: light ? [light] : [] };
+/** A door stamp's own door wall, along its axis, in the state its variant shows. */
+function stampDoorWall(stamp: StampFeature): WallDoc | null {
+    const door = stamp.behaviour.door;
+    if (!door) {
+        return null;
+    }
+    const axis = stampDoorAxis(stamp);
+    return { a: axis.a, b: axis.b, door: door.type, doorState: stampDoorState(stamp), blocks: BLOCKS_ALL, level: null };
 }
 
-function roomPlan(room: RoomFeature): DocumentPlan {
+function stampPlan(stamp: StampFeature): DocumentPlan {
+    const light = stampLight(stamp);
+    const door = stampDoorWall(stamp);
+    return { walls: [...(door ? [door] : []), ...stampWalls(stamp)], tiles: [stampTile(stamp)], lights: light ? [light] : [] };
+}
+
+/** Perimeter walls with door-stamp openings cut out (the stamps supply those door walls). */
+function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
     const light = roomLight(room);
+    const openings = doorOpenings(context.features);
     return {
-        walls: roomWalls(room).map((spec) => wallDocFromSpec(spec)),
+        walls: roomWalls(room).flatMap((spec) => cutSegment(spec, openings, OPENING_TOLERANCE).map((piece) => wallDocFromSpec({ ...piece, door: spec.door }))),
         lights: light.dim > 0 ? [{ ...light, elevation: 0, level: null }] : [],
         tiles: [],
     };
 }
 
-/** The native documents `feature` should have. */
-export function planDocuments(feature: Feature): DocumentPlan {
+/** What a feature's plan may depend on besides the feature itself: the scene's other features. */
+export interface PlanContext {
+    readonly features: readonly Feature[];
+}
+
+const NO_CONTEXT: PlanContext = { features: [] };
+
+/** The native documents `feature` should have, among the scene's `context.features`. */
+export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEXT): DocumentPlan {
     if (feature.type === 'room') {
-        return roomPlan(feature);
+        return roomPlan(feature, context);
     }
     if (feature.type === 'stamp') {
         return stampPlan(feature);

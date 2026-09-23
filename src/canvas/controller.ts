@@ -10,8 +10,9 @@ import { nearestVertex } from '../geometry/hit';
 import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { nearestSegment } from '../geometry/wall';
-import { type CatalogStamp, cycleVariantIndex } from '../stamps/catalog';
-import { hasDocs, NO_DOCS, type GeneratedDocs, type LightDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
+import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type LightDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
@@ -80,6 +81,9 @@ export type Brush =
 
 /** Cap on retained undo snapshots — bounds memory on a long editing session. */
 const MAX_HISTORY = 50;
+
+/** A door stamp placed within this many grid squares of a room wall snaps onto it. */
+const DOOR_SNAP_SQUARES = 0.5;
 
 function swap(arr: Feature[], a: number, b: number): void {
     const first = arr[a];
@@ -161,9 +165,27 @@ export class CartographyController {
         if (!stamp) {
             return null;
         }
-        const feature = await this.withSilhouette(makeStamp(this.makeId(), stamp, placement, this.stampGrid(stamp)));
+        const placed = makeStamp(this.makeId(), stamp, placement, this.stampGrid(stamp));
+        // A door dropped near a room wall lands on it, so its axis cuts the wall cleanly.
+        const feature = await this.withSilhouette(snapDoorToRooms(placed, this.features, placed.gridSize * DOOR_SNAP_SQUARES));
         await this.add(feature);
         return feature.id;
+    }
+
+    /**
+     * Follow a door opened, closed or locked in play: switch the door stamp
+     * that owns `wallId` to a variant showing `state`. Returns false when the
+     * wall is not a door stamp's, it already shows that state, or no variant
+     * does.
+     */
+    async applyDoorState(wallId: string, state: DoorState): Promise<boolean> {
+        const feature = this.features.find((f) => f.docs.walls.includes(wallId));
+        const stamp = feature && isDoorStamp(feature) ? this.catalog.get(feature.stamp) : null;
+        if (!feature || !isDoorStamp(feature) || !stamp || stampDoorState(feature) === state) {
+            return false;
+        }
+        const index = stamp.variants.findIndex((_, i) => (effectiveProperties(stamp, i).doorState ?? 'closed') === state);
+        return index >= 0 && this.setStampVariant(feature.id, index);
     }
 
     /** Switch a placed stamp to variant `index` (clamped); false if it is not a stamp or its pack is gone. */
@@ -264,10 +286,12 @@ export class CartographyController {
     /** Add a committed feature: render, persist, then generate its native documents. */
     async add(feature: Feature): Promise<void> {
         this.snapshot();
+        const before = [...this.features];
         this.features.push(feature);
         this.renderer.set(feature.id, feature);
         await this.store.save(this.features);
         await this.syncDocs(feature);
+        await this.resyncDependents(before, [feature]);
     }
 
     async remove(id: string): Promise<void> {
@@ -276,12 +300,14 @@ export class CartographyController {
             return;
         }
         this.snapshot();
+        const before = this.features;
         this.features = this.features.filter((f) => f.id !== id);
         this.renderer.remove(id);
         await this.store.save(this.features);
         if (hasDocs(target.docs)) {
             await this.sink.deleteDocuments(target.docs);
         }
+        await this.resyncDependents(before, [target]);
     }
 
     /** Topmost feature under `pt`, or null — scans front-to-back (render order). */
@@ -459,10 +485,30 @@ export class CartographyController {
             return;
         }
         this.snapshot();
+        const before = this.features;
         this.features = this.features.map((f) => (f.id === id ? next : f));
         this.renderer.set(id, next);
         await this.store.save(this.features);
         await this.syncDocs(next);
+        await this.resyncDependents(before, [old, next]);
+    }
+
+    /**
+     * Re-sync the features whose plan depends on others that just changed: a
+     * door stamp added, moved or removed changes the openings in room walls.
+     * Only rooms whose planned walls actually differ are touched.
+     */
+    private async resyncDependents(before: readonly Feature[], changed: readonly Feature[]): Promise<void> {
+        if (!changed.some(isDoorStamp)) {
+            return;
+        }
+        const wallsOf = (room: Feature, features: readonly Feature[]): string => JSON.stringify(planDocuments(room, { features }).walls);
+        const affected = this.features.filter((f) => f.type === 'room' && wallsOf(f, before) !== wallsOf(f, this.features));
+        // Sequential: each sync reads and persists the shared feature list, so concurrent syncs would race.
+        await affected.reduce(async (previous, room) => {
+            await previous;
+            await this.syncDocs(this.getFeature(room.id) ?? room);
+        }, Promise.resolve());
     }
 
     /**
@@ -472,7 +518,7 @@ export class CartographyController {
      * resulting ids on the feature and persists.
      */
     private async syncDocs(feature: Feature): Promise<void> {
-        const plan = planDocuments(feature);
+        const plan = planDocuments(feature, { features: this.features });
         const old = feature.docs;
         const planned = plan.walls.length + plan.lights.length + plan.tiles.length;
         if (planned === 0 && !hasDocs(old)) {
