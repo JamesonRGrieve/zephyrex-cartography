@@ -29,7 +29,7 @@ import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
-import { findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
+import { DEFAULT_LEVEL_HEIGHT, findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { drawOrder } from '../tools/nesting';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
@@ -193,6 +193,8 @@ export class CartographyController {
     grid: Grid | null = null;
     /** Whether committed paths also emit Foundry walls along their centerline. */
     emitWalls = false;
+    /** How tall a newly added level is (scene distance units); the entry sets it from the scene's grid. */
+    levelHeight = DEFAULT_LEVEL_HEIGHT;
 
     private readonly renderer: FeatureRenderer;
     private readonly store: SceneStore;
@@ -334,7 +336,7 @@ export class CartographyController {
 
     /** Add a level stacked above (or below) the existing ones and make it active; returns its id. */
     async addLevel(position: 'above' | 'below', levelName: string): Promise<string | null> {
-        const id = await this.levelStore.create({ name: levelName, ...nextLevelBand(this.levelList, position) });
+        const id = await this.levelStore.create({ name: levelName, ...nextLevelBand(this.levelList, position, this.levelHeight) });
         await this.reloadLevels();
         if (id !== null) {
             this.setActiveLevel(id);

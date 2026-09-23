@@ -35,6 +35,38 @@ test('levels are native Level documents, and a room on one has walls on that lev
     }
 });
 
+test('a new level, above or below, is 4 grid squares tall, as Foundry v14 makes them', async ({ world }) => {
+    const heights = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const loft = await controller?.addLevel('above', 'Loft');
+        const cellar = await controller?.addLevel('below', 'Cellar');
+        return [loft, cellar].map((id) => {
+            const level = canvas?.scene?.levels.contents.find((l) => l.id === id);
+            return level ? (level.elevation.top ?? 0) - (level.elevation.bottom ?? 0) : null;
+        });
+    });
+    // The e2e system's grid is 5 distance units per square.
+    expect(heights).toEqual([20, 20]);
+});
+
+test('a Level a GM makes with an open ceiling is read as 4 grid squares tall', async ({ world }) => {
+    await world.evaluate(async () => {
+        await canvas?.scene?.createEmbeddedDocuments('Level', [{ name: 'Sky', elevation: { bottom: 100, top: null } }]);
+    });
+    // The createLevel hook re-reads the levels asynchronously.
+    await expect
+        .poll(async () =>
+            world.evaluate(() => {
+                const sky = game.modules
+                    ?.get('zephyrex-cartography')
+                    .api.controller()
+                    ?.levels.find((l) => l.name === 'Sky');
+                return sky && { bottom: sky.bottom, top: sky.top };
+            }),
+        )
+        .toEqual({ bottom: 100, top: 120 });
+});
+
 test('a Level deleted in Foundry takes its features with it', async ({ world }) => {
     const built = await world.evaluate(async () => {
         const api = game.modules?.get('zephyrex-cartography').api;

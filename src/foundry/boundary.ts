@@ -114,7 +114,7 @@ export interface EmbeddedCollection {
 export interface NativeLevel {
     readonly id: string | null;
     readonly name: string;
-    /** A null bound is open-ended (−∞ / +∞). */
+    /** An open bound is null in source data and ±Infinity once Foundry prepares it. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
 }
 

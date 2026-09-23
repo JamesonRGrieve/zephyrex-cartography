@@ -15,7 +15,7 @@ export interface Level {
     readonly top: number;
 }
 
-/** Height given to a newly added level, in scene distance units; editable afterwards. */
+/** Height given to a new level when the scene's grid is unknown, in scene distance units; editable afterwards. */
 export const DEFAULT_LEVEL_HEIGHT = 10;
 
 /** Levels ordered bottom to top. */
@@ -37,6 +37,14 @@ export function adjacentLevel(levels: readonly Level[], id: string, steps: numbe
 /** Elevation at which a document on `level` sits: its band's bottom, or 0 on no level. */
 export function levelElevation(levels: readonly Level[], id: string | null): number {
     return findLevel(levels, id)?.bottom ?? 0;
+}
+
+/** Grid squares tall a new level is: Foundry v14's default Level height (14.368). */
+const LEVEL_HEIGHT_SQUARES = 4;
+
+/** How tall a new level is on a scene with `gridDistance` distance units per square. */
+export function levelHeightFor(gridDistance: number): number {
+    return gridDistance > 0 ? LEVEL_HEIGHT_SQUARES * gridDistance : DEFAULT_LEVEL_HEIGHT;
 }
 
 /** Band for a new level stacked directly above (or below) the existing ones. */

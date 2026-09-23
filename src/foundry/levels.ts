@@ -5,7 +5,7 @@
  * vision.
  */
 import type { LevelStore } from '../canvas/controller';
-import { DEFAULT_LEVEL_HEIGHT, type Level, sortLevels } from '../tools/levels';
+import { type Level, levelHeightFor, sortLevels } from '../tools/levels';
 import type { FoundryScene, NativeLevel } from './boundary';
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses Foundry's createEmbeddedDocuments result to read the created Level's id
@@ -14,18 +14,36 @@ function firstId(created: unknown): string | null {
     return typeof doc === 'object' && doc !== null && 'id' in doc && typeof doc.id === 'string' ? doc.id : null;
 }
 
-/** A native Level as a band; open-ended bounds are closed at a default height so every band has a floor and a ceiling. */
-function fromNative(level: NativeLevel): Level | null {
+/**
+ * A native Level as a band. Open-ended bounds are closed so every band has a
+ * floor and a ceiling: an open floor at 0, an open ceiling one default level
+ * height up (4 grid squares).
+ */
+function fromNative(level: NativeLevel, height: number): Level | null {
     if (level.id === null) {
         return null;
     }
-    const bottom = level.elevation.bottom ?? 0;
-    return { id: level.id, name: level.name, bottom, top: level.elevation.top ?? bottom + DEFAULT_LEVEL_HEIGHT };
+    // Foundry reports an open bound as null in source data and as ±Infinity once prepared.
+    const bottom = finiteOr(level.elevation.bottom, 0);
+    return { id: level.id, name: level.name, bottom, top: finiteOr(level.elevation.top, bottom + height) };
+}
+
+function finiteOr(value: number | null, fallback: number): number {
+    return value !== null && Number.isFinite(value) ? value : fallback;
+}
+
+/** The scene's Levels as bands. */
+function bands(scene: FoundryScene): Level[] {
+    const height = levelHeightFor(scene.grid.distance);
+    return scene.levels.contents.map((level) => fromNative(level, height)).filter((l): l is Level => l !== null);
 }
 
 export function createLevelStore(getScene: () => FoundryScene | null): LevelStore {
     return {
-        load: () => sortLevels((getScene()?.levels.contents ?? []).map(fromNative).filter((l): l is Level => l !== null)),
+        load: () => {
+            const scene = getScene();
+            return scene ? sortLevels(bands(scene)) : [];
+        },
         create: async (level) => {
             const scene = getScene();
             return scene
@@ -34,7 +52,7 @@ export function createLevelStore(getScene: () => FoundryScene | null): LevelStor
         },
         update: async (id, patch) => {
             const scene = getScene();
-            const current = scene?.levels.contents.map(fromNative).find((l) => l?.id === id);
+            const current = scene ? bands(scene).find((l) => l.id === id) : undefined;
             if (!scene || !current) {
                 return;
             }

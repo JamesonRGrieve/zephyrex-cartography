@@ -376,9 +376,11 @@ These make everything after them cheaper and safer, so they come first.
   feature owns their geometry. An interior exit stays unlocked for the GM to
   place. (From 14.356 the default visibility for non-template regions is
   only on the Region layer when unlocked, which would hide a locked region.)
-- **Level bands from the grid.** A Level's default top is 4 × the grid
-  distance [14.368], not 20. `nextLevelBand` should use the scene's grid
-  distance instead of the fixed `DEFAULT_LEVEL_HEIGHT`.
+- **[done] Level bands from the grid.** A new level is 4 grid squares
+  tall, as Foundry makes them [14.368] (`levelHeightFor`). The entry sets
+  the controller's `levelHeight` from the scene's grid distance, and a
+  native Level with an open top is closed at that height.
+  `DEFAULT_LEVEL_HEIGHT` is only the fallback for a scene with no grid.
 - **Emitter elevation.** Lights and sounds are no longer unbounded vertically;
   they reach by elevation and level [14.353, 14.355]. A stamp's light (and
   later its sound) belongs at its level's base plus its height, and every
@@ -523,6 +525,26 @@ These make everything after them cheaper and safer, so they come first.
 - **Compressed textures.** Tiles and backgrounds accept KTX2 and Basis files
   [14.362]. Asset packs can ship GPU-compressed art for large stamp sets, and
   the pack schema and loader accept those extensions.
+
+### Priority 8: RGBA mask texture painting
+Terrain today is polygons and brush strokes, each one biome with a
+feathered edge. The operator asked for texture painting with an **RGBA mask
+option**: a splat map, as in Dungeondraft and Inkarnate.
+- **Mask.** A painted mask image whose four channels each weight one texture
+  from the active set, blended per pixel. Soft, pressure-free brushes paint
+  into one channel and take from the others, giving hand-painted edges no
+  polygon can.
+- **Scene and texture set.** The mask covers a scene area at a chosen
+  resolution. A texture set assigns a texture role to each channel, and
+  several masks can layer for more than four textures.
+- **Persistence.** The mask is image data, not geometry, so it is stored as
+  a file in the world's data rather than inlined in the scene flag. The
+  scene flag keeps its path, bounds, channel roles and level.
+- **Rendering.** The overlay draws the blend (a PIXI shader over the four
+  textures). A GM can bake it to a native Tile or into a Level background,
+  so it renders without the module.
+- **Everything else as today.** Undo, levels, the scene spec (a mask can be
+  given as a file path) and the e2e suite all apply.
 
 ---
 

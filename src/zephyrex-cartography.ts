@@ -32,6 +32,7 @@ import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
 import { MODULE_ID } from './module-id';
 import { BIOMES, type BiomeKind } from './tools/biome';
+import { levelHeightFor } from './tools/levels';
 
 interface DrawState {
     controller: CartographyController;
@@ -263,6 +264,7 @@ function setupDrawLayer(): void {
     });
     const gridSize = canvas.grid?.size ?? 0;
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
+    controller.levelHeight = levelHeightFor(canvas.scene?.grid.distance ?? 0);
     controller.load();
     levels.refresh();
     // The scene may have been edited under the other terrain setting; only the active GM writes documents.

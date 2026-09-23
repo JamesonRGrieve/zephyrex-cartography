@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { adjacentLevel, findLevel, levelElevation, levelPanel, nextLevelBand, onLevel, sortLevels, type Level } from './levels';
+import { adjacentLevel, findLevel, levelElevation, levelHeightFor, levelPanel, nextLevelBand, onLevel, sortLevels, type Level } from './levels';
 
 const levels: Level[] = [
     { id: 'upper', name: 'Upper', bottom: 10, top: 20 },
@@ -33,6 +33,13 @@ describe('levels', () => {
         expect(nextLevelBand(levels, 'below', 5)).toEqual({ bottom: -15, top: -10 });
         expect(nextLevelBand([], 'above')).toEqual({ bottom: 0, top: 10 });
         expect(nextLevelBand([], 'below')).toEqual({ bottom: -10, top: 0 });
+    });
+
+    it('make a new level 4 grid squares tall, as Foundry v14 does', () => {
+        expect(levelHeightFor(5)).toBe(20);
+        expect(levelHeightFor(1.5)).toBe(6);
+        // A scene without a usable grid distance falls back to the default height.
+        expect(levelHeightFor(0)).toBe(10);
     });
 
     it('show a feature on its own level, and level-less features everywhere', () => {
