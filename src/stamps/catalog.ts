@@ -13,7 +13,13 @@ import {
     type Stamp,
     type StampLight,
     type StampOcclusion,
+    type StampParticleEmitter,
     type StampPhysical,
+    type StampPile,
+    type StampSound,
+    type StampSurface,
+    type StampTerrain,
+    type StampTile,
     type StampVariant,
     type TextureSet,
 } from './schema';
@@ -61,6 +67,41 @@ export function moduleAssetUrl(moduleId: string, path: string): string {
     return HAS_SCHEME.test(path) ? path : `modules/${moduleId}/${path.replace(/^\.?\//, '')}`;
 }
 
+/** Resolves a pack-relative asset path to its served URL. */
+type AssetUrl = (path: string) => string;
+
+/** Particle emitters with their texture paths served. */
+function servedEmitters(emitters: readonly StampParticleEmitter[], url: AssetUrl): StampParticleEmitter[] {
+    return emitters.map((emitter) => ({ ...emitter, textures: emitter.textures.map(url) }));
+}
+
+function servedSound(sound: StampSound, url: AssetUrl): StampSound {
+    return { ...sound, path: url(sound.path) };
+}
+
+/** A container flag with its pile's sound paths served; a plain `true` or `false` is unchanged. */
+function servedContainer(container: boolean | StampPile, url: AssetUrl): boolean | StampPile {
+    if (typeof container === 'boolean' || container.sounds === undefined) {
+        return container;
+    }
+    const sounds = Object.fromEntries(Object.entries(container.sounds).flatMap(([pileEvent, path]) => (path === undefined ? [] : [[pileEvent, url(path)]])));
+    return { ...container, sounds };
+}
+
+/**
+ * A variant's asset paths beyond its image, served. Absent fields stay absent
+ * and null (the variant removing one) stays null.
+ */
+function servedVariant(variant: StampVariant, url: AssetUrl): StampVariant {
+    return {
+        ...variant,
+        image: url(variant.image),
+        ...(variant.particles === undefined || variant.particles === null ? {} : { particles: servedEmitters(variant.particles, url) }),
+        ...(variant.sound === undefined || variant.sound === null ? {} : { sound: servedSound(variant.sound, url) }),
+        ...(variant.container === undefined ? {} : { container: servedContainer(variant.container, url) }),
+    };
+}
+
 /** Validate every source and merge the valid packs into one catalog. Invalid packs are reported in `errors`. */
 export function loadPacks(sources: readonly PackSource[]): LoadedPacks {
     const stamps: CatalogStamp[] = [];
@@ -73,13 +114,17 @@ export function loadPacks(sources: readonly PackSource[]): LoadedPacks {
             continue;
         }
         const { referenceGridSize } = result.pack;
+        const url: AssetUrl = (path) => moduleAssetUrl(moduleId, path);
         for (const stamp of result.pack.stamps) {
             stamps.push({
                 ...stamp,
+                ...(stamp.particles === undefined ? {} : { particles: servedEmitters(stamp.particles, url) }),
+                ...(stamp.sound === undefined ? {} : { sound: servedSound(stamp.sound, url) }),
+                container: servedContainer(stamp.container, url),
                 key: `${moduleId}:${stamp.id}`,
                 moduleId,
                 referenceGridSize,
-                variants: stamp.variants.map((variant) => ({ ...variant, image: moduleAssetUrl(moduleId, variant.image) })),
+                variants: stamp.variants.map((variant) => servedVariant(variant, url)),
             });
         }
         for (const set of result.pack.textureSets) {
@@ -198,12 +243,34 @@ export interface EffectiveStampProperties {
     readonly light: StampLight | null;
     readonly occlusion: StampOcclusion | undefined;
     readonly physical: StampPhysical | undefined;
+    /** `null` when the variant (or stamp) emits no particles. */
+    readonly particles: StampParticleEmitter[] | null;
+    readonly sound: StampSound | null;
+    readonly tile: StampTile | null;
+    /** The Item Piles pile backing the stamp, or null when it is not one. */
+    readonly pile: StampPile | null;
+    readonly surface: StampSurface | null;
+    readonly terrain: StampTerrain | null;
+}
+
+/** An override that replaces the stamp's value outright; `null` on the variant removes it. */
+function overridden<T>(variant: T | null | undefined, stamp: T | undefined): T | null {
+    return variant === undefined ? stamp ?? null : variant;
+}
+
+/** A container flag as a pile: `true` is a plain container with Item Piles' defaults, `false` none. */
+function pileOf(container: boolean | StampPile): StampPile | null {
+    if (container === false) {
+        return null;
+    }
+    return container === true ? { type: 'container' } : container;
 }
 
 /**
- * Resolve a variant's effective properties. `light` and `occlusion` overrides
- * replace the stamp's value outright (`light: null` means unlit). `physical`
- * overrides merge field by field over the stamp's physical body.
+ * Resolve a variant's effective properties. Overrides replace the stamp's
+ * value outright, and `null` removes it (`light: null` is unlit, `particles:
+ * null` is still). `physical` overrides merge field by field over the stamp's
+ * physical body.
  */
 export function effectiveProperties(stamp: Stamp, index: number): EffectiveStampProperties {
     const variant = resolveVariant(stamp, index);
@@ -211,9 +278,15 @@ export function effectiveProperties(stamp: Stamp, index: number): EffectiveStamp
     return {
         perspective: variant.perspective ?? stamp.perspective,
         doorState: variant.doorState,
-        light: variant.light === undefined ? stamp.light ?? null : variant.light,
+        light: overridden(variant.light, stamp.light),
         occlusion: variant.occlusion ?? stamp.occlusion,
         physical,
+        particles: overridden(variant.particles, stamp.particles),
+        sound: overridden(variant.sound, stamp.sound),
+        tile: variant.tile ?? stamp.tile ?? null,
+        pile: pileOf(variant.container ?? stamp.container),
+        surface: overridden(variant.surface, stamp.surface),
+        terrain: overridden(variant.terrain, stamp.terrain),
     };
 }
 

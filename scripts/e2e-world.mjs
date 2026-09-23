@@ -14,13 +14,16 @@
  *
  * Usage: node scripts/e2e-world.mjs <port>
  * Env:   FOUNDRY_RELEASE_DIR (default .foundry-release)
+ *        FOUNDRY_TEST_MODULES (default .foundry-test-modules): optional
+ *        third-party modules (Item Piles, socketlib, lib-wrapper) to install
  */
-import { cpSync, existsSync, lstatSync, mkdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RELEASE = resolve(ROOT, process.env['FOUNDRY_RELEASE_DIR'] ?? '.foundry-release');
+const TEST_MODULES = resolve(ROOT, process.env['FOUNDRY_TEST_MODULES'] ?? '.foundry-test-modules');
 const FIXTURES = join(ROOT, 'tests', 'e2e', 'fixtures');
 const MODULE_ID = 'zephyrex-cartography';
 const SYSTEM_ID = 'zc-e2e';
@@ -71,6 +74,18 @@ function isLink(path) {
 
 link(join(FIXTURES, 'system'), join(DATA, 'systems', SYSTEM_ID));
 link(join(FIXTURES, 'pack'), join(DATA, 'modules', PACK_ID));
+
+// Optional third-party modules (Item Piles and its dependencies), for the specs that
+// integrate with them. Each subdirectory with a module.json is installed; specs skip
+// what is not.
+if (existsSync(TEST_MODULES)) {
+    for (const entry of readdirSync(TEST_MODULES, { withFileTypes: true })) {
+        const source = join(TEST_MODULES, entry.name);
+        if (existsSync(join(source, 'module.json'))) {
+            link(source, join(DATA, 'modules', entry.name));
+        }
+    }
+}
 // The module directory holds only what Foundry serves: the manifest and the build.
 const moduleDir = join(DATA, 'modules', MODULE_ID);
 mkdirSync(moduleDir, { recursive: true });

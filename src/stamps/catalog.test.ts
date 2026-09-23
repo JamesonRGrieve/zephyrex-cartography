@@ -214,7 +214,82 @@ describe('effectiveProperties', () => {
             light: LAMP_LIGHT,
             occlusion: { shape: 'bounds', sight: true, movement: true, light: true, sound: true },
             physical: { height: 2, cover: 0.5 },
+            particles: null,
+            sound: null,
+            tile: null,
+            pile: null,
+            surface: null,
+            terrain: null,
         });
+    });
+
+    it('resolves particles, sounds, piles, surfaces and terrain per variant, null removing them', () => {
+        const smoke = { textures: ['smoke.png'], count: 20, lifetime: [800, 1500] as [number, number] };
+        const [crate] = loadPacks([
+            {
+                moduleId: 'pack',
+                manifest: manifest([
+                    {
+                        id: 'crate',
+                        name: 'Crate',
+                        category: 'Storage',
+                        scale: 'interior',
+                        perspective: 'top-down',
+                        container: { type: 'vault', locked: true, sounds: { open: 'creak.ogg' } },
+                        sound: { path: 'hum.ogg', radius: 3 },
+                        variants: [
+                            { state: 'intact', image: 'a.png', width: 100, height: 100 },
+                            {
+                                state: 'destroyed',
+                                image: 'b.png',
+                                width: 100,
+                                height: 100,
+                                particles: [smoke],
+                                sound: null,
+                                container: false,
+                                terrain: { difficulty: { walk: 2 } },
+                                tile: { occlusion: { modes: ['fade'] } },
+                            },
+                        ],
+                    },
+                ]),
+            },
+        ]).stamps;
+        if (!crate) {
+            throw new Error('fixture failed to load');
+        }
+        const intact = effectiveProperties(crate, 0);
+        expect(intact).toMatchObject({
+            particles: null,
+            pile: { type: 'vault', locked: true, sounds: { open: 'modules/pack/creak.ogg' } },
+            terrain: null,
+            tile: null,
+        });
+        // Asset paths resolve to the pack module's served URLs, like variant images.
+        expect(intact.sound).toMatchObject({ path: 'modules/pack/hum.ogg', radius: 3, volume: 0.5, repeat: true, walls: true, easing: true });
+        const destroyed = effectiveProperties(crate, 1);
+        expect(destroyed.particles).toEqual([{ ...smoke, textures: ['modules/pack/smoke.png'], area: { x: 0.5, y: 0.5, radius: 0 } }]);
+        expect(destroyed).toMatchObject({ sound: null, pile: null, terrain: { difficulty: { walk: 2 } }, tile: { occlusion: { modes: ['fade'] } } });
+    });
+
+    it('reads a plain container flag as a container pile with Item Piles defaults', () => {
+        const [chest] = loadPacks([
+            {
+                moduleId: 'pack',
+                manifest: manifest([
+                    {
+                        id: 'chest',
+                        name: 'Chest',
+                        category: 'Storage',
+                        scale: 'interior',
+                        perspective: 'top-down',
+                        container: true,
+                        variants: [{ state: 'shut', image: 'c.png', width: 100, height: 100 }],
+                    },
+                ]),
+            },
+        ]).stamps;
+        expect(chest ? effectiveProperties(chest, 0).pile : 'missing').toEqual({ type: 'container' });
     });
 
     it('treats light: null as unlit and merges physical field by field', () => {

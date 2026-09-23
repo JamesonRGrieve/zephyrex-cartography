@@ -13,6 +13,18 @@ const stamps = catalogStamps([
         variants: [{ state: 'shut', image: 'chest.png', width: 100, height: 50 }],
     },
     {
+        id: 'crate',
+        name: 'Crate',
+        category: 'Storage',
+        scale: 'interior',
+        perspective: 'top-down',
+        container: { type: 'vault', closed: true },
+        variants: [
+            { state: 'shut', image: 'crate.png', width: 100, height: 100 },
+            { state: 'smashed', image: 'smashed.png', width: 100, height: 100, container: false },
+        ],
+    },
+    {
         id: 'rug',
         name: 'Rug',
         category: 'Decor',
@@ -28,10 +40,29 @@ describe('CartographyController containers', () => {
         c.grid = { size: 100, originX: 0, originY: 0 };
         await c.placeStamp({ stamp: 'pack:chest', x: 250, y: 125, rotation: 90 });
         expect(k.created).toEqual([
-            { spec: { x: 200, y: 100, width: 1, height: 0.5, rotation: 90, elevation: 0, src: 'modules/pack/chest.png' }, name: 'Iron Chest' },
+            {
+                spec: { x: 200, y: 100, width: 1, height: 0.5, rotation: 90, elevation: 0, src: 'modules/pack/chest.png', pile: { type: 'container' } },
+                name: 'Iron Chest',
+            },
         ]);
         const chest = c.getFeature('p1');
         expect(chest?.type === 'stamp' ? chest.pile : null).toBe('pile1');
+    });
+
+    it("gives the pile the pack's options, and follows a variant that stops or starts being a container", async () => {
+        const { c, k } = makeHarness(stamps);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:crate', x: 50, y: 50 });
+        expect(k.created[0]?.spec.pile).toEqual({ type: 'vault', closed: true });
+        await c.setStampVariant('p1', 1); // smashed: no longer a container
+        expect(k.removed).toEqual(['pile1']);
+        const smashed = c.getFeature('p1');
+        expect(smashed?.type === 'stamp' ? smashed.pile : 'x').toBeNull();
+        await c.undo(); // back to shut: a fresh pile
+        const shut = c.getFeature('p1');
+        expect(shut?.type === 'stamp' ? shut.pile : null).toBe('pile2');
+        await c.redo(); // smashed again: that pile goes too
+        expect(k.removed).toEqual(['pile1', 'pile2']);
     });
 
     it('places the pile at the level floor', async () => {

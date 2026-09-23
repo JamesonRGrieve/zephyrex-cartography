@@ -16,15 +16,41 @@ export type DoorType = 'none' | 'door' | 'secret';
 
 export type DoorState = 'closed' | 'open' | 'locked';
 
-/** Which senses a wall blocks. */
+/**
+ * How a wall restricts one sense, as Foundry's edge sense types: not at all,
+ * fully, as a terrain wall (only past a second one), or only within
+ * (proximity) or beyond (distance) the wall's threshold.
+ */
+export type SenseLevel = 'none' | 'normal' | 'limited' | 'proximity' | 'distance';
+
+/** How a wall restricts each sense; movement is simply blocked or not. */
 export interface SenseBlock {
-    readonly sight: boolean;
+    readonly sight: SenseLevel;
     readonly movement: boolean;
-    readonly light: boolean;
-    readonly sound: boolean;
+    readonly light: SenseLevel;
+    readonly sound: SenseLevel;
 }
 
-export const BLOCKS_ALL: SenseBlock = { sight: true, movement: true, light: true, sound: true };
+export const BLOCKS_ALL: SenseBlock = { sight: 'normal', movement: true, light: 'normal', sound: 'normal' };
+
+/** A pack's sense setting: `true` blocks, `false` lets through, or a named sense level. */
+export function senseLevel(setting: boolean | Exclude<SenseLevel, 'none' | 'normal'>): SenseLevel {
+    if (setting === true) {
+        return 'normal';
+    }
+    return setting === false ? 'none' : setting;
+}
+
+/** Which side a one-way wall restricts from, walking it from `a` to `b`. */
+export type WallDirection = 'both' | 'left' | 'right';
+
+/** Distances (grid units) for proximity and distance senses. */
+export interface WallThreshold {
+    readonly light?: number;
+    readonly sight?: number;
+    readonly sound?: number;
+    readonly attenuation?: boolean;
+}
 
 export interface WallDoc {
     readonly a: Point;
@@ -32,6 +58,9 @@ export interface WallDoc {
     readonly door: DoorType;
     readonly doorState: DoorState;
     readonly blocks: SenseBlock;
+    /** A one-way wall; omitted restricts from both sides. */
+    readonly direction?: WallDirection;
+    readonly threshold?: WallThreshold;
     /** Level (elevation band) id the wall belongs to, or null for every level. */
     readonly level: string | null;
     /** For a room wall, the perimeter segment it comes from (so a door changed in play maps back to its room door). */

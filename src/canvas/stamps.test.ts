@@ -65,7 +65,7 @@ describe('CartographyController stamp occlusion', () => {
                 { x: 0, y: 0 },
             ],
         ]);
-        expect(walls[0]?.blocks).toEqual({ sight: true, movement: true, light: true, sound: false });
+        expect(walls[0]?.blocks).toEqual({ sight: 'normal', movement: true, light: 'normal', sound: 'none' });
         expect(c.getFeature('p1')?.docs.walls).toEqual(['w0', 'w1', 'w2', 'w3']);
     });
 
@@ -88,6 +88,39 @@ describe('CartographyController stamp occlusion', () => {
         c.grid = { size: 100, originX: 0, originY: 0 };
         await c.placeStamp({ stamp: 'pack:statue', x: 50, y: 50 });
         expect(d.walls[0]?.[0]).toMatchObject({ a: { x: 0, y: 0 }, b: { x: 100, y: 0 } });
+    });
+
+    it('carries sense levels, one-way direction and thresholds to its walls, and walls nothing that restricts nothing', async () => {
+        const hedges = catalogStamps([
+            {
+                id: 'hedge',
+                name: 'Hedge',
+                category: 'Nature',
+                scale: 'exterior',
+                perspective: 'top-down',
+                occlusion: { shape: 'bounds', sight: 'limited', movement: false, light: 'proximity', sound: false, direction: 'left', threshold: { light: 3 } },
+                variants: [{ state: 'grown', image: 'hedge.png', width: 100, height: 100 }],
+            },
+            {
+                id: 'mist',
+                name: 'Mist',
+                category: 'Nature',
+                scale: 'exterior',
+                perspective: 'top-down',
+                occlusion: { shape: 'bounds', sight: false, movement: false, light: false, sound: false },
+                variants: [{ state: 'thin', image: 'mist.png', width: 100, height: 100 }],
+            },
+        ]);
+        const { c, d } = makeHarness(hedges);
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        await c.placeStamp({ stamp: 'pack:hedge', x: 50, y: 50 });
+        expect(d.walls[0]?.[0]).toMatchObject({
+            blocks: { sight: 'limited', movement: false, light: 'proximity', sound: 'none' },
+            direction: 'left',
+            threshold: { light: 3 },
+        });
+        await c.placeStamp({ stamp: 'pack:mist', x: 250, y: 50 });
+        expect(c.getFeature('p2')?.docs.walls).toEqual([]);
     });
 
     it('moves the walls with the stamp', async () => {

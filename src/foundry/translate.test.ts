@@ -5,9 +5,11 @@ import { doorStateFromDs, lightCreateData, pxToDistance, regionCreateData, regio
 
 const GRID = { size: 100, distance: 5 };
 
+const BLOCKS_WALL = { a: { x: 0, y: 0 }, b: { x: 1, y: 0 }, door: 'none' as const, doorState: 'closed' as const, blocks: BLOCKS_ALL, level: null };
+
 describe('wallCreateData', () => {
     it('translates a plain wall blocking every sense', () => {
-        expect(wallCreateData({ a: { x: 0, y: 0 }, b: { x: 10, y: 5 }, door: 'none', doorState: 'closed', blocks: BLOCKS_ALL, level: null })).toEqual({
+        expect(wallCreateData({ a: { x: 0, y: 0 }, b: { x: 10, y: 5 }, door: 'none', doorState: 'closed', blocks: BLOCKS_ALL, level: null }, GRID)).toEqual({
             c: [0, 0, 10, 5],
             door: 0,
             ds: 0,
@@ -19,21 +21,43 @@ describe('wallCreateData', () => {
     });
 
     it('translates door type, door state and unblocked senses', () => {
-        const data = wallCreateData({
-            a: { x: 0, y: 0 },
-            b: { x: 1, y: 0 },
-            door: 'secret',
-            doorState: 'locked',
-            blocks: { sight: false, movement: true, light: false, sound: true },
-            level: null,
-        });
+        const data = wallCreateData(
+            {
+                a: { x: 0, y: 0 },
+                b: { x: 1, y: 0 },
+                door: 'secret',
+                doorState: 'locked',
+                blocks: { sight: 'none', movement: true, light: 'none', sound: 'normal' },
+                level: null,
+            },
+            GRID,
+        );
         expect(data).toMatchObject({ door: 2, ds: 2, sight: 0, light: 0, sound: 20, move: 20 });
     });
 
+    it('translates every sense level, one-way walls and thresholds in scene distance units', () => {
+        const data = wallCreateData(
+            {
+                a: { x: 0, y: 0 },
+                b: { x: 1, y: 0 },
+                door: 'none',
+                doorState: 'closed',
+                blocks: { sight: 'limited', movement: false, light: 'proximity', sound: 'distance' },
+                direction: 'left',
+                threshold: { light: 2, attenuation: true },
+                level: null,
+            },
+            GRID,
+        );
+        expect(data).toMatchObject({ sight: 10, light: 30, sound: 40, move: 0, dir: 1, threshold: { light: 10, sight: null, sound: null, attenuation: true } });
+        expect(wallCreateData({ ...BLOCKS_WALL, direction: 'right' }, GRID).dir).toBe(2);
+        expect(wallCreateData(BLOCKS_WALL, GRID)).not.toHaveProperty('dir');
+    });
+
     it('puts a levelled wall on its native Level, and a level-less one on every level', () => {
-        const wall = { a: { x: 0, y: 0 }, b: { x: 1, y: 0 }, door: 'none' as const, doorState: 'closed' as const, blocks: BLOCKS_ALL, level: 'L1' };
-        expect(wallCreateData(wall).levels).toEqual(['L1']);
-        expect(wallCreateData({ ...wall, level: null }).levels).toBeUndefined();
+        const wall = { ...BLOCKS_WALL, level: 'L1' };
+        expect(wallCreateData(wall, GRID).levels).toEqual(['L1']);
+        expect(wallCreateData({ ...wall, level: null }, GRID).levels).toBeUndefined();
     });
 });
 

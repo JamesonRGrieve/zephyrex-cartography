@@ -8,6 +8,8 @@ storybook-static/
 .foundry-test-data-*/
 # A local Foundry v14 release (or a symlink to one) for the e2e suite; never committed.
 .foundry-release
+# Optional third-party modules for the e2e suite (Item Piles and its dependencies); never committed.
+.foundry-test-modules
 test-results/
 .e2e-results.json
 .e2e-raw-coverage/

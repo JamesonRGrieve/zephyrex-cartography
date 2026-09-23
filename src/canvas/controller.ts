@@ -498,7 +498,8 @@ export class CartographyController {
         if (feature?.type !== 'stamp' || !stamp) {
             return false;
         }
-        await this.replaceFeature(id, await this.withSilhouette(withStampVariant(feature, stamp, index, this.stampGrid(stamp))));
+        const varied = await this.withSilhouette(withStampVariant(feature, stamp, index, this.stampGrid(stamp)));
+        await this.replaceFeature(id, await this.followPile(varied, feature.pile));
         return true;
     }
 
@@ -698,14 +699,33 @@ export class CartographyController {
     /** A changed feature restored from a snapshot, on the live documents, with its interior exit moved to match. */
     private async relink(restored: Feature, current: Feature): Promise<Feature> {
         const next = withDocs(restored, current.docs);
-        if (next.type !== 'stamp' || current.type !== 'stamp' || JSON.stringify(next.submap) === JSON.stringify(current.submap)) {
+        if (next.type !== 'stamp' || current.type !== 'stamp') {
             return next;
         }
-        if (current.submap) {
-            await this.scenes.deleteRegion(current.submap.scene, current.submap.exitRegion);
+        if (JSON.stringify(next.submap) !== JSON.stringify(current.submap)) {
+            if (current.submap) {
+                await this.scenes.deleteRegion(current.submap.scene, current.submap.exitRegion);
+            }
+            await this.restoreExit(next);
         }
-        await this.restoreExit(next);
-        return next;
+        // The live pile is the real one; the snapshot's may since have been removed.
+        return this.followPile(next, current.pile);
+    }
+
+    /**
+     * Keep a stamp's pile in line with its variant's container flag: create
+     * the pile a variant now needs, and remove one it no longer has (a
+     * smashed crate is not a container).
+     */
+    private async followPile(stamp: StampFeature, livePile: string | null): Promise<StampFeature> {
+        if (stamp.behaviour.container && livePile === null) {
+            return this.withPile({ ...stamp, pile: null }, stamp.name);
+        }
+        if (!stamp.behaviour.container && livePile !== null) {
+            await this.containers.remove(livePile);
+            return { ...stamp, pile: null };
+        }
+        return { ...stamp, pile: livePile };
     }
 
     /** The features shown on the active level, topmost (last drawn) first: what pointer picks consider. */

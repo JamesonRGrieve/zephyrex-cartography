@@ -7,13 +7,34 @@
  * stamps.
  */
 import type { ContainerService } from '../canvas/controller';
+import type { StampPile } from '../stamps/schema';
 import type { PileSpec } from '../tools/containers';
 import { isRecord } from '../tools/guards';
 
 const ITEM_PILES_ID = 'item-piles';
 
-/** Item Piles' pile type for a lootable container, and kept when emptied (it is furniture, not a drop). */
-const CONTAINER_FLAGS = { enabled: true, type: 'container', deleteWhenEmpty: false } as const;
+/**
+ * Item Piles flags for a stamp's pile (names from Item Piles 3.3's
+ * PILE_DEFAULTS). A pile is furniture, not a drop, so it is kept when emptied;
+ * options the pack leaves out take Item Piles' defaults.
+ */
+function pileFlags(pile: StampPile): object {
+    const optional = <K extends keyof StampPile>(key: K): object => (pile[key] === undefined ? {} : { [key]: pile[key] });
+    return {
+        enabled: true,
+        type: pile.type,
+        deleteWhenEmpty: false,
+        ...optional('closed'),
+        ...optional('locked'),
+        ...optional('distance'),
+        ...optional('canInspectItems'),
+        ...optional('displayItemTypes'),
+        ...(pile.sounds?.open === undefined ? {} : { openSound: pile.sounds.open }),
+        ...(pile.sounds?.close === undefined ? {} : { closeSound: pile.sounds.close }),
+        ...(pile.sounds?.locked === undefined ? {} : { lockedSound: pile.sounds.locked }),
+        ...(pile.sounds?.unlocked === undefined ? {} : { unlockedSound: pile.sounds.unlocked }),
+    };
+}
 
 interface CreatePileOptions {
     readonly position: { readonly x: number; readonly y: number };
@@ -32,9 +53,13 @@ interface ItemPilesApi {
 }
 /* eslint-enable @typescript-eslint/method-signature-style */
 
-// eslint-disable-next-line no-restricted-syntax -- boundary: validates the shape of Item Piles' global API object before any call
+// eslint-disable-next-line no-restricted-syntax -- boundary: validates the shape of Item Piles' global API before any call
 function isItemPilesApi(v: unknown): v is ItemPilesApi {
-    return isRecord(v) && typeof v['createItemPile'] === 'function' && typeof v['deleteItemPile'] === 'function';
+    // Item Piles exposes its API as a class of static methods, so it is a function, not a plain object.
+    if (typeof v !== 'function' && (typeof v !== 'object' || v === null)) {
+        return false;
+    }
+    return 'createItemPile' in v && typeof v.createItemPile === 'function' && 'deleteItemPile' in v && typeof v.deleteItemPile === 'function';
 }
 
 /** Item Piles' API, when the module is active. */
@@ -71,7 +96,7 @@ export function createItemPilesContainers(sceneId: () => string | null): Contain
                     sceneId: scene,
                     tokenOverrides: { ...tokenData(spec), name: pileName },
                     actorOverrides: { name: pileName },
-                    itemPileFlags: CONTAINER_FLAGS,
+                    itemPileFlags: pileFlags(spec.pile),
                 }),
             );
         },

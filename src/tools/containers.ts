@@ -6,6 +6,7 @@
  * is just a stamp. Pure: the pile's placement from the stamp. The Item Piles
  * calls live at the boundary.
  */
+import type { StampPile } from '../stamps/schema';
 import type { StampFeature } from './stamp';
 
 /** Where and how a stamp's pile token sits: over the footprint, in the stamp's image and turn. */
@@ -19,7 +20,12 @@ export interface PileSpec {
     readonly rotation: number;
     readonly elevation: number;
     readonly src: string;
+    /** The pack's pile options (type, starting state, sounds). */
+    readonly pile: StampPile;
 }
+
+/** A container stamp's pile when its pack gave no options: a plain container. */
+const PLAIN_CONTAINER: StampPile = { type: 'container' };
 
 export function pileSpec(stamp: StampFeature, floorElevation: number): PileSpec {
     const centre = stamp.points[0] ?? { x: 0, y: 0 };
@@ -32,5 +38,6 @@ export function pileSpec(stamp: StampFeature, floorElevation: number): PileSpec 
         rotation: stamp.rotation,
         elevation: floorElevation + stamp.elevation,
         src: stamp.src,
+        pile: stamp.behaviour.pile ?? PLAIN_CONTAINER,
     };
 }

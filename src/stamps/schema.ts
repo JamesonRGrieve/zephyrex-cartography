@@ -35,18 +35,182 @@ const physicalSchema = z
     .strict()
     .describe('The physical body of the stamp.');
 
+/**
+ * How a wall restricts one sense: `true` blocks it (Foundry's NORMAL), `false`
+ * lets it through, and the rest are Foundry's other edge sense types: LIMITED
+ * (a terrain wall, blocking only past a second one), PROXIMITY and DISTANCE
+ * (blocking only within, or beyond, the wall's `threshold`).
+ */
+const senseSchema = z.union([z.boolean(), z.enum(['limited', 'proximity', 'distance'])]);
+
 const occlusionSchema = z
     .object({
         shape: z
             .enum(['none', 'bounds', 'alpha'])
             .describe('How the stamp is wrapped in native walls: not at all, its bounding box, or its traced alpha silhouette.'),
-        sight: z.boolean().default(true).describe('The generated walls block sight.'),
+        sight: senseSchema.default(true).describe('How the generated walls restrict sight.'),
         movement: z.boolean().default(true).describe('The generated walls block movement.'),
-        light: z.boolean().default(true).describe('The generated walls block light.'),
-        sound: z.boolean().default(true).describe('The generated walls block sound.'),
+        light: senseSchema.default(true).describe('How the generated walls restrict light.'),
+        sound: senseSchema.default(true).describe('How the generated walls restrict sound.'),
+        direction: z
+            .enum(['both', 'left', 'right'])
+            .optional()
+            .describe('A one-way wall: which side it restricts from (Foundry `dir`), walking the outline clockwise.'),
+        threshold: z
+            .object({
+                light: z.number().positive().optional(),
+                sight: z.number().positive().optional(),
+                sound: z.number().positive().optional(),
+                attenuation: z.boolean().optional().describe('Light and sound fade through the wall with distance.'),
+            })
+            .strict()
+            .optional()
+            .describe('Distances (grid units) for proximity and distance senses.'),
     })
     .strict()
     .describe('Automatic occlusion walls around the placed stamp.');
+
+/** A number, or a `[min, max]` range picked uniformly per particle. */
+const rangeSchema = z.union([z.number(), z.tuple([z.number(), z.number()])]);
+
+const particleEmitterSchema = z
+    .object({
+        textures: z.array(text).min(1).describe('Particle images, relative to the pack module root; each particle takes one at random.'),
+        area: z
+            .union([
+                z.literal('footprint').describe('Anywhere over the stamp footprint.'),
+                z
+                    .object({
+                        x: fraction.describe('Emitter centre as a fraction of the footprint width.'),
+                        y: fraction.describe('Emitter centre as a fraction of the footprint height.'),
+                        radius: z.number().min(0).default(0).describe('Spawn radius in grid units; 0 is a point.'),
+                    })
+                    .strict(),
+            ])
+            .default({ x: 0.5, y: 0.5, radius: 0 })
+            .describe('Where particles spawn.'),
+        count: z.number().int().positive().describe('How many particles are alive at once.'),
+        lifetime: rangeSchema.describe('Particle lifetime in milliseconds.'),
+        velocity: z
+            .object({
+                speed: rangeSchema.describe('Grid units per second.'),
+                angle: rangeSchema.describe('Direction in degrees, clockwise from east (the stamp rotation is added).'),
+            })
+            .strict()
+            .optional(),
+        alpha: rangeSchema.optional().describe('Peak opacity, 0 to 1.'),
+        scale: rangeSchema.optional(),
+        rotationSpeed: rangeSchema.optional().describe('Degrees per second.'),
+        fade: z
+            .object({ in: z.number().min(0).optional(), out: z.number().min(0).optional() })
+            .strict()
+            .optional()
+            .describe('Fade-in and fade-out, in milliseconds (or a fraction of lifetime when below 1).'),
+        blend: z.enum(['normal', 'add', 'multiply', 'screen']).optional(),
+        elevation: z.number().optional().describe('Height above the stamp base, in grid units.'),
+    })
+    .strict()
+    .describe("A native particle emitter (Foundry's ParticleGenerator, effect mode) anchored to the stamp.");
+
+const soundSchema = z
+    .object({
+        path: text.describe('Audio file relative to the pack module root.'),
+        radius: z.number().positive().describe('Audible radius in grid units.'),
+        volume: fraction.default(0.5),
+        repeat: z.boolean().default(true),
+        walls: z.boolean().default(true).describe('Walls muffle the sound.'),
+        easing: z.boolean().default(true).describe('Volume falls off with distance.'),
+        offset: z.object({ x: fraction, y: fraction }).strict().optional().describe('Emitter position as a fraction of the footprint (default: centre).'),
+    })
+    .strict()
+    .describe('A native ambient sound emitted by the placed stamp.');
+
+const tileSchema = z
+    .object({
+        alpha: fraction.optional(),
+        hidden: z.boolean().optional().describe('Placed hidden from players.'),
+        occlusion: z
+            .object({
+                modes: z
+                    .array(z.enum(['fade', 'surface', 'radial', 'vision']))
+                    .default([])
+                    .describe('Foundry occlusion modes, combined: fade when a token is beneath, reveal as a surface, a radial cut-out, or by vision.'),
+                alpha: fraction.optional().describe('Opacity while occluded.'),
+            })
+            .strict()
+            .optional()
+            .describe('Roofs and canopies that give way to tokens beneath them.'),
+        alphaThreshold: fraction.optional().describe('Opacity below which the image is not solid (for occlusion and hover).'),
+        restrictions: z
+            .object({ light: z.boolean().optional(), weather: z.boolean().optional() })
+            .strict()
+            .optional()
+            .describe('The tile blocks light and weather beneath it.'),
+        video: z
+            .object({ loop: z.boolean().optional(), autoplay: z.boolean().optional(), volume: fraction.optional() })
+            .strict()
+            .optional()
+            .describe('For a video image.'),
+    })
+    .strict()
+    .describe('How the stamp tile itself behaves.');
+
+const PILE_TYPES = ['pile', 'container', 'merchant', 'vault', 'auctioneer', 'banker'] as const;
+
+const containerSchema = z
+    .object({
+        type: z.enum(PILE_TYPES).default('container').describe('Item Piles pile type.'),
+        closed: z.boolean().optional().describe('Starts closed.'),
+        locked: z.boolean().optional().describe('Starts locked.'),
+        distance: z.number().positive().optional().describe('How near (grid squares) a token must be to open it.'),
+        canInspectItems: z.boolean().optional(),
+        displayItemTypes: z.boolean().optional(),
+        sounds: z
+            .object({ open: text.optional(), close: text.optional(), locked: text.optional(), unlocked: text.optional() })
+            .strict()
+            .optional()
+            .describe('Audio files relative to the pack module root.'),
+        states: z
+            .object({ closed: text.optional(), open: text.optional(), empty: text.optional(), locked: text.optional() })
+            .strict()
+            .optional()
+            .describe('Which variant (by state label) shows the pile closed, open, emptied or locked, so the stamp follows it.'),
+    })
+    .strict()
+    .describe('An Item Piles pile backing the stamp (Item Piles must be active).');
+
+const surfaceSchema = z
+    .object({
+        placement: z.enum(['bottom', 'top', 'both']).default('top').describe('A surface at the bottom, top or both of the stamp height.'),
+        reveal: z.boolean().default(false).describe('An elevated surface (a roof, a balcony) hidden from observers nearly beneath it.'),
+    })
+    .strict()
+    .describe('A Define Surface region over the footprint: a floor or roof that restricts light, movement, sight and sound between levels.');
+
+const terrainSchema = z
+    .object({
+        difficulty: z
+            .record(text, z.number().min(0).max(5))
+            .describe("Movement cost multiplier per movement action (walk, climb, fly, ...), as Foundry's Modify Movement Cost behaviour."),
+    })
+    .strict()
+    .describe('Difficult terrain over the footprint (rubble, mud, a crowd).');
+
+const COLORATION = [
+    'legacy',
+    'luminance',
+    'internalHalo',
+    'externalHalo',
+    'colorBurn',
+    'internalBurn',
+    'externalBurn',
+    'lowAbsorption',
+    'highAbsorption',
+    'invertAbsorption',
+    'naturalLight',
+    'naturalAttenuation',
+    'adaptiveAttenuation',
+] as const;
 
 const lightSchema = z
     .object({
@@ -68,12 +232,37 @@ const lightSchema = z
             })
             .strict()
             .optional(),
+        negative: z.boolean().optional().describe('A darkness source rather than a light.'),
+        priority: z.number().int().min(0).optional().describe('Draw priority among overlapping lights.'),
+        coloration: z.enum(COLORATION).optional().describe('Foundry colouration technique.'),
+        luminosity: fraction.optional(),
+        attenuation: fraction.optional(),
+        saturation: z.number().min(-1).max(1).optional(),
+        contrast: z.number().min(-1).max(1).optional(),
+        shadows: fraction.optional(),
+        walls: z.boolean().optional().describe('Constrained by walls (default true).'),
+        vision: z.boolean().optional().describe('Also provides vision.'),
     })
     .strict()
     .describe('A native ambient light emitted by the placed stamp.');
 
 const doorSchema = z
-    .object({ type: z.enum(['door', 'secret']).describe('Foundry door type of the wall this stamp sits on.') })
+    .object({
+        type: z.enum(['door', 'secret']).describe('Foundry door type of the wall this stamp sits on.'),
+        animation: z
+            .object({
+                type: z.enum(['ascend', 'descend', 'slide', 'swing', 'swivel']),
+                direction: z.union([z.literal(1), z.literal(-1)]).optional(),
+                double: z.boolean().optional().describe('A double door, opening from both ends.'),
+                duration: z.number().int().positive().optional().describe('Milliseconds.'),
+                flip: z.boolean().optional(),
+                strength: z.number().min(0).max(2).optional(),
+            })
+            .strict()
+            .optional()
+            .describe('How the door animates open and closed.'),
+        sound: text.optional().describe('A Foundry door sound key (CONFIG.Wall.doorSounds), e.g. "slidingMetal", "woodCreaky".'),
+    })
     .strict()
     .describe('The stamp is a door: placing it on a wall makes that wall a Foundry door.');
 
@@ -81,6 +270,11 @@ const transitionSchema = z
     .object({
         kind: z.enum(['stairs', 'ladder', 'lift', 'hatch']),
         direction: z.enum(['up', 'down', 'both']).describe('Which level(s) the stamp leads to.'),
+        movement: z
+            .array(text)
+            .min(1)
+            .optional()
+            .describe('Movement actions that use it (walk, climb, fly, ...); omitted means any. Stairs are walked, ladders climbed.'),
     })
     .strict()
     .describe('The stamp moves tokens between elevation levels.');
@@ -96,6 +290,16 @@ const variantSchema = z
         light: lightSchema.nullable().optional().describe('Overrides the stamp light; null means this variant emits none (e.g. "unlit").'),
         occlusion: occlusionSchema.optional().describe('Overrides the stamp occlusion.'),
         physical: physicalSchema.optional().describe('Overrides the stamp physical body.'),
+        particles: z
+            .array(particleEmitterSchema)
+            .nullable()
+            .optional()
+            .describe('Overrides the stamp particles; null means none (a "destroyed" variant can smoke).'),
+        sound: soundSchema.nullable().optional().describe('Overrides the stamp sound; null means silent.'),
+        tile: tileSchema.optional().describe('Overrides the stamp tile behaviour.'),
+        container: z.union([z.boolean(), containerSchema]).optional().describe('Overrides whether (and how) the stamp is an Item Piles pile.'),
+        surface: surfaceSchema.nullable().optional().describe('Overrides the stamp surface; null means none.'),
+        terrain: terrainSchema.nullable().optional().describe('Overrides the stamp terrain; null means none (e.g. rubble only when "destroyed").'),
     })
     .strict();
 
@@ -115,7 +319,15 @@ const stampSchema = z
         door: doorSchema.optional(),
         transition: transitionSchema.optional(),
         enterable: z.boolean().default(false).describe('Can open into a linked interior scene (submap).'),
-        container: z.boolean().default(false).describe('Placed as an Item Piles container by default.'),
+        container: z
+            .union([z.boolean(), containerSchema])
+            .default(false)
+            .describe('Backed by an Item Piles pile: true for a plain container, or its pile options.'),
+        particles: z.array(particleEmitterSchema).optional().describe('Native particle emitters (smoke, embers, sparks, drips).'),
+        sound: soundSchema.optional(),
+        tile: tileSchema.optional(),
+        surface: surfaceSchema.optional(),
+        terrain: terrainSchema.optional(),
     })
     .strict();
 
@@ -162,6 +374,13 @@ export const placedBehaviourSchema = z.object({
     transition: transitionSchema.nullable(),
     enterable: z.boolean(),
     container: z.boolean(),
+    // Added after v1 shipped: optional, so behaviours snapshotted earlier still parse.
+    pile: containerSchema.nullable().optional(),
+    particles: z.array(particleEmitterSchema).nullable().optional(),
+    sound: soundSchema.nullable().optional(),
+    tile: tileSchema.nullable().optional(),
+    surface: surfaceSchema.nullable().optional(),
+    terrain: terrainSchema.nullable().optional(),
 });
 
 export type PlacedBehaviour = z.infer<typeof placedBehaviourSchema>;
@@ -175,6 +394,18 @@ export type StampLight = z.infer<typeof lightSchema>;
 export type StampOcclusion = z.infer<typeof occlusionSchema>;
 
 export type StampPhysical = z.infer<typeof physicalSchema>;
+
+export type StampParticleEmitter = z.infer<typeof particleEmitterSchema>;
+
+export type StampSound = z.infer<typeof soundSchema>;
+
+export type StampTile = z.infer<typeof tileSchema>;
+
+export type StampPile = z.infer<typeof containerSchema>;
+
+export type StampSurface = z.infer<typeof surfaceSchema>;
+
+export type StampTerrain = z.infer<typeof terrainSchema>;
 
 export type TextureSet = StampPack['textureSets'][number];
 

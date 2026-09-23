@@ -85,7 +85,13 @@ export function behaviourOf(stamp: CatalogStamp, index: number): PlacedBehaviour
         doorState: props.doorState ?? null,
         transition: stamp.transition ?? null,
         enterable: stamp.enterable,
-        container: stamp.container,
+        container: props.pile !== null,
+        pile: props.pile,
+        particles: props.particles,
+        sound: props.sound,
+        tile: props.tile,
+        surface: props.surface,
+        terrain: props.terrain,
     };
 }
 

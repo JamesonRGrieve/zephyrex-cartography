@@ -19,6 +19,10 @@ export interface WallCreateData extends OnLevels {
     readonly light: number;
     readonly sound: number;
     readonly move: number;
+    /** `CONST.EDGE_DIRECTIONS`; absent restricts from both sides. */
+    readonly dir?: number;
+    /** Proximity and distance sense thresholds in scene distance units; null is unbounded. */
+    readonly threshold?: { readonly light: number | null; readonly sight: number | null; readonly sound: number | null; readonly attenuation: boolean };
 }
 
 export interface LightCreateData extends OnLevels {

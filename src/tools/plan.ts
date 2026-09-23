@@ -11,7 +11,7 @@ import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { catmullRom, distanceToSegment, type Point } from '../geometry/spline';
 import { cutSegment, perimeterSegments, type Segment, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
-import { BLOCKS_ALL, type LightDoc, type RegionDoc, type SenseBlock, type TileDoc, type WallDoc } from './documents';
+import { BLOCKS_ALL, type LightDoc, type RegionDoc, type SenseBlock, senseLevel, type TileDoc, type WallDoc, type WallThreshold } from './documents';
 import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
 import type { Feature } from './feature';
 import { adjacentLevel, findLevel, levelElevation, type Level } from './levels';
@@ -119,6 +119,16 @@ function stampLight(stamp: StampFeature, floor: Floor): LightDoc | null {
     };
 }
 
+/** A pack threshold with its absent fields dropped rather than carried as undefined. */
+function thresholdDoc(threshold: NonNullable<NonNullable<StampFeature['behaviour']['occlusion']>['threshold']>): WallThreshold {
+    return {
+        ...(threshold.light === undefined ? {} : { light: threshold.light }),
+        ...(threshold.sight === undefined ? {} : { sight: threshold.sight }),
+        ...(threshold.sound === undefined ? {} : { sound: threshold.sound }),
+        ...(threshold.attenuation === undefined ? {} : { attenuation: threshold.attenuation }),
+    };
+}
+
 /**
  * Walls wrapping the stamp per its occlusion: its rotated footprint (`bounds`),
  * or its traced silhouette (`alpha`, falling back to the footprint when the
@@ -129,14 +139,23 @@ function stampWalls(stamp: StampFeature, floor: Floor): WallDoc[] {
     if (!occlusion || occlusion.shape === 'none') {
         return [];
     }
-    const blocks: SenseBlock = { sight: occlusion.sight, movement: occlusion.movement, light: occlusion.light, sound: occlusion.sound };
-    if (!blocks.sight && !blocks.movement && !blocks.light && !blocks.sound) {
+    const blocks: SenseBlock = {
+        sight: senseLevel(occlusion.sight),
+        movement: occlusion.movement,
+        light: senseLevel(occlusion.light),
+        sound: senseLevel(occlusion.sound),
+    };
+    if (blocks.sight === 'none' && !blocks.movement && blocks.light === 'none' && blocks.sound === 'none') {
         return [];
     }
+    const shape = {
+        ...(occlusion.direction === undefined ? {} : { direction: occlusion.direction }),
+        ...(occlusion.threshold === undefined ? {} : { threshold: thresholdDoc(occlusion.threshold) }),
+    };
     const loops =
         occlusion.shape === 'alpha' && stamp.silhouette ? stamp.silhouette.map((loop) => loop.map((f) => stampPoint(stamp, f))) : [stampCorners(stamp)];
     return loops.flatMap((loop) =>
-        perimeterSegments(loop).map((s) => ({ a: s.a, b: s.b, door: 'none' as const, doorState: 'closed' as const, blocks, level: floor.level })),
+        perimeterSegments(loop).map((s) => ({ a: s.a, b: s.b, door: 'none' as const, doorState: 'closed' as const, blocks, ...shape, level: floor.level })),
     );
 }
 

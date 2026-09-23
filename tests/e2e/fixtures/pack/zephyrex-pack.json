@@ -17,6 +17,10 @@
                 "bright": 2,
                 "color": "#ffcc88"
             },
+            "sound": {
+                "path": "sounds/silence.wav",
+                "radius": 3
+            },
             "variants": [
                 {
                     "state": "lit",
@@ -29,7 +33,24 @@
                     "image": "stamps/lamp-unlit.svg",
                     "width": 100,
                     "height": 100,
-                    "light": null
+                    "light": null,
+                    "sound": null
+                }
+            ]
+        },
+        {
+            "id": "chest",
+            "name": "Chest",
+            "category": "Storage",
+            "scale": "interior",
+            "perspective": "top-down",
+            "container": true,
+            "variants": [
+                {
+                    "state": "shut",
+                    "image": "stamps/crate.svg",
+                    "width": 100,
+                    "height": 100
                 }
             ]
         },
@@ -73,12 +94,105 @@
                 "cover": 0.5,
                 "blocksMovement": true
             },
+            "container": {
+                "type": "vault",
+                "closed": true,
+                "locked": false,
+                "distance": 1,
+                "canInspectItems": true,
+                "displayItemTypes": false,
+                "sounds": {
+                    "open": "sounds/silence.wav",
+                    "close": "sounds/silence.wav",
+                    "locked": "sounds/silence.wav",
+                    "unlocked": "sounds/silence.wav"
+                }
+            },
             "variants": [
                 {
                     "state": "shut",
                     "image": "stamps/crate.svg",
                     "width": 100,
                     "height": 100
+                },
+                {
+                    "state": "smashed",
+                    "image": "stamps/crate-smashed.svg",
+                    "width": 100,
+                    "height": 100,
+                    "occlusion": {
+                        "shape": "none"
+                    },
+                    "container": false,
+                    "particles": [
+                        {
+                            "textures": [
+                                "stamps/smoke.svg"
+                            ],
+                            "area": {
+                                "x": 0.5,
+                                "y": 0.6,
+                                "radius": 0.3
+                            },
+                            "count": 12,
+                            "lifetime": [
+                                1500,
+                                3000
+                            ],
+                            "velocity": {
+                                "speed": [
+                                    0.2,
+                                    0.5
+                                ],
+                                "angle": [
+                                    250,
+                                    290
+                                ]
+                            },
+                            "alpha": [
+                                0.3,
+                                0.6
+                            ],
+                            "fade": {
+                                "in": 0.2,
+                                "out": 0.5
+                            }
+                        }
+                    ],
+                    "terrain": {
+                        "difficulty": {
+                            "walk": 2
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "id": "fence",
+            "name": "Fence",
+            "category": "Structures",
+            "scale": "exterior",
+            "perspective": "top-down",
+            "occlusion": {
+                "shape": "bounds",
+                "sight": "limited",
+                "movement": true,
+                "light": "proximity",
+                "sound": false,
+                "direction": "left",
+                "threshold": {
+                    "light": 3,
+                    "sight": 2,
+                    "sound": 4,
+                    "attenuation": true
+                }
+            },
+            "variants": [
+                {
+                    "state": "standing",
+                    "image": "stamps/fence.svg",
+                    "width": 200,
+                    "height": 20
                 }
             ]
         },

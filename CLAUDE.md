@@ -101,6 +101,11 @@ Foundry v14 server.
   `scripts/foundry-hostname-shim.cjs` makes the local server match the
   licence's hostname. This is a throwaway local instance, never the live
   server.
+- **Optional integrations.** Modules in `FOUNDRY_TEST_MODULES` (default
+  `.foundry-test-modules`, gitignored) are installed and activated too:
+  Item Piles with socketlib and lib-wrapper. The fixture configures Item
+  Piles for the e2e system (its Actor type), as a GM would. Specs for an
+  integration skip, with a reason, when its module is absent.
 - **Specs.** They use the `world` fixture (`tests/e2e/lib/foundry.ts`): joined
   as the Gamemaster, module and pack active, a fresh gridded scene. They drive
   the module through its **public API**
@@ -541,16 +546,53 @@ imports).
   against that URL at authoring time. The engine validates again at load and
   reports invalid packs instead of silently dropping them. Stamp-id uniqueness
   is checked in code, because JSON Schema can't express it.
-- **Contents:** per stamp: identity, category, tags, scale band, perspective;
-  **variants** (free-text state label, image, pixel size at the pack's
-  `referenceGridSize`); `physical` (height in grid units, cover 0–1,
-  blocksMovement); `occlusion` (none / bounds / alpha, plus which senses the
-  walls block); `light`; `door`; `transition` (stairs, ladder, lift or hatch,
-  up/down/both); `enterable` (submap-capable); `container`. Structural
-  properties sit on the stamp, and a **variant may override them**:
-  `light: null` for an unlit variant, `doorState` for open/closed, and
-  `occlusion`/`physical` overrides. The manifest also carries **texture
-  sets** (role → image path, licence, credits).
+- **Contents per stamp:**
+  - identity, category, tags, scale band, perspective;
+  - **variants**: a free-text state label, an image, and a pixel size at the
+    pack's `referenceGridSize`;
+  - `physical`: height in grid units, cover 0–1, blocksMovement;
+  - `occlusion`: none, bounds or alpha, plus how the walls restrict each
+    sense (on, off, or `limited`, `proximity`, `distance`), a one-way
+    `direction`, and a `threshold`;
+  - `light`: radii, colour, animation, darkness sources (`negative`),
+    priority, colouration technique, luminosity, attenuation, saturation,
+    contrast, shadows, and whether it is walled and gives vision;
+  - `door`: type, `animation` (ascend, descend, slide, swing, swivel) and a
+    Foundry door `sound`;
+  - `transition`: stairs, ladder, lift or hatch; up, down or both; and the
+    movement actions that use it;
+  - `enterable` (submap-capable);
+  - `container`: `true`, or Item Piles pile options (type, starting closed or
+    locked, distance, sounds, and which variant shows each pile state);
+  - `particles`: native particle emitters (textures, spawn area, count,
+    lifetime, velocity, alpha, scale, fade, blend);
+  - `sound`: an ambient sound emitter;
+  - `tile`: alpha, hidden, combinable occlusion modes (fade, surface, radial,
+    vision), alpha threshold, light and weather restrictions, video;
+  - `surface`: a Define Surface floor or roof over the footprint, optionally
+    revealed;
+  - `terrain`: a movement-cost multiplier per movement action.
+- **Variant overrides.** Structural properties sit on the stamp, and a
+  **variant may override them**. `null` removes a property for that variant:
+  `light: null` for an unlit variant, `particles` only on a "destroyed" one,
+  `terrain` only when rubble, `container: false` for a smashed crate.
+  `doorState` marks open or closed, and `physical` merges field by field.
+- **Assets.** Every asset path (images, particle textures, sounds) is
+  relative to the pack module and resolved to its served URL at load; an
+  absolute URL passes through.
+- **Texture sets.** The manifest also carries texture sets: role → image
+  path, licence, credits.
+- **Engine support, by field.**
+  - Realised: identity through `enterable`, occlusion sense levels,
+    `direction` and `threshold`, and `container` pile options (type, state,
+    distance, inspection, sounds). A variant's `container` override is
+    followed too: switching to a variant that is not a container removes the
+    pile, and switching back (or undoing) makes a fresh one.
+  - Not yet realised: the other new fields (particles, sound, tile, surface,
+    terrain, the new light and door fields, transition movement, and pile
+    `states`). The engine takes each one up as its roadmap priority lands.
+    Packs may author them now; they are validated and snapshotted on placed
+    stamps, so they take effect as soon as that priority ships.
 - **Evolution:** v1 changes are **additive only**. A breaking change becomes a new
   version with its own schema file, and the parser keeps reading supported
   older versions.

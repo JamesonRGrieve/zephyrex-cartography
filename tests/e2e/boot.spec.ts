@@ -13,6 +13,7 @@ test('the module boots with its API, scene controls and the e2e pack', async ({ 
             pack: [...(game.modules?.values() ?? [])].some((m) => m.id === 'zc-e2e-pack' && m.active),
         };
     });
+    // A pack using every stamp field (particles, piles, terrain, overrides) loads with no errors.
     expect(state).toMatchObject({ active: true, apiVersion: 1, controller: true, pack: true });
     expect(state.tools).toBeGreaterThan(0);
 });

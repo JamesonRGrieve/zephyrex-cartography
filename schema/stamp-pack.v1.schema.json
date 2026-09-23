@@ -204,6 +204,68 @@
                                                         "type"
                                                     ],
                                                     "additionalProperties": false
+                                                },
+                                                "negative": {
+                                                    "description": "A darkness source rather than a light.",
+                                                    "type": "boolean"
+                                                },
+                                                "priority": {
+                                                    "description": "Draw priority among overlapping lights.",
+                                                    "type": "integer",
+                                                    "minimum": 0,
+                                                    "maximum": 9007199254740991
+                                                },
+                                                "coloration": {
+                                                    "description": "Foundry colouration technique.",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "legacy",
+                                                        "luminance",
+                                                        "internalHalo",
+                                                        "externalHalo",
+                                                        "colorBurn",
+                                                        "internalBurn",
+                                                        "externalBurn",
+                                                        "lowAbsorption",
+                                                        "highAbsorption",
+                                                        "invertAbsorption",
+                                                        "naturalLight",
+                                                        "naturalAttenuation",
+                                                        "adaptiveAttenuation"
+                                                    ]
+                                                },
+                                                "luminosity": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                },
+                                                "attenuation": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                },
+                                                "saturation": {
+                                                    "type": "number",
+                                                    "minimum": -1,
+                                                    "maximum": 1
+                                                },
+                                                "contrast": {
+                                                    "type": "number",
+                                                    "minimum": -1,
+                                                    "maximum": 1
+                                                },
+                                                "shadows": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                },
+                                                "walls": {
+                                                    "description": "Constrained by walls (default true).",
+                                                    "type": "boolean"
+                                                },
+                                                "vision": {
+                                                    "description": "Also provides vision.",
+                                                    "type": "boolean"
                                                 }
                                             },
                                             "required": [
@@ -233,8 +295,20 @@
                                         },
                                         "sight": {
                                             "default": true,
-                                            "description": "The generated walls block sight.",
-                                            "type": "boolean"
+                                            "description": "How the generated walls restrict sight.",
+                                            "anyOf": [
+                                                {
+                                                    "type": "boolean"
+                                                },
+                                                {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "limited",
+                                                        "proximity",
+                                                        "distance"
+                                                    ]
+                                                }
+                                            ]
                                         },
                                         "movement": {
                                             "default": true,
@@ -243,13 +317,69 @@
                                         },
                                         "light": {
                                             "default": true,
-                                            "description": "The generated walls block light.",
-                                            "type": "boolean"
+                                            "description": "How the generated walls restrict light.",
+                                            "anyOf": [
+                                                {
+                                                    "type": "boolean"
+                                                },
+                                                {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "limited",
+                                                        "proximity",
+                                                        "distance"
+                                                    ]
+                                                }
+                                            ]
                                         },
                                         "sound": {
                                             "default": true,
-                                            "description": "The generated walls block sound.",
-                                            "type": "boolean"
+                                            "description": "How the generated walls restrict sound.",
+                                            "anyOf": [
+                                                {
+                                                    "type": "boolean"
+                                                },
+                                                {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "limited",
+                                                        "proximity",
+                                                        "distance"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "direction": {
+                                            "description": "A one-way wall: which side it restricts from (Foundry `dir`), walking the outline clockwise.",
+                                            "type": "string",
+                                            "enum": [
+                                                "both",
+                                                "left",
+                                                "right"
+                                            ]
+                                        },
+                                        "threshold": {
+                                            "description": "Distances (grid units) for proximity and distance senses.",
+                                            "type": "object",
+                                            "properties": {
+                                                "light": {
+                                                    "type": "number",
+                                                    "exclusiveMinimum": 0
+                                                },
+                                                "sight": {
+                                                    "type": "number",
+                                                    "exclusiveMinimum": 0
+                                                },
+                                                "sound": {
+                                                    "type": "number",
+                                                    "exclusiveMinimum": 0
+                                                },
+                                                "attenuation": {
+                                                    "description": "Light and sound fade through the wall with distance.",
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "additionalProperties": false
                                         }
                                     },
                                     "required": [
@@ -278,6 +408,560 @@
                                         }
                                     },
                                     "additionalProperties": false
+                                },
+                                "particles": {
+                                    "description": "Overrides the stamp particles; null means none (a \"destroyed\" variant can smoke).",
+                                    "anyOf": [
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "textures": {
+                                                        "minItems": 1,
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "description": "Particle images, relative to the pack module root; each particle takes one at random."
+                                                    },
+                                                    "area": {
+                                                        "default": {
+                                                            "x": 0.5,
+                                                            "y": 0.5,
+                                                            "radius": 0
+                                                        },
+                                                        "description": "Where particles spawn.",
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "string",
+                                                                "const": "footprint",
+                                                                "description": "Anywhere over the stamp footprint."
+                                                            },
+                                                            {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "x": {
+                                                                        "type": "number",
+                                                                        "minimum": 0,
+                                                                        "maximum": 1,
+                                                                        "description": "Emitter centre as a fraction of the footprint width."
+                                                                    },
+                                                                    "y": {
+                                                                        "type": "number",
+                                                                        "minimum": 0,
+                                                                        "maximum": 1,
+                                                                        "description": "Emitter centre as a fraction of the footprint height."
+                                                                    },
+                                                                    "radius": {
+                                                                        "default": 0,
+                                                                        "description": "Spawn radius in grid units; 0 is a point.",
+                                                                        "type": "number",
+                                                                        "minimum": 0
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "x",
+                                                                    "y"
+                                                                ],
+                                                                "additionalProperties": false
+                                                            }
+                                                        ]
+                                                    },
+                                                    "count": {
+                                                        "type": "integer",
+                                                        "exclusiveMinimum": 0,
+                                                        "maximum": 9007199254740991,
+                                                        "description": "How many particles are alive at once."
+                                                    },
+                                                    "lifetime": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "number"
+                                                            },
+                                                            {
+                                                                "type": "array",
+                                                                "prefixItems": [
+                                                                    {
+                                                                        "type": "number"
+                                                                    },
+                                                                    {
+                                                                        "type": "number"
+                                                                    }
+                                                                ],
+                                                                "items": false,
+                                                                "minItems": 2,
+                                                                "maxItems": 2
+                                                            }
+                                                        ],
+                                                        "description": "Particle lifetime in milliseconds."
+                                                    },
+                                                    "velocity": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "speed": {
+                                                                "anyOf": [
+                                                                    {
+                                                                        "type": "number"
+                                                                    },
+                                                                    {
+                                                                        "type": "array",
+                                                                        "prefixItems": [
+                                                                            {
+                                                                                "type": "number"
+                                                                            },
+                                                                            {
+                                                                                "type": "number"
+                                                                            }
+                                                                        ],
+                                                                        "items": false,
+                                                                        "minItems": 2,
+                                                                        "maxItems": 2
+                                                                    }
+                                                                ],
+                                                                "description": "Grid units per second."
+                                                            },
+                                                            "angle": {
+                                                                "anyOf": [
+                                                                    {
+                                                                        "type": "number"
+                                                                    },
+                                                                    {
+                                                                        "type": "array",
+                                                                        "prefixItems": [
+                                                                            {
+                                                                                "type": "number"
+                                                                            },
+                                                                            {
+                                                                                "type": "number"
+                                                                            }
+                                                                        ],
+                                                                        "items": false,
+                                                                        "minItems": 2,
+                                                                        "maxItems": 2
+                                                                    }
+                                                                ],
+                                                                "description": "Direction in degrees, clockwise from east (the stamp rotation is added)."
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "speed",
+                                                            "angle"
+                                                        ],
+                                                        "additionalProperties": false
+                                                    },
+                                                    "alpha": {
+                                                        "description": "Peak opacity, 0 to 1.",
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "number"
+                                                            },
+                                                            {
+                                                                "type": "array",
+                                                                "prefixItems": [
+                                                                    {
+                                                                        "type": "number"
+                                                                    },
+                                                                    {
+                                                                        "type": "number"
+                                                                    }
+                                                                ],
+                                                                "items": false,
+                                                                "minItems": 2,
+                                                                "maxItems": 2
+                                                            }
+                                                        ]
+                                                    },
+                                                    "scale": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "number"
+                                                            },
+                                                            {
+                                                                "type": "array",
+                                                                "prefixItems": [
+                                                                    {
+                                                                        "type": "number"
+                                                                    },
+                                                                    {
+                                                                        "type": "number"
+                                                                    }
+                                                                ],
+                                                                "items": false,
+                                                                "minItems": 2,
+                                                                "maxItems": 2
+                                                            }
+                                                        ]
+                                                    },
+                                                    "rotationSpeed": {
+                                                        "description": "Degrees per second.",
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "number"
+                                                            },
+                                                            {
+                                                                "type": "array",
+                                                                "prefixItems": [
+                                                                    {
+                                                                        "type": "number"
+                                                                    },
+                                                                    {
+                                                                        "type": "number"
+                                                                    }
+                                                                ],
+                                                                "items": false,
+                                                                "minItems": 2,
+                                                                "maxItems": 2
+                                                            }
+                                                        ]
+                                                    },
+                                                    "fade": {
+                                                        "description": "Fade-in and fade-out, in milliseconds (or a fraction of lifetime when below 1).",
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "in": {
+                                                                "type": "number",
+                                                                "minimum": 0
+                                                            },
+                                                            "out": {
+                                                                "type": "number",
+                                                                "minimum": 0
+                                                            }
+                                                        },
+                                                        "additionalProperties": false
+                                                    },
+                                                    "blend": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "normal",
+                                                            "add",
+                                                            "multiply",
+                                                            "screen"
+                                                        ]
+                                                    },
+                                                    "elevation": {
+                                                        "description": "Height above the stamp base, in grid units.",
+                                                        "type": "number"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "textures",
+                                                    "count",
+                                                    "lifetime"
+                                                ],
+                                                "additionalProperties": false,
+                                                "description": "A native particle emitter (Foundry's ParticleGenerator, effect mode) anchored to the stamp."
+                                            }
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                },
+                                "sound": {
+                                    "description": "Overrides the stamp sound; null means silent.",
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "path": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "description": "Audio file relative to the pack module root."
+                                                },
+                                                "radius": {
+                                                    "type": "number",
+                                                    "exclusiveMinimum": 0,
+                                                    "description": "Audible radius in grid units."
+                                                },
+                                                "volume": {
+                                                    "default": 0.5,
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                },
+                                                "repeat": {
+                                                    "default": true,
+                                                    "type": "boolean"
+                                                },
+                                                "walls": {
+                                                    "default": true,
+                                                    "description": "Walls muffle the sound.",
+                                                    "type": "boolean"
+                                                },
+                                                "easing": {
+                                                    "default": true,
+                                                    "description": "Volume falls off with distance.",
+                                                    "type": "boolean"
+                                                },
+                                                "offset": {
+                                                    "description": "Emitter position as a fraction of the footprint (default: centre).",
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "x": {
+                                                            "type": "number",
+                                                            "minimum": 0,
+                                                            "maximum": 1
+                                                        },
+                                                        "y": {
+                                                            "type": "number",
+                                                            "minimum": 0,
+                                                            "maximum": 1
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "x",
+                                                        "y"
+                                                    ],
+                                                    "additionalProperties": false
+                                                }
+                                            },
+                                            "required": [
+                                                "path",
+                                                "radius"
+                                            ],
+                                            "additionalProperties": false,
+                                            "description": "A native ambient sound emitted by the placed stamp."
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                },
+                                "tile": {
+                                    "description": "Overrides the stamp tile behaviour.",
+                                    "type": "object",
+                                    "properties": {
+                                        "alpha": {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 1
+                                        },
+                                        "hidden": {
+                                            "description": "Placed hidden from players.",
+                                            "type": "boolean"
+                                        },
+                                        "occlusion": {
+                                            "description": "Roofs and canopies that give way to tokens beneath them.",
+                                            "type": "object",
+                                            "properties": {
+                                                "modes": {
+                                                    "default": [],
+                                                    "description": "Foundry occlusion modes, combined: fade when a token is beneath, reveal as a surface, a radial cut-out, or by vision.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "fade",
+                                                            "surface",
+                                                            "radial",
+                                                            "vision"
+                                                        ]
+                                                    }
+                                                },
+                                                "alpha": {
+                                                    "description": "Opacity while occluded.",
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                }
+                                            },
+                                            "additionalProperties": false
+                                        },
+                                        "alphaThreshold": {
+                                            "description": "Opacity below which the image is not solid (for occlusion and hover).",
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 1
+                                        },
+                                        "restrictions": {
+                                            "description": "The tile blocks light and weather beneath it.",
+                                            "type": "object",
+                                            "properties": {
+                                                "light": {
+                                                    "type": "boolean"
+                                                },
+                                                "weather": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "additionalProperties": false
+                                        },
+                                        "video": {
+                                            "description": "For a video image.",
+                                            "type": "object",
+                                            "properties": {
+                                                "loop": {
+                                                    "type": "boolean"
+                                                },
+                                                "autoplay": {
+                                                    "type": "boolean"
+                                                },
+                                                "volume": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                }
+                                            },
+                                            "additionalProperties": false
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                },
+                                "container": {
+                                    "description": "Overrides whether (and how) the stamp is an Item Piles pile.",
+                                    "anyOf": [
+                                        {
+                                            "type": "boolean"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {
+                                                    "default": "container",
+                                                    "description": "Item Piles pile type.",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "pile",
+                                                        "container",
+                                                        "merchant",
+                                                        "vault",
+                                                        "auctioneer",
+                                                        "banker"
+                                                    ]
+                                                },
+                                                "closed": {
+                                                    "description": "Starts closed.",
+                                                    "type": "boolean"
+                                                },
+                                                "locked": {
+                                                    "description": "Starts locked.",
+                                                    "type": "boolean"
+                                                },
+                                                "distance": {
+                                                    "description": "How near (grid squares) a token must be to open it.",
+                                                    "type": "number",
+                                                    "exclusiveMinimum": 0
+                                                },
+                                                "canInspectItems": {
+                                                    "type": "boolean"
+                                                },
+                                                "displayItemTypes": {
+                                                    "type": "boolean"
+                                                },
+                                                "sounds": {
+                                                    "description": "Audio files relative to the pack module root.",
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "open": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "close": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "locked": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "unlocked": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                },
+                                                "states": {
+                                                    "description": "Which variant (by state label) shows the pile closed, open, emptied or locked, so the stamp follows it.",
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "closed": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "open": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "empty": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "locked": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                }
+                                            },
+                                            "additionalProperties": false,
+                                            "description": "An Item Piles pile backing the stamp (Item Piles must be active)."
+                                        }
+                                    ]
+                                },
+                                "surface": {
+                                    "description": "Overrides the stamp surface; null means none.",
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "placement": {
+                                                    "default": "top",
+                                                    "description": "A surface at the bottom, top or both of the stamp height.",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "bottom",
+                                                        "top",
+                                                        "both"
+                                                    ]
+                                                },
+                                                "reveal": {
+                                                    "default": false,
+                                                    "description": "An elevated surface (a roof, a balcony) hidden from observers nearly beneath it.",
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "additionalProperties": false,
+                                            "description": "A Define Surface region over the footprint: a floor or roof that restricts light, movement, sight and sound between levels."
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                },
+                                "terrain": {
+                                    "description": "Overrides the stamp terrain; null means none (e.g. rubble only when \"destroyed\").",
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "difficulty": {
+                                                    "type": "object",
+                                                    "propertyNames": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    },
+                                                    "additionalProperties": {
+                                                        "type": "number",
+                                                        "minimum": 0,
+                                                        "maximum": 5
+                                                    },
+                                                    "description": "Movement cost multiplier per movement action (walk, climb, fly, ...), as Foundry's Modify Movement Cost behaviour."
+                                                }
+                                            },
+                                            "required": [
+                                                "difficulty"
+                                            ],
+                                            "additionalProperties": false,
+                                            "description": "Difficult terrain over the footprint (rubble, mud, a crowd)."
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
                                 }
                             },
                             "required": [
@@ -325,8 +1009,20 @@
                             },
                             "sight": {
                                 "default": true,
-                                "description": "The generated walls block sight.",
-                                "type": "boolean"
+                                "description": "How the generated walls restrict sight.",
+                                "anyOf": [
+                                    {
+                                        "type": "boolean"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "limited",
+                                            "proximity",
+                                            "distance"
+                                        ]
+                                    }
+                                ]
                             },
                             "movement": {
                                 "default": true,
@@ -335,13 +1031,69 @@
                             },
                             "light": {
                                 "default": true,
-                                "description": "The generated walls block light.",
-                                "type": "boolean"
+                                "description": "How the generated walls restrict light.",
+                                "anyOf": [
+                                    {
+                                        "type": "boolean"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "limited",
+                                            "proximity",
+                                            "distance"
+                                        ]
+                                    }
+                                ]
                             },
                             "sound": {
                                 "default": true,
-                                "description": "The generated walls block sound.",
-                                "type": "boolean"
+                                "description": "How the generated walls restrict sound.",
+                                "anyOf": [
+                                    {
+                                        "type": "boolean"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "limited",
+                                            "proximity",
+                                            "distance"
+                                        ]
+                                    }
+                                ]
+                            },
+                            "direction": {
+                                "description": "A one-way wall: which side it restricts from (Foundry `dir`), walking the outline clockwise.",
+                                "type": "string",
+                                "enum": [
+                                    "both",
+                                    "left",
+                                    "right"
+                                ]
+                            },
+                            "threshold": {
+                                "description": "Distances (grid units) for proximity and distance senses.",
+                                "type": "object",
+                                "properties": {
+                                    "light": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                    },
+                                    "sight": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                    },
+                                    "sound": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                    },
+                                    "attenuation": {
+                                        "description": "Light and sound fade through the wall with distance.",
+                                        "type": "boolean"
+                                    }
+                                },
+                                "additionalProperties": false
                             }
                         },
                         "required": [
@@ -424,6 +1176,68 @@
                                     "type"
                                 ],
                                 "additionalProperties": false
+                            },
+                            "negative": {
+                                "description": "A darkness source rather than a light.",
+                                "type": "boolean"
+                            },
+                            "priority": {
+                                "description": "Draw priority among overlapping lights.",
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                            },
+                            "coloration": {
+                                "description": "Foundry colouration technique.",
+                                "type": "string",
+                                "enum": [
+                                    "legacy",
+                                    "luminance",
+                                    "internalHalo",
+                                    "externalHalo",
+                                    "colorBurn",
+                                    "internalBurn",
+                                    "externalBurn",
+                                    "lowAbsorption",
+                                    "highAbsorption",
+                                    "invertAbsorption",
+                                    "naturalLight",
+                                    "naturalAttenuation",
+                                    "adaptiveAttenuation"
+                                ]
+                            },
+                            "luminosity": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "attenuation": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "saturation": {
+                                "type": "number",
+                                "minimum": -1,
+                                "maximum": 1
+                            },
+                            "contrast": {
+                                "type": "number",
+                                "minimum": -1,
+                                "maximum": 1
+                            },
+                            "shadows": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "walls": {
+                                "description": "Constrained by walls (default true).",
+                                "type": "boolean"
+                            },
+                            "vision": {
+                                "description": "Also provides vision.",
+                                "type": "boolean"
                             }
                         },
                         "required": [
@@ -443,6 +1257,61 @@
                                     "secret"
                                 ],
                                 "description": "Foundry door type of the wall this stamp sits on."
+                            },
+                            "animation": {
+                                "description": "How the door animates open and closed.",
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "ascend",
+                                            "descend",
+                                            "slide",
+                                            "swing",
+                                            "swivel"
+                                        ]
+                                    },
+                                    "direction": {
+                                        "anyOf": [
+                                            {
+                                                "type": "number",
+                                                "const": 1
+                                            },
+                                            {
+                                                "type": "number",
+                                                "const": -1
+                                            }
+                                        ]
+                                    },
+                                    "double": {
+                                        "description": "A double door, opening from both ends.",
+                                        "type": "boolean"
+                                    },
+                                    "duration": {
+                                        "description": "Milliseconds.",
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0,
+                                        "maximum": 9007199254740991
+                                    },
+                                    "flip": {
+                                        "type": "boolean"
+                                    },
+                                    "strength": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 2
+                                    }
+                                },
+                                "required": [
+                                    "type"
+                                ],
+                                "additionalProperties": false
+                            },
+                            "sound": {
+                                "description": "A Foundry door sound key (CONFIG.Wall.doorSounds), e.g. \"slidingMetal\", \"woodCreaky\".",
+                                "type": "string",
+                                "minLength": 1
                             }
                         },
                         "required": [
@@ -471,6 +1340,15 @@
                                     "both"
                                 ],
                                 "description": "Which level(s) the stamp leads to."
+                            },
+                            "movement": {
+                                "description": "Movement actions that use it (walk, climb, fly, ...); omitted means any. Stairs are walked, ladders climbed.",
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
                             }
                         },
                         "required": [
@@ -487,8 +1365,527 @@
                     },
                     "container": {
                         "default": false,
-                        "description": "Placed as an Item Piles container by default.",
-                        "type": "boolean"
+                        "description": "Backed by an Item Piles pile: true for a plain container, or its pile options.",
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "default": "container",
+                                        "description": "Item Piles pile type.",
+                                        "type": "string",
+                                        "enum": [
+                                            "pile",
+                                            "container",
+                                            "merchant",
+                                            "vault",
+                                            "auctioneer",
+                                            "banker"
+                                        ]
+                                    },
+                                    "closed": {
+                                        "description": "Starts closed.",
+                                        "type": "boolean"
+                                    },
+                                    "locked": {
+                                        "description": "Starts locked.",
+                                        "type": "boolean"
+                                    },
+                                    "distance": {
+                                        "description": "How near (grid squares) a token must be to open it.",
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                    },
+                                    "canInspectItems": {
+                                        "type": "boolean"
+                                    },
+                                    "displayItemTypes": {
+                                        "type": "boolean"
+                                    },
+                                    "sounds": {
+                                        "description": "Audio files relative to the pack module root.",
+                                        "type": "object",
+                                        "properties": {
+                                            "open": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "close": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "locked": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "unlocked": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            }
+                                        },
+                                        "additionalProperties": false
+                                    },
+                                    "states": {
+                                        "description": "Which variant (by state label) shows the pile closed, open, emptied or locked, so the stamp follows it.",
+                                        "type": "object",
+                                        "properties": {
+                                            "closed": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "open": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "empty": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "locked": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            }
+                                        },
+                                        "additionalProperties": false
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "description": "An Item Piles pile backing the stamp (Item Piles must be active)."
+                            }
+                        ]
+                    },
+                    "particles": {
+                        "description": "Native particle emitters (smoke, embers, sparks, drips).",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "textures": {
+                                    "minItems": 1,
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "description": "Particle images, relative to the pack module root; each particle takes one at random."
+                                },
+                                "area": {
+                                    "default": {
+                                        "x": 0.5,
+                                        "y": 0.5,
+                                        "radius": 0
+                                    },
+                                    "description": "Where particles spawn.",
+                                    "anyOf": [
+                                        {
+                                            "type": "string",
+                                            "const": "footprint",
+                                            "description": "Anywhere over the stamp footprint."
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "x": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1,
+                                                    "description": "Emitter centre as a fraction of the footprint width."
+                                                },
+                                                "y": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1,
+                                                    "description": "Emitter centre as a fraction of the footprint height."
+                                                },
+                                                "radius": {
+                                                    "default": 0,
+                                                    "description": "Spawn radius in grid units; 0 is a point.",
+                                                    "type": "number",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "x",
+                                                "y"
+                                            ],
+                                            "additionalProperties": false
+                                        }
+                                    ]
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "description": "How many particles are alive at once."
+                                },
+                                "lifetime": {
+                                    "anyOf": [
+                                        {
+                                            "type": "number"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "prefixItems": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "number"
+                                                }
+                                            ],
+                                            "items": false,
+                                            "minItems": 2,
+                                            "maxItems": 2
+                                        }
+                                    ],
+                                    "description": "Particle lifetime in milliseconds."
+                                },
+                                "velocity": {
+                                    "type": "object",
+                                    "properties": {
+                                        "speed": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "prefixItems": [
+                                                        {
+                                                            "type": "number"
+                                                        },
+                                                        {
+                                                            "type": "number"
+                                                        }
+                                                    ],
+                                                    "items": false,
+                                                    "minItems": 2,
+                                                    "maxItems": 2
+                                                }
+                                            ],
+                                            "description": "Grid units per second."
+                                        },
+                                        "angle": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "prefixItems": [
+                                                        {
+                                                            "type": "number"
+                                                        },
+                                                        {
+                                                            "type": "number"
+                                                        }
+                                                    ],
+                                                    "items": false,
+                                                    "minItems": 2,
+                                                    "maxItems": 2
+                                                }
+                                            ],
+                                            "description": "Direction in degrees, clockwise from east (the stamp rotation is added)."
+                                        }
+                                    },
+                                    "required": [
+                                        "speed",
+                                        "angle"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "alpha": {
+                                    "description": "Peak opacity, 0 to 1.",
+                                    "anyOf": [
+                                        {
+                                            "type": "number"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "prefixItems": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "number"
+                                                }
+                                            ],
+                                            "items": false,
+                                            "minItems": 2,
+                                            "maxItems": 2
+                                        }
+                                    ]
+                                },
+                                "scale": {
+                                    "anyOf": [
+                                        {
+                                            "type": "number"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "prefixItems": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "number"
+                                                }
+                                            ],
+                                            "items": false,
+                                            "minItems": 2,
+                                            "maxItems": 2
+                                        }
+                                    ]
+                                },
+                                "rotationSpeed": {
+                                    "description": "Degrees per second.",
+                                    "anyOf": [
+                                        {
+                                            "type": "number"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "prefixItems": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "number"
+                                                }
+                                            ],
+                                            "items": false,
+                                            "minItems": 2,
+                                            "maxItems": 2
+                                        }
+                                    ]
+                                },
+                                "fade": {
+                                    "description": "Fade-in and fade-out, in milliseconds (or a fraction of lifetime when below 1).",
+                                    "type": "object",
+                                    "properties": {
+                                        "in": {
+                                            "type": "number",
+                                            "minimum": 0
+                                        },
+                                        "out": {
+                                            "type": "number",
+                                            "minimum": 0
+                                        }
+                                    },
+                                    "additionalProperties": false
+                                },
+                                "blend": {
+                                    "type": "string",
+                                    "enum": [
+                                        "normal",
+                                        "add",
+                                        "multiply",
+                                        "screen"
+                                    ]
+                                },
+                                "elevation": {
+                                    "description": "Height above the stamp base, in grid units.",
+                                    "type": "number"
+                                }
+                            },
+                            "required": [
+                                "textures",
+                                "count",
+                                "lifetime"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A native particle emitter (Foundry's ParticleGenerator, effect mode) anchored to the stamp."
+                        }
+                    },
+                    "sound": {
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Audio file relative to the pack module root."
+                            },
+                            "radius": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "description": "Audible radius in grid units."
+                            },
+                            "volume": {
+                                "default": 0.5,
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "repeat": {
+                                "default": true,
+                                "type": "boolean"
+                            },
+                            "walls": {
+                                "default": true,
+                                "description": "Walls muffle the sound.",
+                                "type": "boolean"
+                            },
+                            "easing": {
+                                "default": true,
+                                "description": "Volume falls off with distance.",
+                                "type": "boolean"
+                            },
+                            "offset": {
+                                "description": "Emitter position as a fraction of the footprint (default: centre).",
+                                "type": "object",
+                                "properties": {
+                                    "x": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    },
+                                    "y": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    }
+                                },
+                                "required": [
+                                    "x",
+                                    "y"
+                                ],
+                                "additionalProperties": false
+                            }
+                        },
+                        "required": [
+                            "path",
+                            "radius"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A native ambient sound emitted by the placed stamp."
+                    },
+                    "tile": {
+                        "type": "object",
+                        "properties": {
+                            "alpha": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "hidden": {
+                                "description": "Placed hidden from players.",
+                                "type": "boolean"
+                            },
+                            "occlusion": {
+                                "description": "Roofs and canopies that give way to tokens beneath them.",
+                                "type": "object",
+                                "properties": {
+                                    "modes": {
+                                        "default": [],
+                                        "description": "Foundry occlusion modes, combined: fade when a token is beneath, reveal as a surface, a radial cut-out, or by vision.",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "fade",
+                                                "surface",
+                                                "radial",
+                                                "vision"
+                                            ]
+                                        }
+                                    },
+                                    "alpha": {
+                                        "description": "Opacity while occluded.",
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    }
+                                },
+                                "additionalProperties": false
+                            },
+                            "alphaThreshold": {
+                                "description": "Opacity below which the image is not solid (for occlusion and hover).",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "restrictions": {
+                                "description": "The tile blocks light and weather beneath it.",
+                                "type": "object",
+                                "properties": {
+                                    "light": {
+                                        "type": "boolean"
+                                    },
+                                    "weather": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "additionalProperties": false
+                            },
+                            "video": {
+                                "description": "For a video image.",
+                                "type": "object",
+                                "properties": {
+                                    "loop": {
+                                        "type": "boolean"
+                                    },
+                                    "autoplay": {
+                                        "type": "boolean"
+                                    },
+                                    "volume": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    }
+                                },
+                                "additionalProperties": false
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "How the stamp tile itself behaves."
+                    },
+                    "surface": {
+                        "type": "object",
+                        "properties": {
+                            "placement": {
+                                "default": "top",
+                                "description": "A surface at the bottom, top or both of the stamp height.",
+                                "type": "string",
+                                "enum": [
+                                    "bottom",
+                                    "top",
+                                    "both"
+                                ]
+                            },
+                            "reveal": {
+                                "default": false,
+                                "description": "An elevated surface (a roof, a balcony) hidden from observers nearly beneath it.",
+                                "type": "boolean"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "A Define Surface region over the footprint: a floor or roof that restricts light, movement, sight and sound between levels."
+                    },
+                    "terrain": {
+                        "type": "object",
+                        "properties": {
+                            "difficulty": {
+                                "type": "object",
+                                "propertyNames": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "additionalProperties": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "description": "Movement cost multiplier per movement action (walk, climb, fly, ...), as Foundry's Modify Movement Cost behaviour."
+                            }
+                        },
+                        "required": [
+                            "difficulty"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Difficult terrain over the footprint (rubble, mud, a crowd)."
                     }
                 },
                 "required": [

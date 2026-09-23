@@ -39,7 +39,14 @@ export class FoundryDocumentSink implements DocumentSink {
 
     async createWalls(walls: readonly WallDoc[]): Promise<string[]> {
         const scene = this.getScene();
-        return scene ? extractIds(await scene.createEmbeddedDocuments('Wall', walls.map(wallCreateData))) : [];
+        return scene
+            ? extractIds(
+                  await scene.createEmbeddedDocuments(
+                      'Wall',
+                      walls.map((w) => wallCreateData(w, scene.grid)),
+                  ),
+              )
+            : [];
     }
 
     async createLights(lights: readonly LightDoc[]): Promise<string[]> {

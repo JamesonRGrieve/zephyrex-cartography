@@ -25,7 +25,23 @@ function placed(gridSize: number): ReturnType<typeof makeStamp> {
 
 describe('pileSpec', () => {
     it('covers the stamp footprint in grid squares, in its image, turn and elevation above the floor', () => {
-        expect(pileSpec(placed(100), 10)).toEqual({ x: 400, y: 250, width: 2, height: 1, rotation: 90, elevation: 10, src: 'modules/pack/chest.png' });
+        expect(pileSpec(placed(100), 10)).toEqual({
+            x: 400,
+            y: 250,
+            width: 2,
+            height: 1,
+            rotation: 90,
+            elevation: 10,
+            src: 'modules/pack/chest.png',
+            pile: { type: 'container' },
+        });
+    });
+
+    it("carries the pack's pile options, and a plain container when a stamp predates them", () => {
+        const vault = { ...placed(100), behaviour: { ...placed(100).behaviour, pile: { type: 'vault' as const, locked: true } } };
+        expect(pileSpec(vault, 0).pile).toEqual({ type: 'vault', locked: true });
+        const { pile: _omitted, ...older } = placed(100).behaviour;
+        expect(pileSpec({ ...placed(100), behaviour: older }, 0).pile).toEqual({ type: 'container' });
     });
 
     it('treats a gridless stamp as one px per square rather than dividing by zero', () => {

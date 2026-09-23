@@ -8,7 +8,7 @@
 import type { TileFrame } from '../canvas/controller';
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
-import type { DoorState, DoorType, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
+import type { DoorState, DoorType, LightDoc, RegionDoc, SenseLevel, TileDoc, WallDirection, WallDoc, WallThreshold } from '../tools/documents';
 import type { LightCreateData, RegionCreateData, TileCreateData, WallCreateData } from './boundary';
 
 /** `CONST.WALL_DOOR_TYPES`. */
@@ -19,9 +19,11 @@ const DOOR_STATES: Record<DoorState, number> = { closed: 0, open: 1, locked: 2 }
 
 const DOOR_STATE_NAMES: readonly DoorState[] = ['closed', 'open', 'locked'];
 
-/** `CONST.EDGE_SENSE_TYPES`: NONE and NORMAL. */
-const SENSE_NONE = 0;
-const SENSE_NORMAL = 20;
+/** `CONST.EDGE_SENSE_TYPES`. */
+const SENSE_TYPES: Record<SenseLevel, number> = { none: 0, limited: 10, normal: 20, proximity: 30, distance: 40 };
+
+/** `CONST.EDGE_DIRECTIONS`. */
+const DIRECTIONS: Record<WallDirection, number> = { both: 0, left: 1, right: 2 };
 
 /** `CONST.REGION_VISIBILITY.LAYER`: shown on the Regions layer, locked or not. */
 const REGION_VISIBILITY_LAYER = 0;
@@ -42,8 +44,15 @@ export function doorStateFromDs(ds: number): DoorState | null {
     return DOOR_STATE_NAMES.find((state) => DOOR_STATES[state] === ds) ?? null;
 }
 
-function sense(blocks: boolean): number {
-    return blocks ? SENSE_NORMAL : SENSE_NONE;
+/** A wall threshold from grid units to the scene's distance units; a sense without one is unbounded (null). */
+function thresholdData(threshold: WallThreshold, grid: SceneGrid): NonNullable<WallCreateData['threshold']> {
+    const distance = (gridUnits: number | undefined): number | null => (gridUnits === undefined ? null : gridUnits * grid.distance);
+    return {
+        light: distance(threshold.light),
+        sight: distance(threshold.sight),
+        sound: distance(threshold.sound),
+        attenuation: threshold.attenuation ?? false,
+    };
 }
 
 /** Native Level membership; left out (every level) for a document on no level. */
@@ -51,15 +60,17 @@ function levelsField(level: string | null): { levels?: string[] } {
     return level === null ? {} : { levels: [level] };
 }
 
-export function wallCreateData(wall: WallDoc): WallCreateData {
+export function wallCreateData(wall: WallDoc, grid: SceneGrid): WallCreateData {
     return {
         c: [wall.a.x, wall.a.y, wall.b.x, wall.b.y],
         door: DOOR_TYPES[wall.door],
         ds: DOOR_STATES[wall.doorState],
-        sight: sense(wall.blocks.sight),
-        light: sense(wall.blocks.light),
-        sound: sense(wall.blocks.sound),
+        sight: SENSE_TYPES[wall.blocks.sight],
+        light: SENSE_TYPES[wall.blocks.light],
+        sound: SENSE_TYPES[wall.blocks.sound],
         move: wall.blocks.movement ? MOVE_NORMAL : MOVE_NONE,
+        ...(wall.direction === undefined ? {} : { dir: DIRECTIONS[wall.direction] }),
+        ...(wall.threshold === undefined ? {} : { threshold: thresholdData(wall.threshold, grid) }),
         ...levelsField(wall.level),
     };
 }

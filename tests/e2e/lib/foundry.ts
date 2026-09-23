@@ -16,6 +16,23 @@ import { test as base, expect, type Page } from '@playwright/test';
 const PORT_BASE = Number(process.env['FOUNDRY_TEST_PORT'] ?? 30101);
 const MODULE_ID = 'zephyrex-cartography';
 const PACK_ID = 'zc-e2e-pack';
+/** Integrations the suite exercises when their modules are installed (see scripts/e2e-world.mjs). */
+const OPTIONAL_MODULES = ['item-piles', 'socketlib', 'lib-wrapper'];
+
+/** The e2e system's one Actor type (tests/e2e/fixtures/system). */
+const E2E_ACTOR_TYPE = 'npc';
+
+declare global {
+    interface SettingConfig {
+        /** Item Piles' Actor type for piles, which a GM chooses on a system Item Piles does not know. */
+        'item-piles.actorClassType': string;
+    }
+}
+
+/** Whether an optional integration's module is active in this world. */
+export async function moduleActive(page: Page, moduleId: string): Promise<boolean> {
+    return page.evaluate((id) => [...(game.modules?.values() ?? [])].some((m) => m.id === id && m.active), moduleId);
+}
 /** Where the module's served build lives; coverage keeps only these scripts. */
 const MODULE_SCRIPT = `/modules/${MODULE_ID}/dist/`;
 const RAW_COVERAGE_DIR = resolve('.e2e-raw-coverage');
@@ -53,22 +70,42 @@ async function joinAsGamemaster(page: Page): Promise<void> {
     await page.waitForFunction(() => game.ready === true, undefined, { timeout: READY_TIMEOUT_MS });
 }
 
-/** Activate the module and the e2e pack once per world; activating needs a reload. */
+/**
+ * Activate the module, the e2e pack, and whichever optional integrations are
+ * installed, once per world; activating needs a reload.
+ */
 async function activateModules(page: Page): Promise<void> {
     const changed = await page.evaluate(
-        async ([moduleId, packId]) => {
-            if (game.modules?.get(moduleId).active === true && game.modules.get(packId)?.active === true) {
+        async (wanted) => {
+            const installed = [...(game.modules?.values() ?? [])];
+            const toActivate = installed.filter((m) => wanted.includes(m.id));
+            if (toActivate.every((m) => m.active)) {
                 return false;
             }
             const current = game.settings?.get('core', 'moduleConfiguration') ?? {};
-            await game.settings?.set('core', 'moduleConfiguration', { ...current, [moduleId]: true, [packId]: true });
+            await game.settings?.set('core', 'moduleConfiguration', { ...current, ...Object.fromEntries(toActivate.map((m) => [m.id, true])) });
             return true;
         },
-        [MODULE_ID, PACK_ID] as const,
+        [MODULE_ID, PACK_ID, ...OPTIONAL_MODULES],
     );
     if (changed) {
         await page.reload();
         await page.waitForFunction(() => game.ready === true, undefined, { timeout: READY_TIMEOUT_MS });
+    }
+    // Item Piles does not know the e2e system, so it needs the GM's usual setup: which Actor type a pile is.
+    if (await moduleActive(page, 'item-piles')) {
+        const configured = await page.evaluate(async (actorType) => {
+            if (game.settings?.get('item-piles', 'actorClassType') === actorType) {
+                return false;
+            }
+            await game.settings?.set('item-piles', 'actorClassType', actorType);
+            return true;
+        }, E2E_ACTOR_TYPE);
+        // The setting asks for a reload; take it now, before a scene is set up, rather than mid-test.
+        if (configured) {
+            await page.reload();
+            await page.waitForFunction(() => game.ready === true, undefined, { timeout: READY_TIMEOUT_MS });
+        }
     }
 }
 
