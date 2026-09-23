@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
-import { doorStateFromDs, lightCreateData, pxToDistance, regionCreateData, regionUuid, tileCreateData, wallCreateData } from './translate';
+import { doorStateFromDs, lightCreateData, pxToDistance, regionCreateData, regionUuid, tileCreateData, tileFrame, wallCreateData } from './translate';
 
 const GRID = { size: 100, distance: 5 };
 
@@ -80,18 +80,40 @@ describe('lightCreateData', () => {
 });
 
 describe('tileCreateData', () => {
-    it('writes the texture, geometry, level and the owning feature flag', () => {
-        expect(tileCreateData({ src: 'a.png', x: 1, y: 2, width: 3, height: 4, rotation: 90, elevation: 5, level: 'L1', featureId: 'f1' })).toEqual({
-            texture: { src: 'a.png' },
-            x: 1,
-            y: 2,
-            width: 3,
-            height: 4,
+    it('places the tile by its centre anchor, with its level and owning feature flag', () => {
+        expect(tileCreateData({ src: 'a.png', x: 10, y: 20, width: 30, height: 40, rotation: 90, elevation: 5, level: 'L1', featureId: 'f1' })).toEqual({
+            texture: { src: 'a.png', anchorX: 0.5, anchorY: 0.5 },
+            x: 25,
+            y: 40,
+            width: 30,
+            height: 40,
             rotation: 90,
             elevation: 5,
             flags: { 'zephyrex-cartography': { featureId: 'f1' } },
             levels: ['L1'],
         });
+    });
+});
+
+describe('tileFrame', () => {
+    it('reads back the top-left the tile was created from', () => {
+        const tile = { src: 'a.png', x: 10, y: 20, width: 30, height: 40, rotation: 45, elevation: 0, level: null, featureId: 'f1' };
+        expect(tileFrame(tileCreateData(tile))).toEqual({ x: 10, y: 20, width: 30, height: 40, rotation: 45 });
+    });
+
+    it('honours any anchor a GM set', () => {
+        expect(tileFrame({ x: 100, y: 100, width: 50, height: 20, rotation: 0, texture: { anchorX: 0, anchorY: 1 } })).toEqual({
+            x: 100,
+            y: 80,
+            width: 50,
+            height: 20,
+            rotation: 0,
+        });
+    });
+
+    it('rounds a fractional centre to the integer Foundry stores', () => {
+        const data = tileCreateData({ src: 'a.png', x: 0, y: 0, width: 5, height: 3, rotation: 0, elevation: 0, level: null, featureId: 'f' });
+        expect([data.x, data.y]).toEqual([3, 2]);
     });
 });
 

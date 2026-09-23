@@ -89,9 +89,15 @@ export function registerLevelRuntime(controller: () => CartographyController | n
         },
     });
 
-    // A GM editing native Level documents directly changes the bands everything hangs off.
+    // A GM editing native Level documents directly changes the bands everything hangs off. Only the
+    // active GM re-syncs (and drops the features of a deleted level); everyone else just re-reads.
     const reload = (): void => {
-        run(async (c) => c.reloadLevels());
+        if (game.users?.activeGM?.isSelf === true) {
+            run(async (c) => c.reloadLevels());
+        } else {
+            controller()?.load();
+            panel.refresh();
+        }
     };
     Hooks.on('createLevel', reload);
     Hooks.on('updateLevel', reload);

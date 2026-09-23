@@ -79,6 +79,24 @@ describe('CartographyController levels', () => {
         expect(c.activeLevel).toBeNull();
     });
 
+    it('drops the features of a level deleted outside the plugin, from the scene and the undo history', async () => {
+        const { c, l, s } = makeHarness();
+        await drawRoom(c); // p1, no level
+        await c.addLevel('above', 'Ground');
+        await drawRoom(c); // p2 on lv1
+        await c.addLevel('above', 'Upper');
+        await drawRoom(c); // p3 on lv2
+        // A GM deletes Ground natively; Foundry deletes its documents with it.
+        await l.remove('lv1');
+        await c.reloadLevels();
+        expect(s.last().map((f) => f.id)).toEqual(['p1', 'p3']);
+        expect(c.getFeature('p2')).toBeNull();
+        await c.undo(); // takes back p3, and cannot bring p2 back onto the missing level
+        expect(s.last().map((f) => f.id)).toEqual(['p1']);
+        await c.undo();
+        expect(s.last().map((f) => f.id)).toEqual(['p1']);
+    });
+
     it('refuses to remove a level with features on it', async () => {
         const { c } = makeHarness();
         await c.addLevel('above', 'Ground');

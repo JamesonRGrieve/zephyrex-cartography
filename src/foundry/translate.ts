@@ -5,6 +5,7 @@
  * Level membership, and teleport behaviours. It has no Foundry runtime
  * dependency, so it is unit-tested even though it sits at the boundary.
  */
+import type { TileFrame } from '../canvas/controller';
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
 import type { DoorState, DoorType, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
@@ -83,11 +84,40 @@ export function lightCreateData(light: LightDoc, grid: SceneGrid): LightCreateDa
     };
 }
 
+/**
+ * A tile sits at its texture anchor and rotates about it. The core's frames
+ * are an unrotated top-left and a rotation about the centre, so tiles are
+ * anchored at their centre.
+ */
+const TILE_ANCHOR = 0.5;
+
+/** A tile as Foundry reports it: its anchor point, size, rotation and anchor. */
+export interface TileSource {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly rotation: number;
+    readonly texture: { readonly anchorX: number; readonly anchorY: number };
+}
+
+/** The core's frame (unrotated top-left) of a tile, whatever anchor a GM gave it. */
+export function tileFrame(tile: TileSource): TileFrame {
+    return {
+        x: tile.x - tile.texture.anchorX * tile.width,
+        y: tile.y - tile.texture.anchorY * tile.height,
+        width: tile.width,
+        height: tile.height,
+        rotation: tile.rotation,
+    };
+}
+
 export function tileCreateData(tile: TileDoc): TileCreateData {
     return {
-        texture: { src: tile.src },
-        x: tile.x,
-        y: tile.y,
+        texture: { src: tile.src, anchorX: TILE_ANCHOR, anchorY: TILE_ANCHOR },
+        // Foundry stores tile positions as integers; round here so the read-back matches.
+        x: Math.round(tile.x + tile.width * TILE_ANCHOR),
+        y: Math.round(tile.y + tile.height * TILE_ANCHOR),
         width: tile.width,
         height: tile.height,
         rotation: tile.rotation,

@@ -37,7 +37,8 @@ export interface LightCreateData extends OnLevels {
 }
 
 export interface TileCreateData extends OnLevels {
-    readonly texture: { readonly src: string };
+    /** The anchor is the point `x`, `y` names and the tile rotates about. */
+    readonly texture: { readonly src: string; readonly anchorX: number; readonly anchorY: number };
     readonly x: number;
     readonly y: number;
     readonly width: number;

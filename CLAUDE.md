@@ -287,19 +287,16 @@ exposing the option everywhere it applies:
 
 Work down the priorities in order.
 
-### Priority 0: bugs found against v14
-- **Tile anchor.** A v14 tile's `(x, y)` is its *anchor* point, and
-  `texture.anchorX/Y` default to 0.5, so `(x, y)` is the tile's centre. The
-  tile rotates about the anchor (`TileDocument#shape` is a
-  `RectangleShapeData`, changed in 14.349). `tileCreateData` sends the
-  unrotated top-left and no anchor, so every stamp draws offset by half its
-  size from its walls, light and door. The `updateTile` read-back into
-  `syncStampFrame` assumes top-left too. Fix: send the centre with an
-  explicit anchor of 0.5, and convert back using the tile's own anchor.
-- **Level deletion (14.361).** Deleting a Level now deletes every placeable
-  that exists only on it. A GM deleting a Level natively removes our features'
-  documents, but the features stay in the scene flag. `reloadLevels` must
-  discard features whose level is gone.
+### Priority 0: v14 semantics the engine must respect [fixed]
+- **Tile anchor.** A v14 tile's `(x, y)` is its *anchor* point, and it
+  rotates about the anchor (`TileDocument#shape` is a `RectangleShapeData`,
+  14.349). The core's frames are an unrotated top-left, so `tileCreateData`
+  sends the centre with an explicit 0.5 anchor, and `tileFrame` converts a
+  tile back through whatever anchor it has.
+- **Level deletion (14.361).** Deleting a Level deletes every placeable that
+  exists only on it. `reloadLevels` drops the features of a missing level,
+  and removes them from the undo history too, so nothing is revived onto a
+  level that is gone. Only the active GM does this; other clients re-read.
 
 ### Priority 1: native levels
 - **Stairs → `changeLevel`.** v14's way between floors is one region spanning

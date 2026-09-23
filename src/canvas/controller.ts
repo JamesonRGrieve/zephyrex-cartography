@@ -314,6 +314,7 @@ export class CartographyController {
         if (findLevel(this.levelList, this.active) === null) {
             this.active = null;
         }
+        await this.dropOrphans();
         if (JSON.stringify(before) !== JSON.stringify(this.levelList)) {
             await this.resyncLevelled();
             this.redraw();
@@ -366,6 +367,32 @@ export class CartographyController {
         await this.levelStore.remove(id);
         await this.reloadLevels();
         return true;
+    }
+
+    /**
+     * Drop the features of a level that no longer exists. Foundry deletes a
+     * Level's own placeables with it, so their documents are already gone;
+     * anything they own elsewhere (an interior exit, a pile) is discarded, and
+     * they leave the undo history too, so nothing is revived onto a missing
+     * level.
+     */
+    private async dropOrphans(): Promise<void> {
+        const orphaned = (f: Feature): boolean => f.level !== null && findLevel(this.levelList, f.level) === null;
+        const orphans = this.features.filter(orphaned);
+        if (orphans.length === 0) {
+            return;
+        }
+        const before = this.features;
+        this.features = this.features.filter((f) => !orphaned(f));
+        for (const f of orphans) {
+            this.renderer.remove(f.id);
+        }
+        const prune = (snapshot: Feature[]): Feature[] => snapshot.filter((f) => !orphaned(f));
+        this.history.splice(0, this.history.length, ...this.history.map(prune));
+        this.future = this.future.map(prune);
+        await this.store.save(this.features);
+        await Promise.all(orphans.map(async (f) => this.discard(f)));
+        await this.resyncDependents(before, orphans);
     }
 
     /** Re-sync every feature whose documents depend on the levels: anything on a level, and every transition stamp. */

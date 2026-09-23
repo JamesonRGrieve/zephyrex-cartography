@@ -22,7 +22,7 @@ import type { BrowserLabels } from '../ui/stamp-browser-view';
 import { format, localize } from './localize';
 import { fetchPacks } from './packs';
 import { type ArmedStamp, createStampBrowser } from './stamp-browser';
-import { doorStateFromDs } from './translate';
+import { doorStateFromDs, tileFrame } from './translate';
 
 const SNAP_SETTING = 'stampSnap';
 const SCALE_SETTING = 'stampScale';
@@ -235,13 +235,14 @@ export function registerPackRuntime(controller: () => CartographyController | nu
 
     Hooks.on('updateTile', (tile, changed, _options, userId) => {
         const active = controller();
-        const moved = ['x', 'y', 'width', 'height', 'rotation'].some((field) => field in changed);
+        // A changed anchor moves the drawn tile too.
+        const moved = ['x', 'y', 'width', 'height', 'rotation', 'texture'].some((field) => field in changed);
         if (!active || !moved || userId !== game.user?.id) {
             return;
         }
         const featureId = tileOwner(active, tile);
         if (featureId !== null) {
-            void active.syncStampFrame(featureId, { x: tile.x, y: tile.y, width: tile.width, height: tile.height, rotation: tile.rotation });
+            void active.syncStampFrame(featureId, tileFrame(tile));
         }
     });
 
