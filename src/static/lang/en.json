@@ -12,7 +12,32 @@
             "Erase": "Erase",
             "Undo": "Undo",
             "Redo": "Redo",
-            "Stamp": "Stamps (click the canvas to place the selected stamp)"
+            "Stamp": "Stamps (click the canvas to place the selected stamp)",
+            "Levels": "Levels"
+        },
+        "Levels": {
+            "Title": "Levels",
+            "AllLevels": "All levels",
+            "AddAbove": "Add level above",
+            "AddBelow": "Add level below",
+            "Remove": "Remove level",
+            "Name": "Level name",
+            "Bottom": "Floor elevation",
+            "Top": "Ceiling elevation",
+            "Features": "{count} features",
+            "NewLevel": "Level {number}",
+            "Empty": "This scene has no levels yet. Everything drawn shows on every level until you add one.",
+            "RemoveBlocked": "Remove or move this level's features before removing it.",
+            "List": "Scene levels, top to bottom"
+        },
+        "Regions": {
+            "Transition": "{kind}: {from} → {to}",
+            "Kinds": {
+                "Stairs": "Stairs",
+                "Ladder": "Ladder",
+                "Lift": "Lift",
+                "Hatch": "Hatch"
+            }
         },
         "Settings": {
             "TextureSet": {

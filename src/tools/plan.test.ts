@@ -36,6 +36,6 @@ describe('planDocuments', () => {
 
     it('plans nothing for terrain regions', () => {
         const region = makeRegion('g', 'grassland', square);
-        expect(region ? planDocuments(region) : null).toEqual({ walls: [], lights: [], tiles: [] });
+        expect(region ? planDocuments(region) : null).toEqual({ walls: [], lights: [], tiles: [], regions: [] });
     });
 });

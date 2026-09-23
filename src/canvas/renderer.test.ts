@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { NO_DOCS } from '../tools/documents';
 import type { Feature } from '../tools/feature';
+import { NEW_FEATURE } from '../tools/feature-common';
 import type { CartographyPath } from '../tools/path';
 import type { RegionFeature } from '../tools/region';
 import type { TextureResolver } from '../tools/texture';
@@ -39,7 +39,7 @@ const road: CartographyPath = {
     ],
     halfWidths: [5, 5],
     walls: false,
-    docs: NO_DOCS,
+    ...NEW_FEATURE,
 };
 const river: Feature = { ...road, id: 'r', kind: 'river' };
 const lake: RegionFeature = {
@@ -52,7 +52,7 @@ const lake: RegionFeature = {
         { x: 10, y: 10 },
         { x: 0, y: 10 },
     ],
-    docs: NO_DOCS,
+    ...NEW_FEATURE,
 };
 const meadow: Feature = { ...lake, id: 'm', biome: 'grassland' };
 const swath: Feature = {
@@ -64,7 +64,7 @@ const swath: Feature = {
         { x: 40, y: 0 },
     ],
     radius: 15,
-    docs: NO_DOCS,
+    ...NEW_FEATURE,
 };
 const room: Feature = {
     type: 'room',
@@ -77,7 +77,7 @@ const room: Feature = {
         { x: 0, y: 100 },
     ],
     doors: [],
-    docs: NO_DOCS,
+    ...NEW_FEATURE,
 };
 
 describe('GraphicsFeatureRenderer', () => {

@@ -4,7 +4,13 @@
  * Foundry `Scene` satisfies {@link FoundryScene} structurally; the entry seam is
  * the single place that adapts the live document to this shape.
  */
-export interface WallCreateData {
+
+/** Native Level membership (v14 only; absent means every level). */
+interface OnLevels {
+    readonly levels?: readonly string[];
+}
+
+export interface WallCreateData extends OnLevels {
     /** Wall endpoints as `[x0, y0, x1, y1]` in scene pixels. */
     readonly c: readonly number[];
     readonly door: number;
@@ -15,7 +21,7 @@ export interface WallCreateData {
     readonly move: number;
 }
 
-export interface LightCreateData {
+export interface LightCreateData extends OnLevels {
     readonly x: number;
     readonly y: number;
     readonly elevation: number;
@@ -30,7 +36,7 @@ export interface LightCreateData {
     };
 }
 
-export interface TileCreateData {
+export interface TileCreateData extends OnLevels {
     readonly texture: { readonly src: string };
     readonly x: number;
     readonly y: number;
@@ -45,9 +51,45 @@ interface TileUpdateData extends TileCreateData {
     readonly _id: string;
 }
 
-export type EmbeddedName = 'Wall' | 'AmbientLight' | 'Tile';
+/** v14: several destinations, placement, choice. v13: one destination, choice. */
+type TeleportSystem =
+    | { readonly destinations: readonly string[]; readonly placement: string; readonly choice: boolean }
+    | { readonly destination: string; readonly choice: boolean };
 
-type EmbeddedCreateData = WallCreateData | LightCreateData | TileCreateData;
+export interface RegionCreateData extends OnLevels {
+    readonly _id: string;
+    readonly name: string;
+    readonly shapes: readonly { readonly type: 'polygon'; readonly points: readonly number[]; readonly hole: boolean }[];
+    readonly elevation: { readonly bottom: number; readonly top: number };
+    readonly behaviors: readonly { readonly type: 'teleportToken'; readonly system: TeleportSystem }[];
+}
+
+interface LevelCreateData {
+    readonly name: string;
+    readonly elevation: { readonly bottom: number; readonly top: number };
+}
+
+interface LevelUpdateData {
+    readonly _id: string;
+    readonly name?: string;
+    readonly elevation?: { readonly bottom: number; readonly top: number };
+}
+
+export type EmbeddedName = 'Wall' | 'AmbientLight' | 'Tile' | 'Region' | 'Level';
+
+type EmbeddedCreateData = WallCreateData | LightCreateData | TileCreateData | RegionCreateData | LevelCreateData;
+
+export interface EmbeddedCollection {
+    readonly has: (id: string) => boolean;
+}
+
+/** A v14 native Level document, as far as the level store reads it. */
+export interface NativeLevel {
+    readonly id: string | null;
+    readonly name: string;
+    /** A null bound is open-ended (−∞ / +∞). */
+    readonly elevation: { readonly bottom: number | null; readonly top: number | null };
+}
 
 /*
  * FoundryScene mirrors members of the live `Scene` document, so they are
@@ -59,22 +101,23 @@ type EmbeddedCreateData = WallCreateData | LightCreateData | TileCreateData;
  * overlapping). Hence the scoped method-signature-style exception.
  */
 /* eslint-disable @typescript-eslint/method-signature-style -- bivariant method signatures are required to bridge the live Foundry Scene document; see the note above */
-export interface EmbeddedCollection {
-    has(id: string): boolean;
-}
-
 export interface FoundryScene {
+    readonly id: string | null;
     /** Grid size in px per square, and the scene distance units one square spans. */
     readonly grid: { readonly size: number; readonly distance: number };
     readonly walls: EmbeddedCollection;
     readonly lights: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
+    readonly regions: EmbeddedCollection;
+    /** v14 native Levels; absent on v13. */
+    readonly levels?: { readonly contents: readonly NativeLevel[] };
     // eslint-disable-next-line no-restricted-syntax -- boundary: a Foundry flag value is arbitrary serialised JSON; getFlag returns unknown by contract and is narrowed at the parse boundary
     getFlag(scope: string, key: string): unknown;
     // eslint-disable-next-line no-restricted-syntax -- boundary: setFlag accepts an arbitrary serialisable flag value, exactly as the live Foundry Scene API does
     setFlag(scope: string, key: string, value: unknown): Promise<unknown>;
-    createEmbeddedDocuments(embeddedName: EmbeddedName, data: readonly EmbeddedCreateData[]): Promise<unknown>;
+    createEmbeddedDocuments(embeddedName: EmbeddedName, data: readonly EmbeddedCreateData[], operation?: { readonly keepId?: boolean }): Promise<unknown>;
     updateEmbeddedDocuments(embeddedName: 'Tile', updates: TileUpdateData[]): Promise<unknown>;
+    updateEmbeddedDocuments(embeddedName: 'Level', updates: LevelUpdateData[]): Promise<unknown>;
     deleteEmbeddedDocuments(embeddedName: EmbeddedName, ids: readonly string[]): Promise<unknown>;
 }
 /* eslint-enable @typescript-eslint/method-signature-style */

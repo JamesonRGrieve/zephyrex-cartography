@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * The {@link DocumentSink} over the live scene: creates, updates and deletes the
- * walls, lights and tiles features generate. Foundry owns the documents from
- * there (vision, doors, lighting, tile rendering); this is only the
- * create/update/delete boundary.
+ * walls, lights, tiles and regions features generate. Foundry owns the
+ * documents from there (vision, doors, lighting, tile rendering, teleports);
+ * this is only the create/update/delete boundary.
  */
 import type { DocumentSink, TileUpdate } from '../canvas/controller';
-import type { GeneratedDocs, LightDoc, TileDoc, WallDoc } from '../tools/documents';
+import type { GeneratedDocs, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
 import { isRecord } from '../tools/guards';
 import type { EmbeddedCollection, EmbeddedName, FoundryScene } from './boundary';
-import { lightCreateData, tileCreateData, wallCreateData } from './translate';
+import { lightCreateData, regionCreateData, tileCreateData, type TranslateOptions, wallCreateData } from './translate';
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses Foundry's createEmbeddedDocuments result (an array of created documents) to collect their ids
 function extractIds(created: unknown): string[] {
@@ -25,12 +25,26 @@ function extractIds(created: unknown): string[] {
     return ids;
 }
 
+export interface SinkOptions extends TranslateOptions {
+    /** A new document id (regions are created with ids chosen up front, so paired teleports can reference each other). */
+    readonly makeId: () => string;
+    /** The display name of a generated region. */
+    readonly regionName: (region: RegionDoc) => string;
+}
+
 export class FoundryDocumentSink implements DocumentSink {
-    constructor(private readonly getScene: () => FoundryScene | null) {}
+    constructor(private readonly getScene: () => FoundryScene | null, private readonly options: SinkOptions) {}
 
     async createWalls(walls: readonly WallDoc[]): Promise<string[]> {
         const scene = this.getScene();
-        return scene ? extractIds(await scene.createEmbeddedDocuments('Wall', walls.map(wallCreateData))) : [];
+        return scene
+            ? extractIds(
+                  await scene.createEmbeddedDocuments(
+                      'Wall',
+                      walls.map((w) => wallCreateData(w, this.options)),
+                  ),
+              )
+            : [];
     }
 
     async createLights(lights: readonly LightDoc[]): Promise<string[]> {
@@ -39,7 +53,7 @@ export class FoundryDocumentSink implements DocumentSink {
             ? extractIds(
                   await scene.createEmbeddedDocuments(
                       'AmbientLight',
-                      lights.map((l) => lightCreateData(l, scene.grid)),
+                      lights.map((l) => lightCreateData(l, scene.grid, this.options)),
                   ),
               )
             : [];
@@ -47,7 +61,14 @@ export class FoundryDocumentSink implements DocumentSink {
 
     async createTiles(tiles: readonly TileDoc[]): Promise<string[]> {
         const scene = this.getScene();
-        return scene ? extractIds(await scene.createEmbeddedDocuments('Tile', tiles.map(tileCreateData))) : [];
+        return scene
+            ? extractIds(
+                  await scene.createEmbeddedDocuments(
+                      'Tile',
+                      tiles.map((t) => tileCreateData(t, this.options)),
+                  ),
+              )
+            : [];
     }
 
     async updateTiles(updates: readonly TileUpdate[]): Promise<void> {
@@ -55,9 +76,20 @@ export class FoundryDocumentSink implements DocumentSink {
         if (scene && updates.length > 0) {
             await scene.updateEmbeddedDocuments(
                 'Tile',
-                updates.map(({ id, tile }) => ({ _id: id, ...tileCreateData(tile) })),
+                updates.map(({ id, tile }) => ({ _id: id, ...tileCreateData(tile, this.options) })),
             );
         }
+    }
+
+    async createRegions(regions: readonly RegionDoc[]): Promise<string[]> {
+        const scene = this.getScene();
+        const sceneId = scene?.id;
+        if (!scene || sceneId === null || sceneId === undefined || regions.length === 0) {
+            return [];
+        }
+        const ids = regions.map(() => this.options.makeId());
+        const data = regionCreateData(regions, ids, (id) => `Scene.${sceneId}.Region.${id}`, this.options.regionName, this.options);
+        return extractIds(await scene.createEmbeddedDocuments('Region', data, { keepId: true }));
     }
 
     async deleteDocuments(docs: GeneratedDocs): Promise<void> {
@@ -70,6 +102,7 @@ export class FoundryDocumentSink implements DocumentSink {
             ['Wall', scene.walls, docs.walls],
             ['AmbientLight', scene.lights, docs.lights],
             ['Tile', scene.tiles, docs.tiles],
+            ['Region', scene.regions, docs.regions],
         ];
         await Promise.all(
             batches.map(async ([embeddedName, collection, ids]) => {

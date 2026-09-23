@@ -14,10 +14,13 @@ import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
 import type { FoundryScene } from './foundry/boundary';
 import { FoundryDocumentSink } from './foundry/documents';
+import { registerLevelRuntime, regionName } from './foundry/level-runtime';
+import { createLevelStore } from './foundry/levels';
 import { registerPackRuntime } from './foundry/pack-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { FoundrySceneStore } from './foundry/scene-store';
 import { createSilhouetteSource } from './foundry/silhouette';
+import { NATIVE_LEVELS_GENERATION } from './foundry/translate';
 import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
 import { MODULE_ID } from './module-id';
@@ -35,6 +38,8 @@ interface DrawState {
 let state: DrawState | null = null;
 
 const packs = registerPackRuntime(() => state?.controller ?? null);
+
+const levels = registerLevelRuntime(() => state?.controller ?? null);
 
 // Newly loaded packs or another texture set re-render the layer.
 packs.onChange(() => {
@@ -221,17 +226,21 @@ function setupDrawLayer(): void {
     canvas.stage.addChild(container);
 
     const renderer = new GraphicsFeatureRenderer(createPixiSurface(container), packs.textures());
+    const makeId = (): string => foundry.utils.randomID();
+    const nativeLevels = (game.release?.generation ?? 0) >= NATIVE_LEVELS_GENERATION;
     const controller = new CartographyController({
         renderer,
         store: new FoundrySceneStore(activeScene),
-        sink: new FoundryDocumentSink(activeScene),
+        sink: new FoundryDocumentSink(activeScene, { nativeLevels, makeId, regionName }),
+        levels: createLevelStore(activeScene, nativeLevels, makeId),
         catalog: packs.catalog,
         silhouettes,
-        makeId: () => foundry.utils.randomID(),
+        makeId,
     });
     const gridSize = canvas.grid?.size ?? 0;
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.load();
+    levels.refresh();
 
     const st: DrawState = { controller, container, mode: IDLE, drag: null, down: null, painting: false };
     state = st;
@@ -287,6 +296,16 @@ Hooks.on('getSceneControlButtons', (controls) => {
     tools['undo'] = actionTool('undo', modeTools.length, I18N.tools.undo, 'fa-solid fa-rotate-left', (controller) => {
         void controller.undo();
     });
+    tools['levels'] = {
+        name: 'levels',
+        order: modeTools.length + 2,
+        title: I18N.tools.levels,
+        icon: 'fa-solid fa-layer-group',
+        button: true,
+        onChange: (): void => {
+            levels.openPanel();
+        },
+    };
     tools['redo'] = actionTool('redo', modeTools.length + 1, I18N.tools.redo, 'fa-solid fa-rotate-right', (controller) => {
         void controller.redo();
     });

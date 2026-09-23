@@ -173,9 +173,22 @@ tool; an auto `AmbientLightDocument` per room at its centroid.
 - **[next] Item Piles containers** for `container` stamps. Stair and ladder
   `transition` stamps belong to Levels.
 
-**Levels [next]:** Foundry **v13-native Scene Regions + elevation bands** (no
-Levels module). Rooms/structures carry an elevation band; stairs are Regions
-that move a token between bands.
+**Levels [done]:** native Foundry, no Levels module.
+- **Model.** A scene's floors are elevation bands (`tools/levels.ts`). Every
+  feature has a `level` (null shows on every level). Its documents take that
+  level's floor elevation and level id.
+- **Editing.** The GM edits one level at a time from the levels panel (pick,
+  add above or below, rename, set band, remove when empty). Only that level's
+  features, plus level-less ones, are drawn and pickable.
+- **Stairs.** `transition` stamps (stairs, ladder, lift, hatch; up, down or
+  both) generate paired teleport Scene Regions between adjacent levels. Each end
+  sits on its level's band and teleports to the other.
+- **v14.** Levels *are* the scene's native Level documents. Walls, tiles,
+  lights and regions get `levels`, so vision is per floor, and teleports use
+  `destinations`, `placement: relative` and a choice between two ends.
+- **v13.** Levels live in a scene flag. Tiles, lights and regions still take
+  the band's elevation, but walls apply on every level (v13 has no per-level
+  walls), and a teleport takes its first destination only.
 
 **Submaps [next]:** clicking an enterable stamp (a building, a hab) either
 creates a new interior scene or **links an existing one**. Both directions get

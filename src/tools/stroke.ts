@@ -6,22 +6,19 @@
  * parser + edit constructor. Pure and unit-tested.
  */
 import type { Point } from '../geometry/spline';
-import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr } from './guards';
 import { isBiomeKind, type BiomeKind } from './region';
 
 /** Default brush radius (scene px) for a freshly painted terrain stroke. */
 export const DEFAULT_BRUSH_RADIUS = 25;
 
-export interface StrokeFeature {
+/** A painted biome swath; its `points` are the painted centerline. */
+export interface StrokeFeature extends FeatureCommon {
     readonly type: 'stroke';
-    readonly id: string;
     readonly biome: BiomeKind;
-    /** Painted centerline control points. */
-    readonly points: Point[];
     /** Half-width (scene px) of the painted swath. */
     readonly radius: number;
-    readonly docs: GeneratedDocs;
 }
 
 /** Build a committed brush stroke from a painted point stream, or null if too short. */
@@ -29,7 +26,7 @@ export function makeStroke(id: string, biome: BiomeKind, points: readonly Point[
     if (points.length < 2) {
         return null;
     }
-    return { type: 'stroke', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })), radius, docs: NO_DOCS };
+    return { type: 'stroke', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })), radius, ...NEW_FEATURE };
 }
 
 /** Rebuild a stroke with new centerline points (edit ops), or null if < 2. */
@@ -50,5 +47,5 @@ export function parseStroke(v: unknown): StrokeFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const stroke = makeStroke(v['id'], v['biome'], points, numberOr(v['radius'], DEFAULT_BRUSH_RADIUS));
-    return stroke && { ...stroke, docs: parseGeneratedDocs(v['docs']) };
+    return stroke && { ...stroke, ...parseFeatureCommon(v) };
 }

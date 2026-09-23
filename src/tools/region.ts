@@ -5,7 +5,7 @@
  * + defensive parser + the smoothed fill outline. Pure and unit-tested.
  */
 import { closedSpline, type Point } from '../geometry/spline';
-import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord } from './guards';
 
 export type BiomeKind = 'water' | 'grassland' | 'forest' | 'sand' | 'rock' | 'snow' | 'dirt' | 'lava' | 'marsh' | 'ice' | 'ash' | 'tundra' | 'ocean';
@@ -37,13 +37,10 @@ export const BIOME_STYLES: Record<BiomeKind, BiomeStyle> = {
 /** Default half-count of samples per region-boundary span. */
 const REGION_SAMPLES = 10;
 
-export interface RegionFeature {
+/** A closed biome area; its `points` are the boundary control points (>= 3). */
+export interface RegionFeature extends FeatureCommon {
     readonly type: 'region';
-    readonly id: string;
     readonly biome: BiomeKind;
-    /** Closed boundary control points (>= 3). */
-    readonly points: Point[];
-    readonly docs: GeneratedDocs;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: a persisted biome value is untyped scene-flag JSON; this guard narrows it to BiomeKind
@@ -56,7 +53,7 @@ export function makeRegion(id: string, biome: BiomeKind, points: readonly Point[
     if (points.length < 3) {
         return null;
     }
-    return { type: 'region', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })), docs: NO_DOCS };
+    return { type: 'region', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })), ...NEW_FEATURE };
 }
 
 /** Rebuild a region with new boundary points (edit ops), preserving id/biome, or null if < 3. */
@@ -88,5 +85,5 @@ export function parseRegion(v: unknown): RegionFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const region = makeRegion(v['id'], v['biome'], points);
-    return region && { ...region, docs: parseGeneratedDocs(v['docs']) };
+    return region && { ...region, ...parseFeatureCommon(v) };
 }

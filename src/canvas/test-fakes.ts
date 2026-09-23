@@ -6,9 +6,10 @@
  */
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, loadPacks } from '../stamps/catalog';
-import type { GeneratedDocs, LightDoc, TileDoc, WallDoc } from '../tools/documents';
+import type { GeneratedDocs, LightDoc, RegionDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
-import { CartographyController, type DocumentSink, type SceneStore, type TileUpdate } from './controller';
+import type { Level } from '../tools/levels';
+import { CartographyController, type DocumentSink, type LevelStore, type SceneStore, type TileUpdate } from './controller';
 import type { FeatureRenderer } from './renderer';
 
 class FakeRenderer implements FeatureRenderer {
@@ -53,10 +54,11 @@ class FakeSink implements DocumentSink {
     readonly lights: LightDoc[][] = [];
     readonly tiles: TileDoc[][] = [];
     readonly tileUpdates: TileUpdate[][] = [];
+    readonly regions: RegionDoc[][] = [];
     readonly deleted: GeneratedDocs[] = [];
-    private readonly counters = { w: 0, L: 0, t: 0 };
+    private readonly counters = { w: 0, L: 0, t: 0, r: 0 };
 
-    private issue(prefix: 'w' | 'L' | 't', count: number): string[] {
+    private issue(prefix: 'w' | 'L' | 't' | 'r', count: number): string[] {
         return Array.from({ length: count }, () => {
             const id = `${prefix}${this.counters[prefix]}`;
             this.counters[prefix] += 1;
@@ -83,6 +85,11 @@ class FakeSink implements DocumentSink {
         this.tileUpdates.push([...updates]);
         await Promise.resolve();
     }
+    async createRegions(regions: readonly RegionDoc[]): Promise<string[]> {
+        this.regions.push([...regions]);
+        await Promise.resolve();
+        return this.issue('r', regions.length);
+    }
     async deleteDocuments(docs: GeneratedDocs): Promise<void> {
         this.deleted.push(docs);
         await Promise.resolve();
@@ -93,11 +100,36 @@ class FakeSink implements DocumentSink {
     }
 }
 
+/** Levels held in memory, issuing ids `lv1`, `lv2`, … */
+class FakeLevels implements LevelStore {
+    levels: Level[] = [];
+    private counter = 0;
+    load(): Level[] {
+        return [...this.levels];
+    }
+    async create(level: Omit<Level, 'id'>): Promise<string> {
+        this.counter += 1;
+        const id = `lv${this.counter}`;
+        this.levels.push({ id, ...level });
+        await Promise.resolve();
+        return id;
+    }
+    async update(id: string, patch: Partial<Omit<Level, 'id'>>): Promise<void> {
+        this.levels = this.levels.map((level) => (level.id === id ? { ...level, ...patch } : level));
+        await Promise.resolve();
+    }
+    async remove(id: string): Promise<void> {
+        this.levels = this.levels.filter((level) => level.id !== id);
+        await Promise.resolve();
+    }
+}
+
 export interface Harness {
     readonly c: CartographyController;
     readonly r: FakeRenderer;
     readonly s: FakeStore;
     readonly d: FakeSink;
+    readonly l: FakeLevels;
 }
 
 /** A unit square traced from any image: the silhouette every fake stamp gets. */
@@ -115,11 +147,13 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
     const r = new FakeRenderer();
     const s = new FakeStore();
     const d = new FakeSink();
+    const l = new FakeLevels();
     let counter = 0;
     const c = new CartographyController({
         renderer: r,
         store: s,
         sink: d,
+        levels: l,
         catalog: { get: (key) => stamps.find((stamp) => stamp.key === key) ?? null },
         silhouettes: { trace: async () => Promise.resolve(traced) },
         makeId: () => {
@@ -127,7 +161,7 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
             return `p${counter}`;
         },
     });
-    return { c, r, s, d };
+    return { c, r, s, d, l };
 }
 
 /** One catalog stamp per definition, loaded through the real pack parser from module `pack`. */

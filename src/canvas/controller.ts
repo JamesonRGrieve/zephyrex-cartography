@@ -11,12 +11,13 @@ import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
-import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type LightDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type LightDoc, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
+import { findLevel, type Level, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
 import { planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
@@ -40,11 +41,23 @@ export interface SilhouetteSource {
     trace: (src: string) => Promise<Point[][] | null>;
 }
 
-/** Everything the controller is injected with: rendering, persistence, document creation, packs, ids. */
+/**
+ * The scene's levels. On Foundry v14 these are the scene's native Level
+ * documents; on v13 they are recorded in a scene flag.
+ */
+export interface LevelStore {
+    load: () => Level[];
+    create: (level: Omit<Level, 'id'>) => Promise<string | null>;
+    update: (id: string, patch: Partial<Omit<Level, 'id'>>) => Promise<void>;
+    remove: (id: string) => Promise<void>;
+}
+
+/** Everything the controller is injected with: rendering, persistence, document creation, levels, packs, ids. */
 export interface ControllerPorts {
     readonly renderer: FeatureRenderer;
     readonly store: SceneStore;
     readonly sink: DocumentSink;
+    readonly levels: LevelStore;
     readonly catalog: StampCatalog;
     readonly silhouettes: SilhouetteSource;
     readonly makeId: () => string;
@@ -70,6 +83,8 @@ export interface DocumentSink {
     createLights: (lights: readonly LightDoc[]) => Promise<string[]>;
     createTiles: (tiles: readonly TileDoc[]) => Promise<string[]>;
     updateTiles: (updates: readonly TileUpdate[]) => Promise<void>;
+    /** Create regions, wiring each `teleport.targets` index to the created region it names. */
+    createRegions: (regions: readonly RegionDoc[]) => Promise<string[]>;
     deleteDocuments: (docs: GeneratedDocs) => Promise<void>;
 }
 
@@ -133,17 +148,121 @@ export class CartographyController {
     private readonly renderer: FeatureRenderer;
     private readonly store: SceneStore;
     private readonly sink: DocumentSink;
+    private readonly levelStore: LevelStore;
     private readonly catalog: StampCatalog;
     private readonly silhouettes: SilhouetteSource;
     private readonly makeId: () => string;
+
+    private levelList: Level[] = [];
+    /** The level being edited: new features land on it, and only its features (and level-less ones) show. */
+    private active: string | null = null;
 
     constructor(ports: ControllerPorts) {
         this.renderer = ports.renderer;
         this.store = ports.store;
         this.sink = ports.sink;
+        this.levelStore = ports.levels;
         this.catalog = ports.catalog;
         this.silhouettes = ports.silhouettes;
         this.makeId = ports.makeId;
+    }
+
+    /** The scene's levels, bottom to top. */
+    get levels(): readonly Level[] {
+        return this.levelList;
+    }
+
+    get activeLevel(): string | null {
+        return this.active;
+    }
+
+    /** Edit on `id` (null: every level). Redraws to show only that level's features. */
+    setActiveLevel(id: string | null): void {
+        this.active = id !== null && findLevel(this.levelList, id) ? id : null;
+        this.redraw();
+    }
+
+    /** Re-read the levels (after an outside edit, e.g. a GM changing a native Level) and re-sync what depends on them. */
+    async reloadLevels(): Promise<void> {
+        const before = this.levelList;
+        this.levelList = sortLevels(this.levelStore.load());
+        if (findLevel(this.levelList, this.active) === null) {
+            this.active = null;
+        }
+        if (JSON.stringify(before) !== JSON.stringify(this.levelList)) {
+            await this.resyncLevelled();
+            this.redraw();
+        }
+    }
+
+    /** Add a level stacked above (or below) the existing ones and make it active; returns its id. */
+    async addLevel(position: 'above' | 'below', levelName: string): Promise<string | null> {
+        const id = await this.levelStore.create({ name: levelName, ...nextLevelBand(this.levelList, position) });
+        await this.reloadLevels();
+        if (id !== null) {
+            this.setActiveLevel(id);
+        }
+        return id;
+    }
+
+    async renameLevel(id: string, levelName: string): Promise<void> {
+        if (findLevel(this.levelList, id) && levelName.trim() !== '') {
+            await this.levelStore.update(id, { name: levelName.trim() });
+            await this.reloadLevels();
+        }
+    }
+
+    /** Move a level's elevation band; everything on it (and transitions touching it) re-syncs. */
+    async setLevelBand(id: string, bottom: number, ceiling: number): Promise<boolean> {
+        if (!findLevel(this.levelList, id) || !(ceiling > bottom)) {
+            return false;
+        }
+        await this.levelStore.update(id, { bottom, top: ceiling });
+        await this.reloadLevels();
+        return true;
+    }
+
+    /** How many features sit on each level. */
+    levelCounts(): Record<string, number> {
+        const counts: Record<string, number> = {};
+        for (const f of this.features) {
+            if (f.level !== null) {
+                counts[f.level] = (counts[f.level] ?? 0) + 1;
+            }
+        }
+        return counts;
+    }
+
+    /** Remove an empty level; refuses (false) while features sit on it, so nothing is orphaned. */
+    async removeLevel(id: string): Promise<boolean> {
+        if (!findLevel(this.levelList, id) || (this.levelCounts()[id] ?? 0) > 0) {
+            return false;
+        }
+        await this.levelStore.remove(id);
+        await this.reloadLevels();
+        return true;
+    }
+
+    /** Re-sync every feature whose documents depend on the levels: anything on a level, and every transition stamp. */
+    private async resyncLevelled(): Promise<void> {
+        const levelled = this.features.filter((f) => f.level !== null);
+        await levelled.reduce(async (previous, f) => {
+            await previous;
+            await this.syncDocs(this.getFeature(f.id) ?? f);
+        }, Promise.resolve());
+    }
+
+    private visible(feature: Feature): boolean {
+        return onLevel(feature.level, this.active);
+    }
+
+    /** Draw a feature if it is on the active level, otherwise make sure it is not drawn. */
+    private show(feature: Feature): void {
+        if (this.visible(feature)) {
+            this.renderer.set(feature.id, feature);
+        } else {
+            this.renderer.remove(feature.id);
+        }
     }
 
     /** Trace the stamp's silhouette when its occlusion asks for one; otherwise it carries none. */
@@ -245,6 +364,10 @@ export class CartographyController {
 
     load(): void {
         this.features = this.store.load();
+        this.levelList = sortLevels(this.levelStore.load());
+        if (findLevel(this.levelList, this.active) === null) {
+            this.active = null;
+        }
         this.redraw();
     }
 
@@ -283,12 +406,13 @@ export class CartographyController {
         await this.add(feature);
     }
 
-    /** Add a committed feature: render, persist, then generate its native documents. */
-    async add(feature: Feature): Promise<void> {
+    /** Add a committed feature: onto the active level unless it names its own, render, persist, then generate its documents. */
+    async add(input: Feature): Promise<void> {
+        const feature = input.level === null && this.active !== null ? { ...input, level: this.active } : input;
         this.snapshot();
         const before = [...this.features];
         this.features.push(feature);
-        this.renderer.set(feature.id, feature);
+        this.show(feature);
         await this.store.save(this.features);
         await this.syncDocs(feature);
         await this.resyncDependents(before, [feature]);
@@ -310,15 +434,14 @@ export class CartographyController {
         await this.resyncDependents(before, [target]);
     }
 
-    /** Topmost feature under `pt`, or null — scans front-to-back (render order). */
+    /** The features shown on the active level, topmost (last drawn) first: what pointer picks consider. */
+    private topDown(): Feature[] {
+        return this.features.filter((f) => this.visible(f)).reverse();
+    }
+
+    /** Topmost shown feature under `pt`, or null. */
     hitTest(pt: Point): string | null {
-        for (let i = this.features.length - 1; i >= 0; i--) {
-            const f = this.features[i];
-            if (f && featureHit(f, pt)) {
-                return f.id;
-            }
-        }
-        return null;
+        return this.topDown().find((f) => featureHit(f, pt))?.id ?? null;
     }
 
     /** Remove the topmost feature under `pt`; returns whether one was erased. */
@@ -338,11 +461,7 @@ export class CartographyController {
 
     /** The topmost feature vertex within `tol` of `pt`: its feature id + vertex index, or null. */
     pickVertex(pt: Point, tol: number): { id: string; index: number } | null {
-        for (let i = this.features.length - 1; i >= 0; i--) {
-            const f = this.features[i];
-            if (!f) {
-                continue;
-            }
+        for (const f of this.topDown()) {
             const { index, distance } = nearestVertex(pt, f.points);
             if (index >= 0 && distance <= tol) {
                 return { id: f.id, index };
@@ -353,9 +472,8 @@ export class CartographyController {
 
     /** The topmost room wall segment within `tol` of `pt`: its room id + segment index, or null. */
     pickWallSegment(pt: Point, tol: number): { id: string; index: number } | null {
-        for (let i = this.features.length - 1; i >= 0; i--) {
-            const f = this.features[i];
-            if (f?.type !== 'room') {
+        for (const f of this.topDown()) {
+            if (f.type !== 'room') {
                 continue;
             }
             const { index, distance } = nearestSegment(pt, f.points);
@@ -487,7 +605,7 @@ export class CartographyController {
         this.snapshot();
         const before = this.features;
         this.features = this.features.map((f) => (f.id === id ? next : f));
-        this.renderer.set(id, next);
+        this.show(next);
         await this.store.save(this.features);
         await this.syncDocs(next);
         await this.resyncDependents(before, [old, next]);
@@ -502,7 +620,8 @@ export class CartographyController {
         if (!changed.some(isDoorStamp)) {
             return;
         }
-        const wallsOf = (room: Feature, features: readonly Feature[]): string => JSON.stringify(planDocuments(room, { features }).walls);
+        const wallsOf = (room: Feature, features: readonly Feature[]): string =>
+            JSON.stringify(planDocuments(room, { features, levels: this.levelList }).walls);
         const affected = this.features.filter((f) => f.type === 'room' && wallsOf(f, before) !== wallsOf(f, this.features));
         // Sequential: each sync reads and persists the shared feature list, so concurrent syncs would race.
         await affected.reduce(async (previous, room) => {
@@ -518,9 +637,9 @@ export class CartographyController {
      * resulting ids on the feature and persists.
      */
     private async syncDocs(feature: Feature): Promise<void> {
-        const plan = planDocuments(feature, { features: this.features });
+        const plan = planDocuments(feature, { features: this.features, levels: this.levelList });
         const old = feature.docs;
-        const planned = plan.walls.length + plan.lights.length + plan.tiles.length;
+        const planned = plan.walls.length + plan.lights.length + plan.tiles.length + plan.regions.length;
         if (planned === 0 && !hasDocs(old)) {
             return;
         }
@@ -538,6 +657,7 @@ export class CartographyController {
             walls: plan.walls.length > 0 ? await this.sink.createWalls(plan.walls) : [],
             lights: plan.lights.length > 0 ? await this.sink.createLights(plan.lights) : [],
             tiles,
+            regions: plan.regions.length > 0 ? await this.sink.createRegions(plan.regions) : [],
         };
         this.features = this.features.map((f) => (f.id === feature.id ? withDocs(f, docs) : f));
         await this.store.save(this.features);
@@ -589,7 +709,9 @@ export class CartographyController {
     private redraw(): void {
         this.renderer.clear();
         for (const f of this.features) {
-            this.renderer.set(f.id, f);
+            if (this.visible(f)) {
+                this.renderer.set(f.id, f);
+            }
         }
     }
 }

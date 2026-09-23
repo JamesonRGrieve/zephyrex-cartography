@@ -11,7 +11,7 @@
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, clampVariantIndex, computeTilePlacement, effectiveProperties, resolveVariant } from '../stamps/catalog';
 import { type PlacedBehaviour, placedBehaviourSchema } from '../stamps/schema';
-import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr } from './guards';
 
 /** A stamp placement request: everything a human or a generator states to place one. */
@@ -31,28 +31,26 @@ export interface StampPlacement {
     readonly snap?: boolean;
 }
 
-export interface StampFeature {
+/** A placed stamp; its one point is the footprint centre. */
+export interface StampFeature extends FeatureCommon {
     readonly type: 'stamp';
-    readonly id: string;
     /** Catalog key, `<moduleId>:<stamp id>`. */
     readonly stamp: string;
     readonly variant: number;
     /** Module-served image URL of the current variant. */
     readonly src: string;
-    /** One point: the footprint centre. */
-    readonly points: Point[];
     /** Footprint size in scene px. */
     readonly width: number;
     readonly height: number;
     readonly rotation: number;
     readonly scale: number;
+    /** Elevation above its level's floor (scene distance units). */
     readonly elevation: number;
     /** Scene px per grid square the stamp was placed at; converts behaviour radii given in grid units. */
     readonly gridSize: number;
     readonly behaviour: PlacedBehaviour;
     /** Traced outline loops as footprint fractions, for `alpha` occlusion; null when not traced. */
     readonly silhouette: Point[][] | null;
-    readonly docs: GeneratedDocs;
 }
 
 /** Grid size assumed for a persisted stamp that predates the field. */
@@ -113,7 +111,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         gridSize,
         behaviour: behaviourOf(stamp, variant),
         silhouette: null,
-        docs: NO_DOCS,
+        ...NEW_FEATURE,
     };
 }
 
@@ -126,7 +124,7 @@ export function stampCentre(feature: StampFeature): Point {
 export function withStampVariant(feature: StampFeature, stamp: CatalogStamp, index: number, gridSize: number): StampFeature {
     const centre = stampCentre(feature);
     const placed = makeStamp(feature.id, stamp, { stamp: stamp.key, variant: index, x: centre.x, y: centre.y, scale: feature.scale }, gridSize);
-    return { ...placed, rotation: feature.rotation, elevation: feature.elevation, docs: feature.docs };
+    return { ...placed, rotation: feature.rotation, elevation: feature.elevation, docs: feature.docs, level: feature.level };
 }
 
 /** Move, resize or rotate the footprint (e.g. after the GM edits the tile natively). */
@@ -209,6 +207,6 @@ export function parseStamp(v: unknown): StampFeature | null {
         gridSize: numberOr(v['gridSize'], FALLBACK_GRID_SIZE),
         behaviour: parseBehaviour(v['behaviour']),
         silhouette: parseSilhouette(v['silhouette']),
-        docs: parseGeneratedDocs(v['docs']),
+        ...parseFeatureCommon(v),
     };
 }

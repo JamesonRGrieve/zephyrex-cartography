@@ -10,6 +10,7 @@
 import { distance, type Point } from '../geometry/spline';
 import { centroid, perimeterSegments, type WallSpec } from '../geometry/wall';
 import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberArray, stringArray } from './guards';
 import { isBiomeKind, type BiomeKind } from './region';
 
@@ -19,17 +20,13 @@ export const DEFAULT_FLOOR: BiomeKind = 'dirt';
 /** Bright light covers this fraction of the room light's dim radius. */
 const ROOM_BRIGHT_FRACTION = 0.5;
 
-export interface RoomFeature {
+/** A room; its `points` are the grid-snapped boundary (>= 3), its documents the perimeter walls and centre light. */
+export interface RoomFeature extends FeatureCommon {
     readonly type: 'room';
-    readonly id: string;
     /** Floor material (reuses the biome texture set). */
     readonly floor: BiomeKind;
-    /** Grid-snapped boundary control points (>= 3). */
-    readonly points: Point[];
     /** Perimeter segment indices that are doors (Foundry door walls). */
     readonly doors: number[];
-    /** Native Foundry documents (perimeter walls, centre light) this room generated. */
-    readonly docs: GeneratedDocs;
 }
 
 /** Build a committed room from a boundary point stream, or null if fewer than 3 points. */
@@ -37,7 +34,7 @@ export function makeRoom(id: string, floor: BiomeKind, points: readonly Point[])
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id, floor, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], docs: NO_DOCS };
+    return { type: 'room', id, floor, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], ...NEW_FEATURE };
 }
 
 /** Rebuild a room with new boundary points (edit ops), preserving floor + doors + document links, or null if < 3. */
@@ -88,5 +85,13 @@ export function parseRoom(v: unknown): RoomFeature | null {
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id: v['id'], floor: v['floor'], points: points.map((p) => ({ x: p.x, y: p.y })), doors: numberArray(v['doors']), docs: roomDocs(v) };
+    return {
+        type: 'room',
+        id: v['id'],
+        floor: v['floor'],
+        points: points.map((p) => ({ x: p.x, y: p.y })),
+        doors: numberArray(v['doors']),
+        ...parseFeatureCommon(v),
+        docs: roomDocs(v),
+    };
 }

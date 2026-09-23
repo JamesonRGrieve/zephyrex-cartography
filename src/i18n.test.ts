@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { BIOME_TITLE_KEYS, I18N, I18N_ROOT } from './i18n';
+import { BIOME_TITLE_KEYS, I18N, I18N_ROOT, TRANSITION_KIND_KEYS } from './i18n';
 import en from './static/lang/en.json';
 
 type Tree = string | { readonly [key: string]: Tree };
@@ -19,7 +19,7 @@ function leafValues(node: Tree): string[] {
 }
 
 const langKeys = leafPaths(en[I18N_ROOT], I18N_ROOT).sort();
-const codeKeys = [...new Set([...leafValues(I18N), ...Object.values(BIOME_TITLE_KEYS)])].sort();
+const codeKeys = [...new Set([...leafValues(I18N), ...Object.values(BIOME_TITLE_KEYS), ...Object.values(TRANSITION_KIND_KEYS)])].sort();
 
 describe('localisation keys', () => {
     it('every key the code uses exists in en.json', () => {

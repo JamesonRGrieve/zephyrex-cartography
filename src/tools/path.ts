@@ -6,7 +6,7 @@
  * than trusting the blob.
  */
 import type { Point } from '../geometry/spline';
-import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberArray } from './guards';
 
 /** Scene-flag key (under the module-id scope) holding the persisted feature blob. */
@@ -14,17 +14,13 @@ export const FLAG_KEY = 'features';
 
 export type PathKind = 'road' | 'river';
 
-export interface CartographyPath {
+export interface CartographyPath extends FeatureCommon {
     readonly type: 'path';
-    readonly id: string;
     readonly kind: PathKind;
-    /** Authored (simplified) control points, in scene pixels. */
-    readonly points: Point[];
     /** Half-width in scene pixels at each control point (parallel to `points`). */
     readonly halfWidths: number[];
     /** Emit Foundry walls along the centerline when true. */
     readonly walls: boolean;
-    readonly docs: GeneratedDocs;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: a persisted path kind arrives as untyped scene-flag JSON; this guard is the validation that narrows it to PathKind
@@ -47,7 +43,7 @@ export function parsePath(v: unknown): CartographyPath | null {
     // A missing/short width list is normalised to a uniform default per point.
     const rawWidths = numberArray(v['halfWidths']);
     const halfWidths = points.map((_, i) => rawWidths[i] ?? rawWidths[0] ?? DEFAULT_HALF_WIDTH);
-    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: v['walls'] === true, docs: parseGeneratedDocs(v['docs']) };
+    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: v['walls'] === true, ...parseFeatureCommon(v) };
 }
 
 /** Default half-width (scene px) for a freshly drawn path. */
@@ -65,7 +61,7 @@ export function makePath(id: string, kind: PathKind, points: readonly Point[], h
         points: points.map((p) => ({ x: p.x, y: p.y })),
         halfWidths: points.map(() => halfWidth),
         walls,
-        docs: NO_DOCS,
+        ...NEW_FEATURE,
     };
 }
 

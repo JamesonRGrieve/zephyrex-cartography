@@ -26,6 +26,25 @@ export const I18N = {
         undo: key('Tools.Undo'),
         redo: key('Tools.Redo'),
         stamp: key('Tools.Stamp'),
+        levels: key('Tools.Levels'),
+    },
+    levels: {
+        title: key('Levels.Title'),
+        allLevels: key('Levels.AllLevels'),
+        addAbove: key('Levels.AddAbove'),
+        addBelow: key('Levels.AddBelow'),
+        remove: key('Levels.Remove'),
+        name: key('Levels.Name'),
+        bottom: key('Levels.Bottom'),
+        top: key('Levels.Top'),
+        features: key('Levels.Features'),
+        newLevel: key('Levels.NewLevel'),
+        empty: key('Levels.Empty'),
+        removeBlocked: key('Levels.RemoveBlocked'),
+        list: key('Levels.List'),
+    },
+    regions: {
+        transition: key('Regions.Transition'),
     },
     settings: {
         textureSetName: key('Settings.TextureSet.Name'),
@@ -63,6 +82,14 @@ export const I18N = {
         noArmedStamp: key('Notifications.NoArmedStamp'),
     },
 } as const;
+
+/** Region-name key per transition kind. */
+export const TRANSITION_KIND_KEYS: Record<'stairs' | 'ladder' | 'lift' | 'hatch', string> = {
+    stairs: key('Regions.Kinds.Stairs'),
+    ladder: key('Regions.Kinds.Ladder'),
+    lift: key('Regions.Kinds.Lift'),
+    hatch: key('Regions.Kinds.Hatch'),
+};
 
 /** Scene-control title key per biome tool. */
 export const BIOME_TITLE_KEYS: Record<BiomeKind, string> = {

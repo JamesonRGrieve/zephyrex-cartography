@@ -152,6 +152,7 @@ describe('CartographyController', () => {
                 halfWidths: [10, 10],
                 walls: false,
                 docs: { walls: [], lights: [], tiles: [], regions: [] },
+                level: null,
             },
         ];
         c.load();
@@ -172,6 +173,7 @@ describe('CartographyController', () => {
                     { x: 5, y: 5 },
                 ],
                 docs: { walls: [], lights: [], tiles: [], regions: [] },
+                level: null,
             },
         ];
         c.load();

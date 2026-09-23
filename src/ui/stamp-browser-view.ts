@@ -10,6 +10,7 @@ import type { BrowserAction, BrowserView, CardEntry } from '../stamps/browser';
 import { resolveVariant } from '../stamps/catalog';
 import { stampDropPayload } from '../stamps/drop';
 import type { Stamp } from '../stamps/schema';
+import { el, focusKey, pressable, replacePreservingFocus } from './dom';
 
 export interface BrowserLabels {
     readonly search: string;
@@ -39,22 +40,6 @@ export interface BrowserHandlers {
 
 const SCALES: readonly Stamp['scale'][] = ['system', 'planet', 'regional', 'city', 'exterior', 'interior'];
 const PERSPECTIVES: readonly Stamp['perspective'][] = ['top-down', 'isometric'];
-
-/** Attribute naming a control so focus can be restored to it after a re-render. */
-const FOCUS_ATTR = 'data-zc-focus';
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
-    const node = document.createElement(tag);
-    node.className = className;
-    if (text !== undefined) {
-        node.textContent = text;
-    }
-    return node;
-}
-
-function focusKey(node: HTMLElement, key: string): void {
-    node.setAttribute(FOCUS_ATTR, key);
-}
 
 function labelledSelect<T extends string>(
     id: string,
@@ -118,15 +103,6 @@ function filterBar(view: BrowserView, labels: BrowserLabels, handlers: BrowserHa
         rotate,
     );
     return bar;
-}
-
-function pressable(className: string, text: string, pressed: boolean, key: string, onClick: () => void): HTMLButtonElement {
-    const button = el('button', className, text);
-    button.type = 'button';
-    button.setAttribute('aria-pressed', String(pressed));
-    focusKey(button, key);
-    button.addEventListener('click', onClick);
-    return button;
 }
 
 function tagBar(view: BrowserView, labels: BrowserLabels, handlers: BrowserHandlers): HTMLElement | null {
@@ -266,23 +242,14 @@ function details(view: BrowserView, labels: BrowserLabels, handlers: BrowserHand
 
 /** Replace `root`'s contents with the browser for `view`, restoring focus to the same control. */
 export function renderBrowser(root: HTMLElement, view: BrowserView, labels: BrowserLabels, handlers: BrowserHandlers): void {
-    const active = root.ownerDocument.activeElement;
-    const focused = active instanceof HTMLElement && root.contains(active) ? active.getAttribute(FOCUS_ATTR) : null;
-    const caret = active instanceof HTMLInputElement ? active.selectionStart : null;
-
     const body = el('div', 'tw-flex tw-flex-1 tw-min-h-0 tw-gap-2');
     body.append(sidebar(view, labels, handlers), grid(view, labels, handlers), details(view, labels, handlers));
     const statusLine = el('p', 'tw-text-xs tw-px-2', labels.status(view.cards.length, view.total));
     statusLine.setAttribute('role', 'status');
     statusLine.setAttribute('aria-live', 'polite');
     const tags = tagBar(view, labels, handlers);
-    root.replaceChildren(...[filterBar(view, labels, handlers), tags, body, statusLine].filter((node): node is HTMLElement => node !== null));
-
-    if (focused !== null) {
-        const target = [...root.querySelectorAll<HTMLElement>(`[${FOCUS_ATTR}]`)].find((node) => node.getAttribute(FOCUS_ATTR) === focused);
-        target?.focus();
-        if (target instanceof HTMLInputElement && caret !== null) {
-            target.setSelectionRange(caret, caret);
-        }
-    }
+    replacePreservingFocus(
+        root,
+        [filterBar(view, labels, handlers), tags, body, statusLine].filter((node): node is HTMLElement => node !== null),
+    );
 }

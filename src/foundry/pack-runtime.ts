@@ -19,6 +19,7 @@ import { parseStampDrop } from '../stamps/drop';
 import { isRecord, stringOrNull } from '../tools/guards';
 import { pickTextureSet, textureResolver, textureSetChoices, type TextureResolver, type TextureSetRef } from '../tools/texture';
 import type { BrowserLabels } from '../ui/stamp-browser-view';
+import { format, localize } from './localize';
 import { fetchPacks } from './packs';
 import { type ArmedStamp, createStampBrowser } from './stamp-browser';
 import { doorStateFromDs } from './translate';
@@ -48,14 +49,6 @@ export interface PackRuntime {
     readonly textures: () => TextureResolver;
     /** Run `listener` whenever the loaded packs or the chosen texture set change. */
     readonly onChange: (listener: () => void) => void;
-}
-
-function localize(key: string): string {
-    return game.i18n?.localize(key) ?? key;
-}
-
-function format(key: string, data: Record<string, string>): string {
-    return game.i18n?.format(key, data) ?? key;
 }
 
 function browserLabels(): BrowserLabels {

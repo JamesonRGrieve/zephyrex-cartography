@@ -9,6 +9,7 @@
  */
 import type { Point } from '../geometry/spline';
 import type { WallSpec } from '../geometry/wall';
+import type { PlacedBehaviour } from '../stamps/schema';
 import { isRecord, stringArray } from './guards';
 
 export type DoorType = 'none' | 'door' | 'secret';
@@ -70,6 +71,28 @@ export interface TileDoc {
     readonly level: string | null;
     /** The feature that owns this tile, written to the tile's module flag. */
     readonly featureId: string;
+}
+
+/** How a transition region names itself: what it is and where it leads (the boundary localises it). */
+interface TransitionLabel {
+    readonly kind: NonNullable<PlacedBehaviour['transition']>['kind'];
+    readonly from: string;
+    readonly to: readonly string[];
+}
+
+/**
+ * A native Scene Region. `teleport.targets` are indices of other regions in the
+ * same plan, so a stair's two ends can point at each other before either exists.
+ * The sink turns them into region UUIDs.
+ */
+export interface RegionDoc {
+    readonly label: TransitionLabel;
+    readonly polygon: readonly Point[];
+    /** Elevation band (scene distance units). */
+    readonly bottom: number;
+    readonly top: number;
+    readonly level: string | null;
+    readonly teleport: { readonly targets: readonly number[] } | null;
 }
 
 /** The ids of every native document one feature generated, by document type. */
