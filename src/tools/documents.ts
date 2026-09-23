@@ -10,6 +10,7 @@
 import type { Point } from '../geometry/spline';
 import type { PlacedBehaviour } from '../stamps/schema';
 import { isRecord, stringArray } from './guards';
+import type { BiomeKind } from './region';
 
 export type DoorType = 'none' | 'door' | 'secret';
 
@@ -74,11 +75,14 @@ export interface TileDoc {
     readonly featureId: string;
 }
 
-/** How a transition region names itself: what it is and where it leads (the boundary localises it). */
-/** How a generated region names itself (the boundary localises it): a stair between levels, or a way into or out of a submap. */
+/**
+ * How a generated region names itself (the boundary localises it): a stair
+ * between levels, a way into or out of a submap, or a stretch of terrain.
+ */
 type RegionLabel =
     | { readonly kind: NonNullable<PlacedBehaviour['transition']>['kind']; readonly from: string; readonly to: readonly string[] }
-    | { readonly kind: 'entrance' | 'exit'; readonly scene: string };
+    | { readonly kind: 'entrance' | 'exit'; readonly scene: string }
+    | { readonly kind: 'terrain'; readonly biome: BiomeKind };
 
 /**
  * Where a teleport leads: another region of the same plan (by index, so a

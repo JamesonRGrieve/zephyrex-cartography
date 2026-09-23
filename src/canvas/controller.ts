@@ -20,7 +20,7 @@ import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
-import { planDocuments } from '../tools/plan';
+import { type PlanContext, planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
 import { type DoorSettings, doorOn, makeRoom, NEW_DOOR, type RoomDoor, type RoomFeature, withRoomDoor } from '../tools/room';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
@@ -182,6 +182,7 @@ export class CartographyController {
     private readonly makeId: () => string;
 
     private levelList: Level[] = [];
+    private terrainRegions = false;
     /** The level being edited: new features land on it, and only its features (and level-less ones) show. */
     private active: string | null = null;
 
@@ -252,6 +253,31 @@ export class CartographyController {
         await this.scenes.deleteRegion(stamp.submap.scene, stamp.submap.exitRegion);
         await this.replaceFeature(id, { ...stamp, submap: null });
         return true;
+    }
+
+    /** What plans read besides the feature: the scene's features (by default the live ones), levels and options. */
+    private planContext(features: readonly Feature[] = this.features): PlanContext {
+        return { features, levels: this.levelList, terrainRegions: this.terrainRegions };
+    }
+
+    /** Whether terrain is mirrored as Scene Regions. */
+    get terrainAsRegions(): boolean {
+        return this.terrainRegions;
+    }
+
+    /**
+     * Mirror terrain (biome regions and brush strokes) as Scene Regions, or
+     * stop, and bring the scene in line. Also run after loading a scene, which
+     * may have been last edited under the other setting.
+     */
+    async setTerrainRegions(on: boolean): Promise<void> {
+        this.terrainRegions = on;
+        // Only terrain whose regions disagree with the setting is re-synced.
+        const stale = this.features.filter((f) => (f.type === 'region' || f.type === 'stroke') && f.docs.regions.length > 0 !== on);
+        await stale.reduce(async (previous, f) => {
+            await previous;
+            await this.syncDocs(this.getFeature(f.id) ?? f);
+        }, Promise.resolve());
     }
 
     /** The scene's levels, bottom to top. */
@@ -411,7 +437,7 @@ export class CartographyController {
      * it was left rather than resetting it.
      */
     private async recordRoomDoorState(room: RoomFeature, wallId: string, state: DoorState): Promise<boolean> {
-        const plan = planDocuments(room, { features: this.features, levels: this.levelList });
+        const plan = planDocuments(room, this.planContext());
         const segment = plan.walls[room.docs.walls.indexOf(wallId)]?.segment;
         const door = segment === undefined ? null : doorOn(room, segment);
         if (segment === undefined || !door || door.state === state) {
@@ -863,8 +889,7 @@ export class CartographyController {
         if (!changed.some((f) => isDoorStamp(f) || f.type === 'room')) {
             return;
         }
-        const wallsOf = (room: Feature, features: readonly Feature[]): string =>
-            JSON.stringify(planDocuments(room, { features, levels: this.levelList }).walls);
+        const wallsOf = (room: Feature, features: readonly Feature[]): string => JSON.stringify(planDocuments(room, this.planContext(features)).walls);
         // The changed features themselves were synced already.
         const changedIds = new Set(changed.map((f) => f.id));
         const affected = this.features.filter((f) => f.type === 'room' && !changedIds.has(f.id) && wallsOf(f, before) !== wallsOf(f, this.features));
@@ -882,7 +907,7 @@ export class CartographyController {
      * resulting ids on the feature and persists.
      */
     private async syncDocs(feature: Feature): Promise<void> {
-        const plan = planDocuments(feature, { features: this.features, levels: this.levelList });
+        const plan = planDocuments(feature, this.planContext());
         const old = feature.docs;
         const planned = plan.walls.length + plan.lights.length + plan.tiles.length + plan.regions.length;
         if (planned === 0 && !hasDocs(old)) {

@@ -7,7 +7,7 @@
  * feature is fully described by the feature itself plus its scene context
  * (the other features and the levels): the declarative-first rule.
  */
-import { RIBBON_SAMPLES } from '../geometry/ribbon';
+import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { catmullRom, distanceToSegment, type Point } from '../geometry/spline';
 import { cutSegment, perimeterSegments, type Segment, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
@@ -16,8 +16,10 @@ import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
 import type { Feature } from './feature';
 import { adjacentLevel, findLevel, levelElevation, type Level } from './levels';
 import type { CartographyPath } from './path';
+import { regionOutline, type RegionFeature } from './region';
 import { roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
+import type { StrokeFeature } from './stroke';
 
 export interface DocumentPlan {
     readonly walls: readonly WallDoc[];
@@ -32,9 +34,11 @@ const EMPTY_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: []
 export interface PlanContext {
     readonly features: readonly Feature[];
     readonly levels: readonly Level[];
+    /** Whether terrain (biome regions and brush strokes) is mirrored as Scene Regions. */
+    readonly terrainRegions: boolean;
 }
 
-const NO_CONTEXT: PlanContext = { features: [], levels: [] };
+const NO_CONTEXT: PlanContext = { features: [], levels: [], terrainRegions: false };
 
 /** Where a feature's documents go: its level, and that level's floor elevation. */
 interface Floor {
@@ -274,5 +278,47 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
     if (feature.type === 'path' && feature.walls) {
         return { ...EMPTY_PLAN, walls: pathWalls(feature, floorOf(feature, context)) };
     }
+    if ((feature.type === 'region' || feature.type === 'stroke') && context.terrainRegions) {
+        return { ...EMPTY_PLAN, regions: [terrainRegion(feature, context.levels)] };
+    }
     return EMPTY_PLAN;
+}
+
+/** Pairs of a flat `[x, y, …]` outline as points. */
+function outlinePoints(flat: readonly number[]): Point[] {
+    const points: Point[] = [];
+    for (let i = 0; i + 1 < flat.length; i += 2) {
+        points.push({ x: flat[i] ?? 0, y: flat[i + 1] ?? 0 });
+    }
+    return points;
+}
+
+/**
+ * Terrain as a Scene Region over exactly what is painted (the smoothed region
+ * fill, or the stroke's swath), named after its biome, on its level's band.
+ * It carries no behaviours: GMs and systems attach their own (difficult
+ * terrain, weather, and so on).
+ */
+function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly Level[]): RegionDoc {
+    const outline =
+        feature.type === 'region'
+            ? regionOutline(feature.points)
+            : ribbonOutline(
+                  buildRibbon(
+                      feature.points,
+                      feature.points.map(() => feature.radius),
+                      RIBBON_SAMPLES,
+                      false,
+                  ),
+              );
+    const band = findLevel(levels, feature.level);
+    return {
+        id: null,
+        label: { kind: 'terrain', biome: feature.biome },
+        polygon: outlinePoints(outline),
+        bottom: band?.bottom ?? null,
+        top: band?.top ?? null,
+        level: feature.level,
+        teleport: null,
+    };
 }

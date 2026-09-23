@@ -77,6 +77,8 @@ export const I18N = {
         stampSnapHint: key('Settings.StampSnap.Hint'),
         stampScaleName: key('Settings.StampScale.Name'),
         stampScaleHint: key('Settings.StampScale.Hint'),
+        terrainRegionsName: key('Settings.TerrainRegions.Name'),
+        terrainRegionsHint: key('Settings.TerrainRegions.Hint'),
     },
     browser: {
         title: key('Browser.Title'),

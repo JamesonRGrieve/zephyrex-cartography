@@ -230,8 +230,14 @@ parses as a closed door.
 control point sets that point's half-width to its distance from the pointer.
 It previews live and is clamped to a visible minimum.
 
-Follow-ups: room nesting; floor/wall materials beyond biomes; Scene Regions from
-biomes.
+**Terrain as Scene Regions [done]:** an opt-in world setting (`terrainRegions`,
+off by default). Each biome region and brush stroke gets a Scene Region over
+exactly what is painted, named after its biome and on its level's band. They
+carry no behaviours: GMs and systems attach their own (difficult terrain,
+weather and so on). Toggling it, or loading a scene last edited under the
+other setting, re-syncs only terrain that disagrees. Only the active GM writes.
+
+Follow-ups: room nesting; floor/wall materials beyond biomes.
 
 **Generative map builder [intent — last]:** build real maps
 *declaratively* with this module's own tools, not by generating images. A

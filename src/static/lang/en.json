@@ -79,6 +79,10 @@
                 "Name": "Snap placed stamps to the grid",
                 "Hint": "Snap a placed stamp's top-left corner to the nearest grid intersection."
             },
+            "TerrainRegions": {
+                "Name": "Terrain as Scene Regions",
+                "Hint": "Mirror each painted biome area and brush stroke as a Scene Region named after its biome, so region behaviours (difficult terrain, weather and so on) can be attached to it."
+            },
             "StampScale": {
                 "Name": "Stamp scale",
                 "Hint": "Multiplier over a stamp's authored grid footprint when it is placed (1 = authored size)."

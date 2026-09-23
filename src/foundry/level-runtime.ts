@@ -5,7 +5,7 @@
  * Level documents directly (v14). The level logic itself is the controller's.
  */
 import type { CartographyController } from '../canvas/controller';
-import { I18N, TRANSITION_KIND_KEYS } from '../i18n';
+import { BIOME_TITLE_KEYS, I18N, TRANSITION_KIND_KEYS } from '../i18n';
 import type { RegionDoc } from '../tools/documents';
 import { levelPanel } from '../tools/levels';
 import { renderLevelPanel, type LevelPanelLabels } from '../ui/level-panel-view';
@@ -43,6 +43,9 @@ export function regionName(region: RegionDoc): string {
     const label = region.label;
     if ('scene' in label) {
         return format(label.kind === 'entrance' ? I18N.regions.entrance : I18N.regions.exit, { scene: label.scene });
+    }
+    if ('biome' in label) {
+        return localize(BIOME_TITLE_KEYS[label.biome]);
     }
     return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
 }

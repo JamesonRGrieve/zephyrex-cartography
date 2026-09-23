@@ -250,6 +250,10 @@ function setupDrawLayer(): void {
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.load();
     levels.refresh();
+    // The scene may have been edited under the other terrain setting; only the active GM writes documents.
+    if (game.users?.activeGM?.isSelf === true) {
+        void controller.setTerrainRegions(terrainRegionsEnabled());
+    }
 
     const st: DrawState = { controller, container, mode: IDLE, drag: null, down: null, painting: false };
     state = st;
@@ -267,6 +271,34 @@ function setupDrawLayer(): void {
 
 Hooks.on('canvasReady', () => {
     setupDrawLayer();
+});
+
+const TERRAIN_REGIONS_SETTING = 'terrainRegions';
+
+declare global {
+    interface SettingConfig {
+        'zephyrex-cartography.terrainRegions': boolean;
+    }
+}
+
+function terrainRegionsEnabled(): boolean {
+    return game.settings?.get(MODULE_ID, TERRAIN_REGIONS_SETTING) === true;
+}
+
+Hooks.once('init', () => {
+    game.settings?.register(MODULE_ID, TERRAIN_REGIONS_SETTING, {
+        name: I18N.settings.terrainRegionsName,
+        hint: I18N.settings.terrainRegionsHint,
+        scope: 'world',
+        config: true,
+        type: Boolean,
+        default: false,
+        onChange: (on): void => {
+            if (state && game.users?.activeGM?.isSelf === true) {
+                void state.controller.setTerrainRegions(on);
+            }
+        },
+    });
 });
 
 type Tool = foundry.applications.ui.SceneControls.Tool;
