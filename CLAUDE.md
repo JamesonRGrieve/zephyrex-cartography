@@ -58,7 +58,14 @@ Gate members (all wired into `gate` + pre-commit + CI):
 
 - **prettier** `--check` (zero diff), **stylelint**, **biome** (`biome:ratchet`, 0 diagnostics)
 - **tsc** `--noEmit` (main + `tsconfig.test.json`), **strict:ratchet**, **test:typecheck:ratchet**
-- **vitest** (`pnpm test`) — the full suite, green
+- **vitest** with v8 coverage (`pnpm test:coverage`): the full suite, green.
+  **coverage:ratchet** holds lines, statements, functions and branches over
+  the pure core at or above `.coverage-baseline`; a metric at 100% locks
+  there. The Foundry boundary is covered by the e2e suite instead.
+- **symmetry** (hard): every `src/ui/*-view.ts` has stories and a story test;
+  every core module has a co-located test (or a reasoned entry in
+  `.coverage-opt-out.json`); every production module is imported by another
+  (tests and stories do not count, so nothing ships unreachable).
 - **type-coverage** `--strict` — **locked at 100%** (`type-coverage:ratchet`); fix `any`/casts at the source (prefer a type guard over `as`), never lower the floor to pass
 - **lint:ratchet** — 0 warnings; ~94 rules graduated to hard error
 - **ts:ratchet** — `any` / `as any` / `@ts-expect-error` / `@ts-ignore` counts at 0
