@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FLOOR, makeRoom, parseRoom, roomWalls, withRoomDoors, withRoomPoints, withRoomWalls } from './room';
+import { DEFAULT_FLOOR, makeRoom, parseRoom, roomWalls, withRoomDoors, withRoomLights, withRoomPoints, withRoomWalls } from './room';
 
 const pts = [
     { x: 0, y: 0 },
@@ -16,6 +16,7 @@ describe('makeRoom', () => {
         expect(r?.floor).toBe(DEFAULT_FLOOR);
         expect(r?.points).toHaveLength(4);
         expect(r?.wallIds).toEqual([]);
+        expect(r?.lightIds).toEqual([]);
     });
 
     it('returns null for fewer than three points', () => {
@@ -66,6 +67,17 @@ describe('withRoomWalls', () => {
         // Re-editing points preserves the wall links.
         const moved = walled ? withRoomPoints(walled, pts.slice(0, 3)) : null;
         expect(moved?.wallIds).toEqual(['w0', 'w1', 'w2', 'w3']);
+    });
+
+    it('records the generated light ids', () => {
+        const r = makeRoom('r', 'dirt', pts);
+        const lit = r ? withRoomLights(r, ['L0']) : null;
+        expect(lit?.lightIds).toEqual(['L0']);
+        // Wall + light links coexist and survive a points edit.
+        const both = lit ? withRoomWalls(lit, ['w0']) : null;
+        const moved = both ? withRoomPoints(both, pts.slice(0, 3)) : null;
+        expect(moved?.lightIds).toEqual(['L0']);
+        expect(moved?.wallIds).toEqual(['w0']);
     });
 });
 

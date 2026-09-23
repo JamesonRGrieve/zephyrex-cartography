@@ -11,6 +11,12 @@ export interface WallCreateData {
     readonly door?: number;
 }
 
+export interface LightCreateData {
+    readonly x: number;
+    readonly y: number;
+    readonly config?: { readonly dim?: number; readonly bright?: number };
+}
+
 /*
  * FoundryScene mirrors three members of the live `Scene` document, so they are
  * declared as METHODS rather than function properties on purpose: Foundry's
@@ -26,7 +32,7 @@ export interface FoundryScene {
     getFlag(scope: string, key: string): unknown;
     // eslint-disable-next-line no-restricted-syntax -- boundary: setFlag accepts an arbitrary serialisable flag value, exactly as the live Foundry Scene API does
     setFlag(scope: string, key: string, value: unknown): Promise<unknown>;
-    createEmbeddedDocuments(embeddedName: 'Wall', data: readonly WallCreateData[]): Promise<unknown>;
-    deleteEmbeddedDocuments(embeddedName: 'Wall', ids: readonly string[]): Promise<unknown>;
+    createEmbeddedDocuments(embeddedName: 'Wall' | 'AmbientLight', data: readonly (WallCreateData | LightCreateData)[]): Promise<unknown>;
+    deleteEmbeddedDocuments(embeddedName: 'Wall' | 'AmbientLight', ids: readonly string[]): Promise<unknown>;
 }
 /* eslint-enable @typescript-eslint/method-signature-style */

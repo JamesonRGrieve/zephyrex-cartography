@@ -68,6 +68,7 @@ const room: Feature = {
     ],
     doors: [],
     wallIds: [],
+    lightIds: [],
 };
 
 describe('GraphicsFeatureRenderer', () => {

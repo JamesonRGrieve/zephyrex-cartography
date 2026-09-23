@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import type { Point } from './spline';
-import { nearestSegment, perimeterSegments } from './wall';
+import { centroid, nearestSegment, perimeterSegments } from './wall';
 
 describe('perimeterSegments', () => {
     it('produces one segment per edge of a closed polygon, including the closing edge', () => {
@@ -41,5 +41,22 @@ describe('nearestSegment', () => {
 
     it('returns index −1 for no segments', () => {
         expect(nearestSegment({ x: 0, y: 0 }, [])).toEqual({ index: -1, distance: Number.POSITIVE_INFINITY });
+    });
+});
+
+describe('centroid', () => {
+    it('averages the vertices', () => {
+        expect(
+            centroid([
+                { x: 0, y: 0 },
+                { x: 10, y: 0 },
+                { x: 10, y: 10 },
+                { x: 0, y: 10 },
+            ]),
+        ).toEqual({ x: 5, y: 5 });
+    });
+
+    it('is the origin for no points', () => {
+        expect(centroid([])).toEqual({ x: 0, y: 0 });
     });
 });

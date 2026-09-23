@@ -26,6 +26,8 @@ export interface RoomFeature {
     readonly doors: number[];
     /** Ids of the native Foundry WallDocuments this room generated (for lifecycle sync). */
     readonly wallIds: string[];
+    /** Ids of the native Foundry AmbientLightDocuments this room generated. */
+    readonly lightIds: string[];
 }
 
 /** Build a committed room from a boundary point stream, or null if fewer than 3 points. */
@@ -33,7 +35,7 @@ export function makeRoom(id: string, floor: BiomeKind, points: readonly Point[])
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id, floor, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], wallIds: [] };
+    return { type: 'room', id, floor, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], wallIds: [], lightIds: [] };
 }
 
 /** Rebuild a room with new boundary points (edit ops), preserving floor + doors + wall links, or null if < 3. */
@@ -49,6 +51,11 @@ export function withRoomPoints(room: RoomFeature, points: readonly Point[]): Roo
 /** Record the ids of the Foundry walls this room generated. */
 export function withRoomWalls(room: RoomFeature, wallIds: readonly string[]): RoomFeature {
     return { ...room, wallIds: [...wallIds] };
+}
+
+/** Record the ids of the Foundry ambient lights this room generated. */
+export function withRoomLights(room: RoomFeature, lightIds: readonly string[]): RoomFeature {
+    return { ...room, lightIds: [...lightIds] };
 }
 
 /** Set which perimeter segments are doors. */
@@ -76,5 +83,6 @@ export function parseRoom(v: unknown): RoomFeature | null {
     }
     const doors = Array.isArray(v['doors']) ? v['doors'].filter((n): n is number => typeof n === 'number') : [];
     const wallIds = Array.isArray(v['wallIds']) ? v['wallIds'].filter((s): s is string => typeof s === 'string') : [];
-    return { type: 'room', id: v['id'], floor: v['floor'], points: points.map((p) => ({ x: p.x, y: p.y })), doors, wallIds };
+    const lightIds = Array.isArray(v['lightIds']) ? v['lightIds'].filter((s): s is string => typeof s === 'string') : [];
+    return { type: 'room', id: v['id'], floor: v['floor'], points: points.map((p) => ({ x: p.x, y: p.y })), doors, wallIds, lightIds };
 }

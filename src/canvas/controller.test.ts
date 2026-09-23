@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { WallSpec } from '../geometry/wall';
 import type { Feature } from '../tools/feature';
 import type { CartographyPath } from '../tools/path';
-import { CartographyController, type SceneStore, type WallEmitter } from './controller';
+import { CartographyController, type LightEmitter, type SceneStore, type WallEmitter } from './controller';
 import type { FeatureRenderer } from './renderer';
 
 class FakeRenderer implements FeatureRenderer {
@@ -59,17 +59,32 @@ class FakeWalls implements WallEmitter {
     }
 }
 
-function make(): { c: CartographyController; r: FakeRenderer; s: FakeStore; w: FakeWalls } {
+class FakeLights implements LightEmitter {
+    readonly lit: { x: number; y: number }[] = [];
+    readonly deleted: string[][] = [];
+    async emitLight(x: number, y: number): Promise<string | null> {
+        this.lit.push({ x, y });
+        await Promise.resolve();
+        return `L${this.lit.length - 1}`;
+    }
+    async deleteLights(ids: readonly string[]): Promise<void> {
+        this.deleted.push([...ids]);
+        await Promise.resolve();
+    }
+}
+
+function make(): { c: CartographyController; r: FakeRenderer; s: FakeStore; w: FakeWalls; l: FakeLights } {
     const r = new FakeRenderer();
     const s = new FakeStore();
     const w = new FakeWalls();
+    const l = new FakeLights();
     let counter = 0;
     const makeId = (): string => {
         counter += 1;
         return `p${counter}`;
     };
-    const c = new CartographyController(r, s, w, makeId);
-    return { c, r, s, w };
+    const c = new CartographyController(r, s, w, l, makeId);
+    return { c, r, s, w, l };
 }
 
 describe('CartographyController', () => {
@@ -112,19 +127,23 @@ describe('CartographyController', () => {
         expect(saved?.points[2]).toEqual({ x: 100, y: 100 });
     });
 
-    it('generates native Foundry walls for a room and deletes them on removal', async () => {
-        const { c, w } = make();
+    it('generates native Foundry walls + a light for a room and cleans them up on removal', async () => {
+        const { c, w, l } = make();
         c.begin({ type: 'room', floor: 'dirt' }, 'click');
         c.addPoint({ x: 0, y: 0 });
         c.addPoint({ x: 100, y: 0 });
         c.addPoint({ x: 100, y: 100 });
-        await c.commit(); // p1 — a 3-point room => 3 perimeter segments
+        await c.commit(); // p1 — a 3-point room => 3 perimeter segments + 1 centre light
         expect(w.segmentCalls).toEqual([3]);
+        expect(l.lit).toHaveLength(1);
         const room = c.getFeature('p1');
         const wallCount = room?.type === 'room' ? room.wallIds.length : -1;
+        const lightCount = room?.type === 'room' ? room.lightIds.length : -1;
         expect(wallCount).toBe(3);
+        expect(lightCount).toBe(1);
         await c.remove('p1');
         expect(w.deleted).toEqual([['w0', 'w1', 'w2']]);
+        expect(l.deleted).toEqual([['L0']]);
     });
 
     it('re-syncs native walls when a room vertex moves', async () => {

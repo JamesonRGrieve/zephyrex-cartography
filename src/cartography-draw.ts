@@ -12,6 +12,7 @@ import './styles/entry.css';
 import { CartographyController, type Brush } from './canvas/controller';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
 import type { FoundryScene } from './foundry/boundary';
+import { FoundryLightEmitter } from './foundry/lights';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { FoundrySceneStore } from './foundry/scene-store';
 import { FoundryWallEmitter } from './foundry/walls';
@@ -142,8 +143,12 @@ function setupDrawLayer(): void {
     canvas.stage.addChild(container);
 
     const renderer = new GraphicsFeatureRenderer(createPixiSurface(container, activePack()));
-    const controller = new CartographyController(renderer, new FoundrySceneStore(activeScene), new FoundryWallEmitter(activeScene), () =>
-        foundry.utils.randomID(),
+    const controller = new CartographyController(
+        renderer,
+        new FoundrySceneStore(activeScene),
+        new FoundryWallEmitter(activeScene),
+        new FoundryLightEmitter(activeScene),
+        () => foundry.utils.randomID(),
     );
     const gridSize = canvas.grid?.size ?? 0;
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;

@@ -34,6 +34,20 @@ export function perimeterSegments(points: readonly Point[]): Segment[] {
     return out;
 }
 
+/** Average of a polygon's vertices — a good-enough light-placement centre for a room. */
+export function centroid(points: readonly Point[]): Point {
+    if (points.length === 0) {
+        return { x: 0, y: 0 };
+    }
+    let sx = 0;
+    let sy = 0;
+    for (const p of points) {
+        sx += p.x;
+        sy += p.y;
+    }
+    return { x: sx / points.length, y: sy / points.length };
+}
+
 /** Nearest perimeter segment of a closed polygon to `pt`: its index (−1 if none) and distance. */
 export function nearestSegment(pt: Point, points: readonly Point[]): { index: number; distance: number } {
     const segs = perimeterSegments(points);

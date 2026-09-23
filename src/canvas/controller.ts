@@ -9,14 +9,14 @@
 import { nearestVertex } from '../geometry/hit';
 import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
-import { nearestSegment, type WallSpec } from '../geometry/wall';
+import { centroid, nearestSegment, type WallSpec } from '../geometry/wall';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
 import type { Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { DEFAULT_HALF_WIDTH, makePath, type CartographyPath, type PathKind } from '../tools/path';
 import { makeRegion, type BiomeKind } from '../tools/region';
-import { makeRoom, roomWalls, withRoomDoors, withRoomWalls } from '../tools/room';
+import { makeRoom, roomWalls, withRoomDoors, withRoomLights, withRoomWalls, type RoomFeature } from '../tools/room';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { FeatureRenderer } from './renderer';
 
@@ -31,6 +31,13 @@ export interface WallEmitter {
     emitSegments: (walls: readonly WallSpec[]) => Promise<string[]>;
     /** Delete native Foundry walls by document id. */
     deleteWalls: (ids: readonly string[]) => Promise<void>;
+}
+
+export interface LightEmitter {
+    /** Create a native Foundry ambient light at (x, y); returns its document id or null. */
+    emitLight: (x: number, y: number) => Promise<string | null>;
+    /** Delete native Foundry ambient lights by document id. */
+    deleteLights: (ids: readonly string[]) => Promise<void>;
 }
 
 export type Brush =
@@ -79,6 +86,7 @@ export class CartographyController {
         private readonly renderer: FeatureRenderer,
         private readonly store: SceneStore,
         private readonly wallEmitter: WallEmitter,
+        private readonly lightEmitter: LightEmitter,
         private readonly makeId: () => string,
     ) {}
 
@@ -131,10 +139,9 @@ export class CartographyController {
             await this.wallEmitter.emit(feature);
         }
         if (feature.type === 'room') {
-            // Rooms generate native Foundry walls; track their ids on the room for lifecycle sync.
-            const wallIds = await this.wallEmitter.emitSegments(roomWalls(feature));
-            const walled = withRoomWalls(feature, wallIds);
-            this.features = this.features.map((f) => (f.id === feature.id ? walled : f));
+            // Rooms generate native Foundry walls + a centre light; track their ids for lifecycle sync.
+            const synced = await this.syncRoomDocs(feature);
+            this.features = this.features.map((f) => (f.id === feature.id ? synced : f));
             await this.store.save(this.features);
         }
     }
@@ -148,8 +155,8 @@ export class CartographyController {
         this.features = this.features.filter((f) => f.id !== id);
         this.renderer.remove(id);
         await this.store.save(this.features);
-        if (target.type === 'room' && target.wallIds.length > 0) {
-            await this.wallEmitter.deleteWalls(target.wallIds);
+        if (target.type === 'room') {
+            await this.deleteRoomDocs(target);
         }
     }
 
@@ -332,14 +339,31 @@ export class CartographyController {
         this.renderer.set(id, next);
         await this.store.save(this.features);
         if (next.type === 'room') {
-            // Re-sync native walls: drop the room's old walls, re-emit from the new perimeter.
-            if (old.type === 'room' && old.wallIds.length > 0) {
-                await this.wallEmitter.deleteWalls(old.wallIds);
+            // Re-sync native docs: drop the room's old walls/lights, re-emit from the new geometry.
+            if (old.type === 'room') {
+                await this.deleteRoomDocs(old);
             }
-            const wallIds = await this.wallEmitter.emitSegments(roomWalls(next));
-            const walled = withRoomWalls(next, wallIds);
-            this.features = this.features.map((f) => (f.id === id ? walled : f));
+            const synced = await this.syncRoomDocs(next);
+            this.features = this.features.map((f) => (f.id === id ? synced : f));
             await this.store.save(this.features);
+        }
+    }
+
+    /** Emit a room's native Foundry walls + centre light, returning the room stamped with their ids. */
+    private async syncRoomDocs(room: RoomFeature): Promise<RoomFeature> {
+        const wallIds = await this.wallEmitter.emitSegments(roomWalls(room));
+        const c = centroid(room.points);
+        const lightId = await this.lightEmitter.emitLight(c.x, c.y);
+        return withRoomLights(withRoomWalls(room, wallIds), lightId !== null ? [lightId] : []);
+    }
+
+    /** Delete the native Foundry walls + lights a room generated. */
+    private async deleteRoomDocs(room: RoomFeature): Promise<void> {
+        if (room.wallIds.length > 0) {
+            await this.wallEmitter.deleteWalls(room.wallIds);
+        }
+        if (room.lightIds.length > 0) {
+            await this.lightEmitter.deleteLights(room.lightIds);
         }
     }
 
