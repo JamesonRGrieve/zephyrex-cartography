@@ -12,6 +12,7 @@ import { BLOCKS_ALL, type LightDoc, type TileDoc, type WallDoc, wallDocFromSpec 
 import type { Feature } from './feature';
 import type { CartographyPath } from './path';
 import { roomLight, roomWalls, type RoomFeature } from './room';
+import { stampCentre, type StampFeature } from './stamp';
 
 export interface DocumentPlan {
     readonly walls: readonly WallDoc[];
@@ -35,6 +36,26 @@ function pathWalls(path: CartographyPath): WallDoc[] {
     return walls;
 }
 
+/** A stamp's own tile: Foundry positions a tile by its unrotated top-left and rotates it about its centre. */
+function stampTile(stamp: StampFeature): TileDoc {
+    const c = stampCentre(stamp);
+    return {
+        src: stamp.src,
+        x: c.x - stamp.width / 2,
+        y: c.y - stamp.height / 2,
+        width: stamp.width,
+        height: stamp.height,
+        rotation: stamp.rotation,
+        elevation: stamp.elevation,
+        level: null,
+        featureId: stamp.id,
+    };
+}
+
+function stampPlan(stamp: StampFeature): DocumentPlan {
+    return { ...EMPTY_PLAN, tiles: [stampTile(stamp)] };
+}
+
 function roomPlan(room: RoomFeature): DocumentPlan {
     const light = roomLight(room);
     return {
@@ -48,6 +69,9 @@ function roomPlan(room: RoomFeature): DocumentPlan {
 export function planDocuments(feature: Feature): DocumentPlan {
     if (feature.type === 'room') {
         return roomPlan(feature);
+    }
+    if (feature.type === 'stamp') {
+        return stampPlan(feature);
     }
     if (feature.type === 'path' && feature.walls) {
         return { ...EMPTY_PLAN, walls: pathWalls(feature) };

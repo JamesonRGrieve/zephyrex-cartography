@@ -7,7 +7,7 @@
  * these and persists.
  */
 import type { Point } from '../geometry/spline';
-import { isRegion, isRoom, isStroke, type Feature } from './feature';
+import { isRegion, isRoom, isStamp, isStroke, type Feature } from './feature';
 import { withPathGeometry } from './path';
 import { withRegionPoints } from './region';
 import { withRoomPoints } from './room';
@@ -19,6 +19,10 @@ export function movePoint(feature: Feature, index: number, to: Point): Feature |
         return null;
     }
     const points = feature.points.map((p, i) => (i === index ? { x: to.x, y: to.y } : p));
+    if (isStamp(feature)) {
+        // A stamp's one point is its centre: moving it moves the whole stamp.
+        return { ...feature, points };
+    }
     if (isRegion(feature)) {
         return withRegionPoints(feature, points);
     }
@@ -34,6 +38,9 @@ export function movePoint(feature: Feature, index: number, to: Point): Feature |
 /** Delete the vertex at `index`, or null if out of range or it would drop below the minimum. */
 export function deletePoint(feature: Feature, index: number): Feature | null {
     if (index < 0 || index >= feature.points.length) {
+        return null;
+    }
+    if (isStamp(feature)) {
         return null;
     }
     const points = feature.points.filter((_, i) => i !== index);

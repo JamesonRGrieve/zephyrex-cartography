@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Architecture rules for zephyrex-cartography. Layering (inner → outer):
- *   geometry (pure math)  ←  tools (feature models)  ←  canvas (controller/renderer)  ←  foundry (boundary)  ←  entry
+ *   geometry (pure math)  ←  stamps (pack schema/catalog)  ←  tools (feature models)  ←  canvas (controller/renderer)  ←  foundry (boundary)  ←  entry
+ *   ui (DOM views over pure view models) sits beside canvas and is hosted by foundry.
  * Inner layers must never import outer ones.
  */
 module.exports = {
@@ -30,6 +31,13 @@ module.exports = {
             comment: 'The stamp engine core (schema, catalog, placement math) is Foundry-agnostic.',
             severity: 'warn',
             from: { path: '^src/stamps/' },
+            to: { path: '^src/(canvas|foundry)/' },
+        },
+        {
+            name: 'ui-is-foundry-agnostic',
+            comment: 'DOM views render view models and dispatch actions; Foundry and the controller stay outside them.',
+            severity: 'warn',
+            from: { path: '^src/ui/' },
             to: { path: '^src/(canvas|foundry)/' },
         },
         {

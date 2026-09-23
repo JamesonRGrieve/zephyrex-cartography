@@ -144,6 +144,24 @@ export const stampPackSchema = z
 
 type StampPack = z.infer<typeof stampPackSchema>;
 
+/**
+ * The behaviour a placed stamp carries on the scene: the pack's effective
+ * properties for the chosen variant, snapshotted at placement so the scene
+ * stays intact and self-describing even if the pack is later removed.
+ */
+export const placedBehaviourSchema = z.object({
+    light: lightSchema.nullable(),
+    occlusion: occlusionSchema.nullable(),
+    physical: physicalSchema.nullable(),
+    door: doorSchema.nullable(),
+    doorState: z.enum(['closed', 'open', 'locked']).nullable(),
+    transition: transitionSchema.nullable(),
+    enterable: z.boolean(),
+    container: z.boolean(),
+});
+
+export type PlacedBehaviour = z.infer<typeof placedBehaviourSchema>;
+
 export type Stamp = StampPack['stamps'][number];
 
 export type StampVariant = Stamp['variants'][number];

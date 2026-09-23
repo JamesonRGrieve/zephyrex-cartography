@@ -72,7 +72,13 @@ function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean): Fil
     };
 }
 
+/** Nothing to draw: the feature is realised entirely as native documents (a stamp is its Tile). */
+const NOT_DRAWN: Filled = { outline: [], fill: 0, alpha: 0, texture: null, tint: NO_TINT, feather: false };
+
 function outlineAndStyle(feature: Feature): Filled {
+    if (feature.type === 'stamp') {
+        return NOT_DRAWN;
+    }
     if (feature.type === 'region') {
         return biomeFilled(feature.biome, regionOutline(feature.points), true);
     }

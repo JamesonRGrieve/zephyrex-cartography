@@ -8,9 +8,10 @@ import type { GeneratedDocs } from './documents';
 import { parsePath, type CartographyPath } from './path';
 import { parseRegion, type RegionFeature } from './region';
 import { parseRoom, type RoomFeature } from './room';
+import { parseStamp, type StampFeature } from './stamp';
 import { parseStroke, type StrokeFeature } from './stroke';
 
-export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature;
+export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature | StampFeature;
 
 export function isRegion(f: Feature): f is RegionFeature {
     return f.type === 'region';
@@ -24,12 +25,16 @@ export function isRoom(f: Feature): f is RoomFeature {
     return f.type === 'room';
 }
 
+export function isStamp(f: Feature): f is StampFeature {
+    return f.type === 'stamp';
+}
+
 /** The same feature, recording the native documents it now owns. */
 export function withDocs<F extends Feature>(feature: F, docs: GeneratedDocs): F {
     return { ...feature, docs };
 }
 
-/** Parse the mixed scene-flag blob into validated features (paths + regions + strokes). */
+/** Parse the mixed scene-flag blob into validated features. */
 // eslint-disable-next-line no-restricted-syntax -- boundary: the scene-flag blob is untyped JSON; this is the single entry that validates it and narrows to Feature[]
 export function parseFeatures(raw: unknown): Feature[] {
     if (!Array.isArray(raw)) {
@@ -37,7 +42,7 @@ export function parseFeatures(raw: unknown): Feature[] {
     }
     const out: Feature[] = [];
     for (const entry of raw) {
-        const feature = parsePath(entry) ?? parseRegion(entry) ?? parseStroke(entry) ?? parseRoom(entry);
+        const feature = parseStamp(entry) ?? parsePath(entry) ?? parseRegion(entry) ?? parseStroke(entry) ?? parseRoom(entry);
         if (feature) {
             out.push(feature);
         }

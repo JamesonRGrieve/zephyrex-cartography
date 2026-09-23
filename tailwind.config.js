@@ -6,6 +6,8 @@ export default {
     // never leak into Foundry's own chrome.
     prefix: 'tw-',
     important: '.zephyrex-cartography',
+    // Preflight is a global element reset; it would restyle Foundry's own buttons, images and inputs.
+    corePlugins: { preflight: false },
     theme: { extend: {} },
     plugins: [],
 };

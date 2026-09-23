@@ -11,13 +11,49 @@
             "Edit": "Edit Points",
             "Erase": "Erase",
             "Undo": "Undo",
-            "Redo": "Redo"
+            "Redo": "Redo",
+            "Stamp": "Stamps (click the canvas to place the selected stamp)"
         },
         "Settings": {
             "TexturePack": {
                 "Name": "Terrain texture pack",
                 "Hint": "Which bundled texture pack fills biome regions, brush strokes, room floors, and roads."
+            },
+            "StampSnap": {
+                "Name": "Snap placed stamps to the grid",
+                "Hint": "Snap a placed stamp's top-left corner to the nearest grid intersection."
+            },
+            "StampScale": {
+                "Name": "Stamp scale",
+                "Hint": "Multiplier over a stamp's authored grid footprint when it is placed (1 = authored size)."
             }
+        },
+        "Browser": {
+            "Title": "Stamps",
+            "Search": "Search stamps",
+            "Scale": "Scale",
+            "Perspective": "Perspective",
+            "Any": "Any",
+            "All": "All",
+            "Rotate": "Rotation",
+            "ClearTags": "Clear tags",
+            "Place": "Place at view centre",
+            "Variants": "Variants",
+            "Empty": "No stamps match these filters.",
+            "NoSelection": "Select a stamp to see its variants.",
+            "Categories": "Categories",
+            "Stamps": "Stamps",
+            "Status": "{shown} of {total} stamps",
+            "CardHint": "Click to select for placing, double-click to place at the view centre, or drag onto the canvas."
+        },
+        "Hud": {
+            "Variant": "Variant: {state}"
+        },
+        "Notifications": {
+            "PackInvalid": "Stamp pack {module} failed validation ({count} issues); see the console.",
+            "PackFetchFailed": "Stamp pack {module} could not be loaded: {message}",
+            "NoScene": "There is no active scene to place a stamp on.",
+            "NoArmedStamp": "Select a stamp in the stamp browser first."
         },
         "Biomes": {
             "Water": "Water",

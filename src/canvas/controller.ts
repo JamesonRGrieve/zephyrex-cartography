@@ -10,6 +10,7 @@ import { nearestVertex } from '../geometry/hit';
 import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { nearestSegment } from '../geometry/wall';
+import { type CatalogStamp, cycleVariantIndex } from '../stamps/catalog';
 import { hasDocs, NO_DOCS, type GeneratedDocs, type LightDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
@@ -19,12 +20,27 @@ import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
 import { planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
 import { makeRoom, withRoomDoors } from '../tools/room';
+import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { FeatureRenderer } from './renderer';
 
 export interface SceneStore {
     load: () => Feature[];
     save: (features: readonly Feature[]) => Promise<void>;
+}
+
+/** Resolves a catalog key to its stamp across every loaded pack. */
+export interface StampCatalog {
+    get: (key: string) => CatalogStamp | null;
+}
+
+/** A tile's frame as Foundry reports it: unrotated top-left, size, rotation about the centre. */
+export interface TileFrame {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly rotation: number;
 }
 
 export interface TileUpdate {
@@ -99,8 +115,76 @@ export class CartographyController {
         private readonly renderer: FeatureRenderer,
         private readonly store: SceneStore,
         private readonly sink: DocumentSink,
+        private readonly catalog: StampCatalog,
         private readonly makeId: () => string,
     ) {}
+
+    /** Scene px per grid square for stamp footprints; a gridless scene uses the pack's own reference grid. */
+    private stampGrid(stamp: CatalogStamp): number {
+        return this.grid?.size ?? stamp.referenceGridSize;
+    }
+
+    /** Place a catalog stamp; returns the new feature id, or null if the stamp is not in any loaded pack. */
+    async placeStamp(placement: StampPlacement): Promise<string | null> {
+        const stamp = this.catalog.get(placement.stamp);
+        if (!stamp) {
+            return null;
+        }
+        const feature = makeStamp(this.makeId(), stamp, placement, this.stampGrid(stamp));
+        await this.add(feature);
+        return feature.id;
+    }
+
+    /** Switch a placed stamp to variant `index` (clamped); false if it is not a stamp or its pack is gone. */
+    async setStampVariant(id: string, index: number): Promise<boolean> {
+        const feature = this.getFeature(id);
+        const stamp = feature?.type === 'stamp' ? this.catalog.get(feature.stamp) : null;
+        if (feature?.type !== 'stamp' || !stamp) {
+            return false;
+        }
+        await this.replaceFeature(id, withStampVariant(feature, stamp, index, this.stampGrid(stamp)));
+        return true;
+    }
+
+    /** Step a placed stamp to its next (or previous) variant, wrapping. */
+    async cycleStampVariant(id: string, direction: 1 | -1 = 1): Promise<boolean> {
+        const feature = this.getFeature(id);
+        const stamp = feature?.type === 'stamp' ? this.catalog.get(feature.stamp) : null;
+        if (feature?.type !== 'stamp' || !stamp) {
+            return false;
+        }
+        return this.setStampVariant(id, cycleVariantIndex(stamp, feature.variant, direction));
+    }
+
+    /** The feature that owns a native tile, or null for a tile the plugin did not generate. */
+    featureForTile(tileId: string): string | null {
+        return this.features.find((f) => f.docs.tiles.includes(tileId))?.id ?? null;
+    }
+
+    /**
+     * Adopt a GM's native edit of a stamp's tile (move, resize, rotate) and
+     * re-sync its other documents. Returns false when nothing changed, which
+     * ends the update loop our own tile write triggers.
+     */
+    async syncStampFrame(id: string, frame: TileFrame): Promise<boolean> {
+        const feature = this.getFeature(id);
+        if (feature?.type !== 'stamp') {
+            return false;
+        }
+        const centre = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+        const current = stampCentre(feature);
+        const unchanged =
+            current.x === centre.x &&
+            current.y === centre.y &&
+            feature.width === frame.width &&
+            feature.height === frame.height &&
+            feature.rotation === frame.rotation;
+        if (unchanged) {
+            return false;
+        }
+        await this.replaceFeature(id, withStampFrame(feature, { centre, width: frame.width, height: frame.height, rotation: frame.rotation }));
+        return true;
+    }
 
     get drawing(): boolean {
         return this.session !== null;

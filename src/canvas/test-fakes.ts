@@ -4,6 +4,7 @@
  * tests. They record every call so tests assert on the declarative effects
  * (what was rendered, persisted, created, deleted) with no Foundry runtime.
  */
+import { type CatalogStamp, loadPacks } from '../stamps/catalog';
 import type { GeneratedDocs, LightDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import { CartographyController, type DocumentSink, type SceneStore, type TileUpdate } from './controller';
@@ -98,15 +99,25 @@ export interface Harness {
     readonly d: FakeSink;
 }
 
-/** A controller over fresh fakes, issuing feature ids p1, p2, … */
-export function makeHarness(): Harness {
+/** A controller over fresh fakes and the given catalog stamps, issuing feature ids p1, p2, … */
+export function makeHarness(stamps: readonly CatalogStamp[] = []): Harness {
     const r = new FakeRenderer();
     const s = new FakeStore();
     const d = new FakeSink();
     let counter = 0;
-    const c = new CartographyController(r, s, d, () => {
+    const catalog = { get: (key: string): CatalogStamp | null => stamps.find((stamp) => stamp.key === key) ?? null };
+    const c = new CartographyController(r, s, d, catalog, () => {
         counter += 1;
         return `p${counter}`;
     });
     return { c, r, s, d };
+}
+
+/** One catalog stamp per definition, loaded through the real pack parser from module `pack`. */
+export function catalogStamps(definitions: readonly object[]): readonly CatalogStamp[] {
+    const loaded = loadPacks([{ moduleId: 'pack', manifest: { schemaVersion: 1, id: 'pack', name: 'Pack', stamps: definitions } }]);
+    if (loaded.errors.length > 0) {
+        throw new Error(`invalid test stamps: ${JSON.stringify(loaded.errors)}`);
+    }
+    return loaded.stamps;
 }

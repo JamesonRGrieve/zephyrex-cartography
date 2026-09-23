@@ -2,3 +2,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Variant bar the stamp engine adds to the Tile HUD's right column. */
+.zephyrex-cartography-hud-variants {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.zephyrex-cartography-hud-variants img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border: 0;
+}
+
+.zephyrex-cartography-hud-variants [aria-pressed='true'] {
+    outline: 2px solid var(--color-border-highlight, #ff6400);
+}
