@@ -1,0 +1,154 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * The e2e fixture: a page joined to this worker's own Foundry world as the
+ * Gamemaster, with the module and the e2e stamp pack active, on a fresh
+ * scene. It records the module's JS coverage for the source-coverage
+ * ratchet, and fails the test on any page error or console error.
+ *
+ * Specs drive the module through its public API
+ * (`game.modules.get('zephyrex-cartography').api`) and assert on the native
+ * documents Foundry holds.
+ */
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { test as base, expect, type Page } from '@playwright/test';
+
+const PORT_BASE = Number(process.env['FOUNDRY_TEST_PORT'] ?? 30101);
+const MODULE_ID = 'zephyrex-cartography';
+const PACK_ID = 'zc-e2e-pack';
+/** Where the module's served build lives; coverage keeps only these scripts. */
+const MODULE_SCRIPT = `/modules/${MODULE_ID}/dist/`;
+const RAW_COVERAGE_DIR = resolve('.e2e-raw-coverage');
+const JOIN_ATTEMPTS = 6;
+const JOIN_RETRY_MS = 2_000;
+const READY_TIMEOUT_MS = 60_000;
+
+/** A scene every test starts on: gridded, unpadded, so scene px equal canvas px from (0, 0). */
+export const SCENE = { width: 2000, height: 1500, gridSize: 100 } as const;
+
+/** Console errors Foundry itself logs on a bare test world, unrelated to the module. */
+const FOUNDRY_NOISE = [/Failed to load resource/, /favicon/];
+
+/** This worker's own server. */
+function serverUrl(): string {
+    const slot = Number(process.env['TEST_PARALLEL_INDEX'] ?? 0);
+    return `http://127.0.0.1:${PORT_BASE + slot}`;
+}
+
+async function joinAsGamemaster(page: Page): Promise<void> {
+    for (let attempt = 0; attempt < JOIN_ATTEMPTS; attempt++) {
+        // eslint-disable-next-line no-await-in-loop -- sequential retry: each attempt waits out a still-booting world before the next
+        await page.goto(`${serverUrl()}/join`);
+        // eslint-disable-next-line no-await-in-loop -- see above
+        const listed = await page.locator('select[name="userid"] option', { hasText: 'Gamemaster' }).count();
+        if (listed > 0) {
+            break;
+        }
+        // eslint-disable-next-line no-await-in-loop -- see above
+        await page.waitForTimeout(JOIN_RETRY_MS);
+    }
+    await page.selectOption('select[name="userid"]', { label: 'Gamemaster' });
+    await page.click('button[name="join"]');
+    await page.waitForURL(/\/game/);
+    await page.waitForFunction(() => game.ready === true, undefined, { timeout: READY_TIMEOUT_MS });
+}
+
+/** Activate the module and the e2e pack once per world; activating needs a reload. */
+async function activateModules(page: Page): Promise<void> {
+    const changed = await page.evaluate(
+        async ([moduleId, packId]) => {
+            if (game.modules?.get(moduleId).active === true && game.modules.get(packId)?.active === true) {
+                return false;
+            }
+            const current = game.settings?.get('core', 'moduleConfiguration') ?? {};
+            await game.settings?.set('core', 'moduleConfiguration', { ...current, [moduleId]: true, [packId]: true });
+            return true;
+        },
+        [MODULE_ID, PACK_ID] as const,
+    );
+    if (changed) {
+        await page.reload();
+        await page.waitForFunction(() => game.ready === true, undefined, { timeout: READY_TIMEOUT_MS });
+    }
+}
+
+/** Create and view a fresh scene, and wait for the module's controller on it. */
+export async function freshScene(page: Page, sceneTitle: string): Promise<void> {
+    await page.evaluate(
+        async ({ sceneName, scene }) => {
+            const created = await Scene.create({ name: sceneName, width: scene.width, height: scene.height, padding: 0, grid: { size: scene.gridSize } });
+            await created?.view();
+        },
+        { sceneName: sceneTitle, scene: SCENE },
+    );
+    await page.waitForFunction(
+        ([sceneName, moduleId]) =>
+            canvas?.ready === true && canvas.scene?.name === sceneName && (game.modules?.get(moduleId).api.controller() ?? null) !== null,
+        [sceneTitle, MODULE_ID] as const,
+        { timeout: READY_TIMEOUT_MS },
+    );
+    // A real GM's pointer is always somewhere over the canvas. Put it there, so pointer
+    // handlers run every time rather than whenever PIXI happens to synthesise a move.
+    for (const at of POINTER_SWEEP) {
+        // eslint-disable-next-line no-await-in-loop -- mouse moves are sequential by nature
+        await page.mouse.move(at.x, at.y);
+    }
+}
+
+/** Viewport points the pointer sweeps across a fresh scene. */
+const POINTER_SWEEP = [
+    { x: 700, y: 400 },
+    { x: 720, y: 420 },
+] as const;
+
+/**
+ * Hide everything but the canvas (the interface, notifications, the pause
+ * banner) and frame the whole scene, for a canvas-only screenshot.
+ */
+export async function frameScene(page: Page, layer: 'walls' | null = null): Promise<void> {
+    // A stylesheet rule, not per-element styles, so overlays added later (a tour, a notification) stay hidden too.
+    await page.addStyleTag({ content: 'body > :not(#board) { visibility: hidden !important; }' });
+    await page.evaluate(
+        async ({ scene, show }) => {
+            // Foundry draws wall lines only while the Walls layer is active.
+            if (show === 'walls') {
+                canvas?.walls?.activate();
+            }
+            await canvas?.animatePan({ x: scene.width / 2, y: scene.height / 2, scale: 0.5, duration: 0 });
+        },
+        { scene: SCENE, show: layer },
+    );
+}
+
+async function saveCoverage(page: Page, title: string): Promise<void> {
+    const entries = (await page.coverage.stopJSCoverage()).filter((entry) => entry.url.includes(MODULE_SCRIPT));
+    if (entries.length === 0) {
+        return;
+    }
+    mkdirSync(RAW_COVERAGE_DIR, { recursive: true });
+    const file = `${title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.json`;
+    writeFileSync(resolve(RAW_COVERAGE_DIR, file), JSON.stringify(entries));
+}
+
+export const test = base.extend<{ world: Page }>({
+    world: async ({ page }, use, testInfo) => {
+        const errors: string[] = [];
+        page.on('pageerror', (error) => {
+            errors.push(error.message);
+        });
+        page.on('console', (message) => {
+            if (message.type() === 'error' && !FOUNDRY_NOISE.some((noise) => noise.test(message.text()))) {
+                errors.push(message.text());
+            }
+        });
+        await page.coverage.startJSCoverage({ resetOnNavigation: false });
+        await joinAsGamemaster(page);
+        await activateModules(page);
+        await freshScene(page, testInfo.title);
+        await use(page);
+        await saveCoverage(page, testInfo.titlePath.join(' '));
+        expect(errors, 'page and console errors').toEqual([]);
+    },
+});
+
+export { expect };

@@ -12,6 +12,7 @@ import './styles/entry.css';
 import { type Brush, CartographyController } from './canvas/controller';
 import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
+import { registerApi } from './foundry/api';
 import { FoundryDocumentSink } from './foundry/documents';
 import { registerDoorRuntime } from './foundry/door-runtime';
 import { registerGeneratorRuntime } from './foundry/generator-runtime';
@@ -54,6 +55,8 @@ const doors = registerDoorRuntime(() => state?.controller ?? null);
 const materials = registerMaterialsRuntime(() => state?.controller ?? null, packs.textureRoles);
 
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
+
+registerApi(() => state?.controller ?? null);
 
 // Newly loaded packs or another texture set re-render the layer.
 packs.onChange(() => {

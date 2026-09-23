@@ -1,0 +1,23 @@
+{
+    "id": "zc-e2e",
+    "title": "Cartography E2E System",
+    "description": "A game system with no rules, just enough for Foundry to load a world that the Zephyrex Cartography e2e suite authors scenes in.",
+    "version": "1.0.0",
+    "compatibility": {
+        "minimum": "14",
+        "verified": "14"
+    },
+    "documentTypes": {
+        "Actor": {
+            "npc": {}
+        },
+        "Item": {
+            "item": {}
+        }
+    },
+    "grid": {
+        "distance": 5,
+        "units": "ft"
+    },
+    "license": "AGPL-3.0-or-later"
+}

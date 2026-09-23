@@ -6,6 +6,12 @@ storybook-static/
 *.log
 .DS_Store
 .foundry-test-data-*/
+# A local Foundry v14 release (or a symlink to one) for the e2e suite; never committed.
+.foundry-release
+test-results/
+.e2e-results.json
+.e2e-raw-coverage/
+.e2e-coverage/
 
 # Ratchet run reports — regenerated on every gate run; the committed source of
 # truth is the paired `.*-baseline` file, not these detail dumps.

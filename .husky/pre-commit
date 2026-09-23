@@ -43,11 +43,15 @@ run_bg() {
 wait_all() {
     local i=0
     local pid
+    local status
     for pid in "${PIDS[@]}"; do
-        if wait "$pid"; then
+        wait "$pid"
+        status=$?
+        if [ "$status" = "0" ]; then
             echo "[pre-commit] ✓ ${LABELS[$i]}"
         else
-            echo "[pre-commit] ✗ ${LABELS[$i]} (log: ${LOGS[$i]})" >&2
+            # 128+N means the job died from signal N (137 = killed), with nothing in its log.
+            echo "[pre-commit] ✗ ${LABELS[$i]} (exit ${status}; log: ${LOGS[$i]})" >&2
             sed "s|^|[${LABELS[$i]}] |" "${LOGS[$i]}" >&2
             FAILED=1
         fi
@@ -92,12 +96,20 @@ run_bg "lockfile"       pnpm -s lockfile:validate
 run_bg "schema"         pnpm -s schema:check
 run_bg "symmetry"       pnpm -s symmetry
 
-# Bundle: build then size-limit (size-limit needs dist/).
-run_bg "size"           bash -c 'pnpm -s build && pnpm -s size-limit'
-
 # Storybook: the stories and their config must still build.
 run_bg "storybook"      pnpm -s test:storybook
 
+wait_all
+[ "$FAILED" = "0" ] || exit 1
+
+# ---------------------------------------------------------------------------
+# Phase 3: build, size, then the e2e suite against that build. It boots a
+# Foundry server and a browser, so it runs after the parallel analyses have
+# released their memory rather than alongside them (the fan-out plus e2e can
+# exhaust RAM, and a killed job fails with an empty log).
+# ---------------------------------------------------------------------------
+echo "[pre-commit] phase 3: build + e2e"
+run_bg "build-e2e"      bash -c 'pnpm -s build && pnpm -s size-limit && pnpm -s test:e2e && pnpm -s e2e:ratchet'
 wait_all
 [ "$FAILED" = "0" ] || exit 1
 

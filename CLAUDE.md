@@ -73,6 +73,10 @@ Gate members (all wired into `gate` + pre-commit + CI):
 - **deps:ratchet** — dependency-cruiser layering (see Architecture)
 - **lockfile:validate** — lockfile resolves only to trusted hosts
 - **build** (Vite lib) + **size-limit** (JS bundle only)
+- **test:e2e** + **e2e:ratchet** (Tier B): the built module in a **real
+  Foundry v14 server** (see "E2E suite" below). No test may fail; the passed
+  count and the source coverage the suite reaches (`.e2e-baseline`) may not
+  fall. Skipped with a banner where no Foundry release is available (CI).
 - **test:storybook**: Storybook builds, and Playwright renders **every
   story** in its `index.json` in a real browser. Each must mount with no page
   or console errors or failed loads, and match its committed screenshot
@@ -80,6 +84,39 @@ Gate members (all wired into `gate` + pre-commit + CI):
   Chromium). CI uses Playwright's bundled Chromium and ignores snapshots.
   Refresh baselines deliberately with `pnpm test:storybook --update-snapshots`,
   then look at every changed PNG before committing it.
+
+## E2E suite (Tier B)
+
+`pnpm test:e2e` runs `tests/e2e/*.spec.ts` with Playwright against a real
+Foundry v14 server.
+- **Server.** Each worker gets its own server, data directory and world on
+  port `FOUNDRY_TEST_PORT + slot` (base 30101). `scripts/e2e-world.mjs`
+  provisions each one from `tests/e2e/fixtures/`:
+  - a rules-free game system;
+  - the seed world;
+  - a stamp pack with one stamp per behaviour;
+  - this module's `module.json` and current `dist/`.
+- **Release.** It comes from `FOUNDRY_RELEASE_DIR` (default `.foundry-release`,
+  gitignored; a symlink to a licensed release is fine).
+  `scripts/foundry-hostname-shim.cjs` makes the local server match the
+  licence's hostname. This is a throwaway local instance, never the live
+  server.
+- **Specs.** They use the `world` fixture (`tests/e2e/lib/foundry.ts`): joined
+  as the Gamemaster, module and pack active, a fresh gridded scene. They drive
+  the module through its **public API**
+  (`game.modules.get('zephyrex-cartography').api`: `controller()`,
+  `buildSpec()`, `generateFloorPlan()`). They assert on the native documents
+  Foundry holds.
+  - Any page or console error fails the test.
+  - Canvas screenshots (`frameScene`, which hides the UI; pass `'walls'` to
+    show wall lines) are compared with `toHaveScreenshot`. They are pinned to
+    the system Chromium with software GL. Refresh them with
+    `pnpm test:e2e --update-snapshots=all`, then look at every changed PNG.
+- **Coverage.** The fixture records the module's JS coverage per test.
+  `scripts/e2e-coverage.mjs` maps it onto `src/` through the source maps
+  (`.e2e-coverage/`), and that covers the Foundry boundary unit tests cannot
+  reach.
+- **Every roadmap feature lands with an e2e spec** that proves it in Foundry.
 
 ## UI views and Storybook
 

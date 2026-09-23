@@ -7,13 +7,14 @@
  * materials panel.
  */
 import type { CartographyController } from '../canvas/controller';
-import { realizeSpec, type RealizeReport } from '../canvas/realize';
+import type { RealizeReport } from '../canvas/realize';
 import { generateFloorPlan } from '../generate/floor-plan';
 import { DEFAULT_GENERATOR_FORM, floorPlanOptions, newSeed, withGeneratorField, type GeneratorForm } from '../generate/form';
 import { formatSpecIssue, parseSceneSpecJson, type SceneSpec } from '../generate/spec';
 import { I18N } from '../i18n';
 import type { RoomMaterials } from '../tools/room';
 import { renderGeneratorPanel, type GeneratorLabels, type GeneratorPanel } from '../ui/generator-view';
+import { buildOnScene } from './build-spec';
 import { format, localize } from './localize';
 import { createViewWindow } from './view-window';
 
@@ -62,10 +63,7 @@ export function registerGeneratorRuntime(controller: () => CartographyController
         busy = true;
         panelWindow.refresh();
         try {
-            // The spec's (0, 0) is the scene's top-left corner, inside the canvas padding.
-            const sceneOrigin = { x: canvas?.dimensions?.sceneX ?? 0, y: canvas?.dimensions?.sceneY ?? 0 };
-            const gridSize = active.grid?.size ?? canvas?.dimensions?.size ?? 1;
-            outcome = reportLines(await realizeSpec(active, spec, { origin: sceneOrigin, gridSize }));
+            outcome = reportLines(await buildOnScene(active, spec));
         } finally {
             busy = false;
             panelWindow.refresh();
