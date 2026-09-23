@@ -477,6 +477,25 @@ These make everything after them cheaper and safer, so they come first.
     techniques [14.349].
   - Already generated: dim, bright, colour, alpha, angle, rotation and
     animation.
+- **Light switches that players click.** A switch is a stamp the engine
+  treats as a door: its variants are its on and off states, and it has a
+  native door wall that blocks nothing (every sense `none`, movement off).
+  - **In play.** Players use Foundry's own door control. v14 lets a player
+    change a door's state (`wall.mjs`), and it handles the `WALL_DOORS`
+    permission, the pause, sound and visibility. The existing door-state
+    hook runs on the active GM. It turns the switch to its matching variant
+    and toggles every linked target in one atomic write. No socket.
+  - **Targets.** A switch lists what it controls:
+    - lamp stamps, switched to their lit or unlit variant, so the art,
+      particles and sound follow;
+    - a room's generated light;
+    - plain AmbientLights, through their native `hidden` field.
+  - **Linking.** A tool picks a switch, then clicks targets to add or remove
+    them, and draws link lines while it is active. The scene spec can
+    declare links too. Removing a target drops it from its switches, and
+    undo and redo follow the usual rules.
+  - **Open.** The door control shows Foundry's door icon. Check whether v14
+    can show a switch icon for one wall before building on it.
 
 ### Priority 5: regions
 - **Shapes beyond polygons** [14.349, 14.352, 14.356]:
