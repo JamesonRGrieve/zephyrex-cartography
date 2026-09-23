@@ -7,9 +7,10 @@
  * these and persists.
  */
 import type { Point } from '../geometry/spline';
-import { isRegion, isStroke, type Feature } from './feature';
+import { isRegion, isRoom, isStroke, type Feature } from './feature';
 import { withPathGeometry } from './path';
 import { withRegionPoints } from './region';
+import { withRoomPoints } from './room';
 import { withStrokePoints } from './stroke';
 
 /** Move the vertex at `index` to `to`, or null if the index is out of range. */
@@ -20,6 +21,9 @@ export function movePoint(feature: Feature, index: number, to: Point): Feature |
     const points = feature.points.map((p, i) => (i === index ? { x: to.x, y: to.y } : p));
     if (isRegion(feature)) {
         return withRegionPoints(feature, points);
+    }
+    if (isRoom(feature)) {
+        return withRoomPoints(feature, points);
     }
     if (isStroke(feature)) {
         return withStrokePoints(feature, points);
@@ -35,6 +39,9 @@ export function deletePoint(feature: Feature, index: number): Feature | null {
     const points = feature.points.filter((_, i) => i !== index);
     if (isRegion(feature)) {
         return withRegionPoints(feature, points);
+    }
+    if (isRoom(feature)) {
+        return withRoomPoints(feature, points);
     }
     if (isStroke(feature)) {
         return withStrokePoints(feature, points);

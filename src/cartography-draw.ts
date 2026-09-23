@@ -17,6 +17,7 @@ import { FoundrySceneStore } from './foundry/scene-store';
 import { FoundryWallEmitter } from './foundry/walls';
 import { distance, type Point } from './geometry/spline';
 import { BIOMES, isBiomeKind, type BiomeKind } from './tools/region';
+import { DEFAULT_FLOOR } from './tools/room';
 import { DEFAULT_PACK, isTexturePack, TEXTURE_PACK_LABELS, type TexturePack } from './tools/texture';
 
 export const MODULE_ID = 'dh-cartography-draw';
@@ -86,6 +87,9 @@ function brushFor(toolName: string): Brush | null {
     if (toolName === 'road' || toolName === 'river') {
         return { type: 'path', kind: toolName };
     }
+    if (toolName === 'room') {
+        return { type: 'room', floor: DEFAULT_FLOOR };
+    }
     if (isBiomeKind(toolName)) {
         return { type: 'region', biome: toolName };
     }
@@ -135,6 +139,8 @@ function setupDrawLayer(): void {
     const controller = new CartographyController(renderer, new FoundrySceneStore(activeScene), new FoundryWallEmitter(activeScene), () =>
         foundry.utils.randomID(),
     );
+    const gridSize = canvas.grid?.size ?? 0;
+    controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.load();
 
     const st: DrawState = {
@@ -262,7 +268,9 @@ Hooks.on('getSceneControlButtons', (controls) => {
     BIOMES.forEach((biome, i) => {
         tools[biome] = { name: biome, order: i + 2, title: BIOME_TITLES[biome], icon: BIOME_ICONS[biome] };
     });
-    const editOrder = BIOMES.length + 2;
+    const roomOrder = BIOMES.length + 2;
+    tools['room'] = { name: 'room', order: roomOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Room', icon: 'fa-solid fa-vector-square' };
+    const editOrder = roomOrder + 1;
     tools['edit'] = { name: 'edit', order: editOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Edit', icon: 'fa-solid fa-arrows-up-down-left-right' };
     const eraseOrder = editOrder + 1;
     tools['erase'] = { name: 'erase', order: eraseOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Erase', icon: 'fa-solid fa-eraser' };

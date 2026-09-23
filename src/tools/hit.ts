@@ -7,14 +7,14 @@
  */
 import { distanceToPolyline, pointInPolygon } from '../geometry/hit';
 import type { Point } from '../geometry/spline';
-import { isRegion, isStroke, type Feature } from './feature';
+import { isRegion, isRoom, isStroke, type Feature } from './feature';
 import { regionOutline } from './region';
 
 /** Extra tolerance (scene px) so thin paths/strokes are still comfortably clickable. */
 const PATH_HIT_PADDING = 4;
 
 export function featureHit(feature: Feature, pt: Point): boolean {
-    if (isRegion(feature)) {
+    if (isRegion(feature) || isRoom(feature)) {
         return pointInPolygon(pt, regionOutline(feature.points));
     }
     if (isStroke(feature)) {

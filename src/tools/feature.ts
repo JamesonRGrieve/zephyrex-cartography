@@ -6,9 +6,10 @@
  */
 import { parsePath, type CartographyPath } from './path';
 import { parseRegion, type RegionFeature } from './region';
+import { parseRoom, type RoomFeature } from './room';
 import { parseStroke, type StrokeFeature } from './stroke';
 
-export type Feature = CartographyPath | RegionFeature | StrokeFeature;
+export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature;
 
 export function isRegion(f: Feature): f is RegionFeature {
     return f.type === 'region';
@@ -16,6 +17,10 @@ export function isRegion(f: Feature): f is RegionFeature {
 
 export function isStroke(f: Feature): f is StrokeFeature {
     return f.type === 'stroke';
+}
+
+export function isRoom(f: Feature): f is RoomFeature {
+    return f.type === 'room';
 }
 
 /** Parse the mixed scene-flag blob into validated features (paths + regions + strokes). */
@@ -26,7 +31,7 @@ export function parseFeatures(raw: unknown): Feature[] {
     }
     const out: Feature[] = [];
     for (const entry of raw) {
-        const feature = parsePath(entry) ?? parseRegion(entry) ?? parseStroke(entry);
+        const feature = parsePath(entry) ?? parseRegion(entry) ?? parseStroke(entry) ?? parseRoom(entry);
         if (feature) {
             out.push(feature);
         }

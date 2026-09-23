@@ -56,6 +56,17 @@ const swath: Feature = {
     ],
     radius: 15,
 };
+const room: Feature = {
+    type: 'room',
+    id: 'rm',
+    floor: 'dirt',
+    points: [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: 0, y: 100 },
+    ],
+};
 
 describe('GraphicsFeatureRenderer', () => {
     it('textures a road ribbon (bundled tile)', () => {
@@ -95,6 +106,14 @@ describe('GraphicsFeatureRenderer', () => {
         expect(s.textured).toHaveLength(1);
         expect(s.textured[0]?.textureFile).toBe('forest.jpg');
         expect(s.textured[0]?.feather).toBe(true);
+    });
+
+    it('renders a room floor textured with a crisp (unfeathered) edge', () => {
+        const s = new FakeSurface();
+        new GraphicsFeatureRenderer(s).set('rm', room);
+        expect(s.textured).toHaveLength(1);
+        expect(s.textured[0]?.textureFile).toBe('dirt.jpg');
+        expect(s.textured[0]?.feather).toBe(false);
     });
 
     it('feathers region edges but keeps paths crisp', () => {

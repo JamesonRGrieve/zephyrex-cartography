@@ -83,6 +83,21 @@ describe('CartographyController', () => {
         expect(s.saved[0]?.[0]?.type).toBe('stroke');
     });
 
+    it('commits a grid-snapped room', async () => {
+        const { c, s } = make();
+        c.grid = { size: 100, originX: 0, originY: 0 };
+        c.begin({ type: 'room', floor: 'dirt' }, 'click');
+        c.addPoint({ x: 12, y: 8 });
+        c.addPoint({ x: 105, y: 3 });
+        c.addPoint({ x: 98, y: 96 });
+        await c.commit();
+        const saved = s.saved[s.saved.length - 1]?.[0];
+        expect(saved?.type).toBe('room');
+        expect(saved?.points[0]).toEqual({ x: 0, y: 0 });
+        expect(saved?.points[1]).toEqual({ x: 100, y: 0 });
+        expect(saved?.points[2]).toEqual({ x: 100, y: 100 });
+    });
+
     it('commits a biome region', async () => {
         const { c, r, s } = make();
         c.begin({ type: 'region', biome: 'water' }, 'click');

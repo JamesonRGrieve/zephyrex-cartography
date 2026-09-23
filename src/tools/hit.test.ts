@@ -4,6 +4,7 @@ import type { Feature } from './feature';
 import { featureHit } from './hit';
 import { makePath } from './path';
 import { makeRegion } from './region';
+import { makeRoom } from './room';
 import { makeStroke } from './stroke';
 
 describe('featureHit', () => {
@@ -50,5 +51,17 @@ describe('featureHit', () => {
         expect(stroke).not.toBeNull();
         expect(featureHit(stroke as Feature, { x: 50, y: 18 })).toBe(true);
         expect(featureHit(stroke as Feature, { x: 50, y: 60 })).toBe(false);
+    });
+
+    it('hits a room when the point is inside its floor', () => {
+        const room = makeRoom('rm', 'dirt', [
+            { x: 0, y: 0 },
+            { x: 100, y: 0 },
+            { x: 100, y: 100 },
+            { x: 0, y: 100 },
+        ]);
+        expect(room).not.toBeNull();
+        expect(featureHit(room as Feature, { x: 50, y: 50 })).toBe(true);
+        expect(featureHit(room as Feature, { x: 200, y: 50 })).toBe(false);
     });
 });

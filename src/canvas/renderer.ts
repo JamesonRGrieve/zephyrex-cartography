@@ -61,8 +61,8 @@ interface Filled {
     readonly feather: boolean;
 }
 
-/** Fill descriptor for a biome area (region or brush stroke) — textured, tinted, feathered. */
-function biomeFilled(biome: BiomeKind, outline: number[]): Filled {
+/** Fill descriptor for a biome area (region, brush stroke, or room floor) — textured, tinted. */
+function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean): Filled {
     const style = BIOME_STYLES[biome];
     const texture = BIOME_TEXTURE[biome];
     return {
@@ -71,17 +71,21 @@ function biomeFilled(biome: BiomeKind, outline: number[]): Filled {
         alpha: texture !== null ? TEXTURE_ALPHA : style.alpha,
         texture,
         tint: BIOME_TINT[biome],
-        feather: true,
+        feather,
     };
 }
 
 function outlineAndStyle(feature: Feature): Filled {
     if (feature.type === 'region') {
-        return biomeFilled(feature.biome, regionOutline(feature.points));
+        return biomeFilled(feature.biome, regionOutline(feature.points), true);
     }
     if (feature.type === 'stroke') {
         const halfWidths = feature.points.map(() => feature.radius);
-        return biomeFilled(feature.biome, ribbonOutline(buildRibbon(feature.points, halfWidths, RIBBON_SAMPLES, false)));
+        return biomeFilled(feature.biome, ribbonOutline(buildRibbon(feature.points, halfWidths, RIBBON_SAMPLES, false)), true);
+    }
+    if (feature.type === 'room') {
+        // Crisp floor edge — walls (a later phase) cover the boundary.
+        return biomeFilled(feature.floor, regionOutline(feature.points), false);
     }
     const pathStyle = STYLES[feature.kind];
     const pathTexture = PATH_TEXTURE[feature.kind];

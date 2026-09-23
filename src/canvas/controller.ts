@@ -7,6 +7,7 @@
  * and region (biome).
  */
 import { nearestVertex } from '../geometry/hit';
+import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint } from '../tools/edit';
@@ -14,6 +15,7 @@ import type { Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import { DEFAULT_HALF_WIDTH, makePath, type CartographyPath, type PathKind } from '../tools/path';
 import { makeRegion, type BiomeKind } from '../tools/region';
+import { makeRoom } from '../tools/room';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { FeatureRenderer } from './renderer';
 
@@ -29,7 +31,8 @@ export interface WallEmitter {
 export type Brush =
     | { readonly type: 'path'; readonly kind: PathKind }
     | { readonly type: 'region'; readonly biome: BiomeKind }
-    | { readonly type: 'stroke'; readonly biome: BiomeKind };
+    | { readonly type: 'stroke'; readonly biome: BiomeKind }
+    | { readonly type: 'room'; readonly floor: BiomeKind };
 
 /** Cap on retained undo snapshots — bounds memory on a long editing session. */
 const MAX_HISTORY = 50;
@@ -62,6 +65,8 @@ export class CartographyController {
     halfWidth = DEFAULT_HALF_WIDTH;
     /** Radius (scene px) applied to newly painted terrain strokes. */
     brushRadius = DEFAULT_BRUSH_RADIUS;
+    /** Scene grid for snapping room vertices; null disables snapping. */
+    grid: Grid | null = null;
     /** Whether committed paths also emit Foundry walls along their centerline. */
     emitWalls = false;
 
@@ -90,7 +95,9 @@ export class CartographyController {
         if (!this.session) {
             return;
         }
-        this.session.addPoint(p);
+        // Rooms snap to the scene grid so their walls meet cleanly; other tools stay freeform.
+        const point = this.grid && this.brush?.type === 'room' && this.session.mode === 'click' ? snapToGrid(p, this.grid) : p;
+        this.session.addPoint(point);
         const preview = this.buildFeature('__preview__');
         if (preview) {
             this.renderer.preview(preview);
@@ -319,6 +326,9 @@ export class CartographyController {
         }
         if (this.brush.type === 'region') {
             return makeRegion(id, this.brush.biome, pts);
+        }
+        if (this.brush.type === 'room') {
+            return makeRoom(id, this.brush.floor, pts);
         }
         return makeStroke(id, this.brush.biome, pts, this.brushRadius);
     }

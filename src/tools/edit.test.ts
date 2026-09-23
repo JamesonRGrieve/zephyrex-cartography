@@ -4,6 +4,7 @@ import { deletePoint, movePoint } from './edit';
 import type { Feature } from './feature';
 import { makePath } from './path';
 import { makeRegion } from './region';
+import { makeRoom } from './room';
 import { makeStroke } from './stroke';
 
 function road(): Feature {
@@ -118,6 +119,33 @@ describe('editing a brush stroke', () => {
     it('deletes a stroke vertex until only two remain', () => {
         const d = deletePoint(stroke(), 1);
         expect(d?.points).toHaveLength(2);
+        expect(deletePoint(d as Feature, 0)).toBeNull();
+    });
+});
+
+describe('editing a room', () => {
+    function room(): Feature {
+        const r = makeRoom('rm', 'dirt', [
+            { x: 0, y: 0 },
+            { x: 100, y: 0 },
+            { x: 100, y: 100 },
+            { x: 0, y: 100 },
+        ]);
+        if (!r) {
+            throw new Error('fixture');
+        }
+        return r;
+    }
+
+    it('moves a room vertex, preserving type and floor', () => {
+        const moved = movePoint(room(), 2, { x: 120, y: 120 });
+        expect(moved?.type).toBe('room');
+        expect(moved?.points[2]).toEqual({ x: 120, y: 120 });
+    });
+
+    it('deletes a room vertex but refuses to drop below three', () => {
+        const d = deletePoint(room(), 0);
+        expect(d?.points).toHaveLength(3);
         expect(deletePoint(d as Feature, 0)).toBeNull();
     });
 });
