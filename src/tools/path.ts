@@ -7,7 +7,7 @@
  */
 import type { Point } from '../geometry/spline';
 
-export const FLAG_SCOPE = 'dh-cartography-draw';
+/** Scene-flag key (under the module-id scope) holding the persisted feature blob. */
 export const FLAG_KEY = 'features';
 
 export type PathKind = 'road' | 'river';

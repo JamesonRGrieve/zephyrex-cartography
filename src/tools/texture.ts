@@ -7,11 +7,12 @@
  * Pure data + a tiny URL helper; unit-tested. The concrete PIXI tiling lives at
  * the Foundry boundary.
  */
+import { MODULE_ID } from '../module-id';
 import type { PathKind } from './path';
 import type { BiomeKind } from './region';
 
 /** Foundry serves a module's files under this path; textures live beside the code. */
-const TEXTURE_BASE = 'modules/dh-cartography-draw/assets/textures';
+const TEXTURE_BASE = `modules/${MODULE_ID}/assets/textures`;
 
 /** Bundled texture packs the GM can choose between (see assets/textures/PACKS.json). */
 export type TexturePack = 'polyhaven' | 'ambientcg';

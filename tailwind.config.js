@@ -5,7 +5,7 @@ export default {
     // Utilities are namespaced (tw-) and scoped to the plugin's HUD root so they
     // never leak into Foundry's own chrome.
     prefix: 'tw-',
-    important: '.cartography-draw',
+    important: '.zephyrex-cartography',
     theme: { extend: {} },
     plugins: [],
 };

@@ -1,63 +1,49 @@
-# Zephyrex Cartography — Draw (`dh-cartography-draw`)
+# Zephyrex Cartography
 
-In-Foundry map painting for Foundry VTT v13+: draw **roads, rivers, and paths**
-as editable splines with width, texture, and optional generated walls. The
-open, AGPL answer to the paid path/paint tools (FA-Nexus, MapForge).
+Scene authoring for Foundry VTT v13+. Paint terrain, draw roads and rivers, and
+build structures directly on the canvas. Walls, doors and lights come out as
+real Foundry documents, so vision, movement and lighting just work.
 
-Companion to the **Zephyrex Cartography** asset library (`dh-cartography`, the
-stamp-tile browser); this module owns the *interactive drawing* surface.
+It's an open (AGPL) alternative to the paid map tools (FA-Nexus, MapForge,
+Dungeondraft, Inkarnate) and runs entirely inside Foundry.
 
-> **Status — v0.1.0 scaffold.** The strict-TypeScript foundation, the pure
-> geometry core (freehand simplify → Catmull-Rom → offset ribbon), and the full
-> code-quality gate suite are in place and green. The Foundry canvas layer +
-> path tool that turn a click/freehand stream into a rendered textured ribbon
-> are the next stage.
+## Features
 
-## Quality bar
+- **Terrain:** 13 biomes as smoothed regions or freehand brush strokes, with
+  soft edges and tiled textures from swappable texture packs.
+- **Roads and rivers:** smooth, variable-width paths. Rivers taper at the ends.
+  Paths can optionally emit walls along their centreline.
+- **Structures:** grid-snapped rooms with floors. Each room gets native walls
+  and a light, and a door tool turns any wall segment into a Foundry door.
+  Editing a room keeps its walls, doors and light in sync.
+- **Editing:** drag control points, delete points, erase, undo/redo, reorder.
 
-Mirrors the `wh40k-rpg` system's bar (`foundry-system`), scoped to the universal
-code-quality gates — every one green today, run by `pnpm check` and pre-commit:
+In progress: structure-aware stamps (auto occlusion walls, light-emitting and
+door stamps), multi-level scenes with stairs, and enterable buildings that open
+into linked interior scenes.
 
-`eslint` (strong type-aware config) · `biome` · `prettier` · `stylelint` ·
-`tsc --noEmit` (all strict flags: `noUncheckedIndexedAccess`,
-`exactOptionalPropertyTypes`, …) · test typecheck · `vitest` ·
-`type-coverage --strict` · `knip` · `dependency-cruiser` (layer rules) ·
-`size-limit`.
+## Asset packs
 
-Staged next: the auto-flipping ratchet wrappers (`lint:ratchet`, `strict:ratchet`,
-`type-coverage:ratchet`, `knip:ratchet`, `deps:ratchet`, `symmetry:ratchet`,
-`unconsumed:ratchet`, `important:ratchet`, `lockfile:validate`), i18n typed-key
-codegen, the parallel husky fan-out, and CI. System-content gates (compendium
-packs, per-system Tailwind theming, icon/hook audits) are N/A for a canvas
-plugin and are added if that surface ever appears.
+Art isn't bundled with this module. Stamps and terrain textures come from asset
+pack modules such as `zephyrex-cartography-assets`. Packs follow a versioned
+schema defined here, so anyone can publish their own.
 
-AGPL-3.0-or-later; SPDX header on every source file.
+## Install
 
-## Architecture
+Add the module to your Foundry `Data/modules` folder (built output in `dist/`),
+then enable it in your world. Requires Foundry VTT v13 or later.
 
-Layered inner → outer; inner layers never import outer ones (enforced by
-`dependency-cruiser`):
-
-```
-geometry/  pure 2D math (spline, simplify, offset ribbon) — unit-tested
-tools/     path/paint state, Foundry-agnostic
-canvas/    the Foundry v14 InteractionLayer + rendering (PIXI)
-cartography-draw.ts   entry: registers the layer + scene-control tools
-```
-
-## Develop
+## Development
 
 ```bash
-pnpm install     # pnpm 11 (see packageManager); allowlisted git build for fvtt-types
-pnpm check       # the full green gate aggregate
-pnpm build       # Vite → dist/cartography-draw.{js,css}
-pnpm test        # Vitest
-pnpm test:e2e    # Playwright vs real Foundry (opt-in; staged)
+pnpm install
+pnpm gate    # the full quality gate: format, lint, types, tests, ratchets, build
+pnpm build   # Vite → dist/
+pnpm test    # Vitest
 ```
 
-## Roadmap
+Contributor rules and architecture live in [CLAUDE.md](CLAUDE.md).
 
-1. **Path tool** — spline ribbon rendering (per-point width, feathered edges,
-   texture along path), editable control points, optional walls along centerline.
-2. **Texture painting** — brush → RenderTexture, blend modes, height-map masking.
-3. **Flatten & export** — render the layer to a background image.
+## License
+
+AGPL-3.0-or-later. See [LICENSE](LICENSE).

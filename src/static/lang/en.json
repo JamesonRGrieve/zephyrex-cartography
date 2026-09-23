@@ -1,0 +1,38 @@
+{
+    "ZEPHYREX-CARTOGRAPHY": {
+        "Controls": {
+            "Group": "Cartography"
+        },
+        "Tools": {
+            "Road": "Road",
+            "River": "River",
+            "Room": "Room",
+            "Door": "Toggle Door",
+            "Edit": "Edit Points",
+            "Erase": "Erase",
+            "Undo": "Undo",
+            "Redo": "Redo"
+        },
+        "Settings": {
+            "TexturePack": {
+                "Name": "Terrain texture pack",
+                "Hint": "Which bundled texture pack fills biome regions, brush strokes, room floors, and roads."
+            }
+        },
+        "Biomes": {
+            "Water": "Water",
+            "Grassland": "Grassland",
+            "Forest": "Forest",
+            "Sand": "Sand",
+            "Rock": "Rock",
+            "Snow": "Snow",
+            "Dirt": "Dirt",
+            "Lava": "Lava",
+            "Marsh": "Marsh",
+            "Ice": "Ice",
+            "Ash": "Ash",
+            "Tundra": "Tundra",
+            "Ocean": "Ocean"
+        }
+    }
+}

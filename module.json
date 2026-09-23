@@ -1,13 +1,31 @@
 {
-  "id": "dh-cartography-draw",
-  "title": "Zephyrex Cartography — Draw",
-  "description": "In-Foundry map painting: draw roads, rivers, and paths as editable splines with width, texture, and optional generated walls. AGPL companion to the Zephyrex Cartography asset library (dh-cartography).",
-  "version": "0.1.0",
-  "authors": [{ "name": "Jameson Grieve" }],
-  "compatibility": { "minimum": "13", "verified": "14" },
-  "esmodules": ["dist/cartography-draw.js"],
-  "styles": ["dist/cartography-draw.css"],
-  "license": "AGPL-3.0-or-later",
-  "url": "",
-  "flags": {}
+    "id": "zephyrex-cartography",
+    "title": "Zephyrex Cartography",
+    "description": "Standalone scene authoring for Foundry VTT: paint terrain, draw roads and rivers, and build structures (rooms, walls, doors, lights) as native Foundry documents.",
+    "version": "0.2.0",
+    "authors": [
+        {
+            "name": "Jameson Grieve"
+        }
+    ],
+    "compatibility": {
+        "minimum": "13",
+        "verified": "14"
+    },
+    "esmodules": [
+        "dist/zephyrex-cartography.js"
+    ],
+    "styles": [
+        "dist/zephyrex-cartography.css"
+    ],
+    "languages": [
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "dist/lang/en.json"
+        }
+    ],
+    "license": "AGPL-3.0-or-later",
+    "url": "https://github.com/JamesonRGrieve/zephyrex-cartography",
+    "flags": {}
 }

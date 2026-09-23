@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Architecture rules for dh-cartography-draw. Layering (inner → outer):
- *   geometry (pure math)  ←  tools (path/paint state)  ←  canvas (Foundry layer)  ←  entry
+ * Architecture rules for zephyrex-cartography. Layering (inner → outer):
+ *   geometry (pure math)  ←  tools (feature models)  ←  canvas (controller/renderer)  ←  foundry (boundary)  ←  entry
  * Inner layers must never import outer ones.
  */
 module.exports = {
@@ -15,7 +15,7 @@ module.exports = {
         {
             name: 'no-orphans',
             severity: 'warn',
-            from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)cartography-draw\\.ts$', '\\.test\\.ts$'] },
+            from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)zephyrex-cartography\\.ts$', '\\.test\\.ts$'] },
             to: {},
         },
         {

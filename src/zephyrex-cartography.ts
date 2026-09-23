@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Zephyrex Cartography — Draw: Foundry entry / runtime seam.
+ * Zephyrex Cartography: Foundry entry / runtime seam.
  *
- * All drawing logic lives in the pure, unit-tested modules (geometry, tools,
+ * All authoring logic lives in the pure, unit-tested modules (geometry, tools,
  * canvas/controller, canvas/renderer). This file is the thin glue that wires the
  * live Foundry canvas, scene, and PIXI into that logic and registers the
- * scene-control tools (road/river paths + biome regions). It is the module's
- * single Foundry boundary.
+ * scene-control tools (paths, biome regions/strokes, rooms, doors, editing). It
+ * is the module's single Foundry boundary.
  */
 import './styles/entry.css';
 import { CartographyController, type Brush } from './canvas/controller';
@@ -17,18 +17,19 @@ import { createPixiSurface } from './foundry/pixi-surface';
 import { FoundrySceneStore } from './foundry/scene-store';
 import { FoundryWallEmitter } from './foundry/walls';
 import { distance, type Point } from './geometry/spline';
+import { BIOME_TITLE_KEYS, I18N } from './i18n';
+import { MODULE_ID } from './module-id';
 import { BIOMES, isBiomeKind, type BiomeKind } from './tools/region';
 import { DEFAULT_FLOOR } from './tools/room';
 import { DEFAULT_PACK, isTexturePack, TEXTURE_PACK_LABELS, type TexturePack } from './tools/texture';
 
-export const MODULE_ID = 'dh-cartography-draw';
-
 const TEXTURE_PACK_SETTING = 'texturePack';
 
 declare global {
-    // Register the setting's type so `game.settings.get/register` are well-typed.
+    // Register the setting's type so `game.settings.get/register` are well-typed. The key must be the
+    // literal `${MODULE_ID}.${TEXTURE_PACK_SETTING}`; a mismatch fails typecheck at the get/register calls.
     interface SettingConfig {
-        'dh-cartography-draw.texturePack': string;
+        'zephyrex-cartography.texturePack': string;
     }
 }
 
@@ -70,22 +71,6 @@ const BIOME_ICONS: Record<BiomeKind, string> = {
     ash: 'fa-solid fa-smog',
     tundra: 'fa-solid fa-wind',
     ocean: 'fa-solid fa-anchor',
-};
-
-const BIOME_TITLES: Record<BiomeKind, string> = {
-    water: 'DH-CARTOGRAPHY-DRAW.Biomes.Water',
-    grassland: 'DH-CARTOGRAPHY-DRAW.Biomes.Grassland',
-    forest: 'DH-CARTOGRAPHY-DRAW.Biomes.Forest',
-    sand: 'DH-CARTOGRAPHY-DRAW.Biomes.Sand',
-    rock: 'DH-CARTOGRAPHY-DRAW.Biomes.Rock',
-    snow: 'DH-CARTOGRAPHY-DRAW.Biomes.Snow',
-    dirt: 'DH-CARTOGRAPHY-DRAW.Biomes.Dirt',
-    lava: 'DH-CARTOGRAPHY-DRAW.Biomes.Lava',
-    marsh: 'DH-CARTOGRAPHY-DRAW.Biomes.Marsh',
-    ice: 'DH-CARTOGRAPHY-DRAW.Biomes.Ice',
-    ash: 'DH-CARTOGRAPHY-DRAW.Biomes.Ash',
-    tundra: 'DH-CARTOGRAPHY-DRAW.Biomes.Tundra',
-    ocean: 'DH-CARTOGRAPHY-DRAW.Biomes.Ocean',
 };
 
 function brushFor(toolName: string): Brush | null {
@@ -261,8 +246,8 @@ Hooks.once('init', () => {
     }
     const choices: Record<string, string> = { ...TEXTURE_PACK_LABELS };
     game.settings.register(MODULE_ID, TEXTURE_PACK_SETTING, {
-        name: 'DH-CARTOGRAPHY-DRAW.Settings.TexturePack.Name',
-        hint: 'DH-CARTOGRAPHY-DRAW.Settings.TexturePack.Hint',
+        name: I18N.settings.texturePackName,
+        hint: I18N.settings.texturePackHint,
         scope: 'world',
         config: true,
         type: String,
@@ -281,24 +266,24 @@ Hooks.on('canvasReady', () => {
 Hooks.on('getSceneControlButtons', (controls) => {
     const st = state;
     const tools: Record<string, foundry.applications.ui.SceneControls.Tool> = {
-        road: { name: 'road', order: 0, title: 'DH-CARTOGRAPHY-DRAW.Tools.Road', icon: 'fa-solid fa-road' },
-        river: { name: 'river', order: 1, title: 'DH-CARTOGRAPHY-DRAW.Tools.River', icon: 'fa-solid fa-water' },
+        road: { name: 'road', order: 0, title: I18N.tools.road, icon: 'fa-solid fa-road' },
+        river: { name: 'river', order: 1, title: I18N.tools.river, icon: 'fa-solid fa-water' },
     };
     BIOMES.forEach((biome, i) => {
-        tools[biome] = { name: biome, order: i + 2, title: BIOME_TITLES[biome], icon: BIOME_ICONS[biome] };
+        tools[biome] = { name: biome, order: i + 2, title: BIOME_TITLE_KEYS[biome], icon: BIOME_ICONS[biome] };
     });
     const roomOrder = BIOMES.length + 2;
-    tools['room'] = { name: 'room', order: roomOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Room', icon: 'fa-solid fa-vector-square' };
+    tools['room'] = { name: 'room', order: roomOrder, title: I18N.tools.room, icon: 'fa-solid fa-vector-square' };
     const doorOrder = roomOrder + 1;
-    tools['door'] = { name: 'door', order: doorOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Door', icon: 'fa-solid fa-door-open' };
+    tools['door'] = { name: 'door', order: doorOrder, title: I18N.tools.door, icon: 'fa-solid fa-door-open' };
     const editOrder = doorOrder + 1;
-    tools['edit'] = { name: 'edit', order: editOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Edit', icon: 'fa-solid fa-arrows-up-down-left-right' };
+    tools['edit'] = { name: 'edit', order: editOrder, title: I18N.tools.edit, icon: 'fa-solid fa-arrows-up-down-left-right' };
     const eraseOrder = editOrder + 1;
-    tools['erase'] = { name: 'erase', order: eraseOrder, title: 'DH-CARTOGRAPHY-DRAW.Tools.Erase', icon: 'fa-solid fa-eraser' };
+    tools['erase'] = { name: 'erase', order: eraseOrder, title: I18N.tools.erase, icon: 'fa-solid fa-eraser' };
     tools['undo'] = {
         name: 'undo',
         order: eraseOrder + 1,
-        title: 'DH-CARTOGRAPHY-DRAW.Tools.Undo',
+        title: I18N.tools.undo,
         icon: 'fa-solid fa-rotate-left',
         button: true,
         onChange: (): void => {
@@ -310,7 +295,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
     tools['redo'] = {
         name: 'redo',
         order: eraseOrder + 2,
-        title: 'DH-CARTOGRAPHY-DRAW.Tools.Redo',
+        title: I18N.tools.redo,
         icon: 'fa-solid fa-rotate-right',
         button: true,
         onChange: (): void => {
@@ -322,7 +307,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
     controls[MODULE_ID] = {
         name: MODULE_ID,
         order: 100,
-        title: 'DH-CARTOGRAPHY-DRAW.Controls.Group',
+        title: I18N.controlsGroup,
         icon: 'fa-solid fa-map',
         tools,
         activeTool: 'road',

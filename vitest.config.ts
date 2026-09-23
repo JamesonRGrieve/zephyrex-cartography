@@ -12,7 +12,7 @@ export default defineConfig({
             provider: 'v8',
             reporter: ['text', 'html'],
             include: ['src/**/*.ts'],
-            exclude: ['node_modules/**', 'dist/**', '**/*.test.ts', 'src/cartography-draw.ts'],
+            exclude: ['node_modules/**', 'dist/**', '**/*.test.ts', 'src/zephyrex-cartography.ts'],
         },
     },
 });

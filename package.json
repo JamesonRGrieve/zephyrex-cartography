@@ -1,15 +1,15 @@
 {
-    "name": "dh-cartography-draw",
-    "version": "0.1.0",
+    "name": "zephyrex-cartography",
+    "version": "0.2.0",
     "private": true,
     "type": "module",
     "packageManager": "pnpm@11.1.1",
     "license": "AGPL-3.0-or-later",
-    "description": "In-Foundry road/river/path painting for Foundry VTT v13+.",
+    "description": "Standalone scene authoring for Foundry VTT v13+: terrain, roads/rivers, and native-document structures.",
     "scripts": {
         "build": "vite build",
         "watch": "vite build --watch",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json",
         "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
         "lint": "eslint src/ --ext .ts",
         "lint:fix": "eslint src/ --ext .ts --fix",
@@ -92,8 +92,8 @@
     },
     "size-limit": [
         {
-            "name": "cartography-draw.js (built ESM)",
-            "path": "dist/cartography-draw.js",
+            "name": "zephyrex-cartography.js (built ESM)",
+            "path": "dist/zephyrex-cartography.js",
             "limit": "120 kB"
         }
     ]

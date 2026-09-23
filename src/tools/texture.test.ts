@@ -34,8 +34,8 @@ describe('PATH_TEXTURE', () => {
 
 describe('textureUrl', () => {
     it('resolves a filename against the module-served path for a pack', () => {
-        expect(textureUrl('polyhaven', 'grassland.jpg')).toBe('modules/dh-cartography-draw/assets/textures/polyhaven/grassland.jpg');
-        expect(textureUrl('ambientcg', 'road.jpg')).toBe('modules/dh-cartography-draw/assets/textures/ambientcg/road.jpg');
+        expect(textureUrl('polyhaven', 'grassland.jpg')).toBe('modules/zephyrex-cartography/assets/textures/polyhaven/grassland.jpg');
+        expect(textureUrl('ambientcg', 'road.jpg')).toBe('modules/zephyrex-cartography/assets/textures/ambientcg/road.jpg');
     });
 });
 
