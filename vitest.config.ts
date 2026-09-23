@@ -8,11 +8,15 @@ export default defineConfig({
         environment: 'happy-dom',
         globals: true,
         testTimeout: 30000,
+        // Unit coverage measures the pure core. The Foundry boundary (foundry/ and
+        // the entry) is exercised by the e2e suite, which records its own source
+        // coverage against the real Foundry.
         coverage: {
             provider: 'v8',
-            reporter: ['text', 'html'],
+            reporter: ['text-summary', 'json-summary', 'html'],
+            reportsDirectory: '.coverage',
             include: ['src/**/*.ts'],
-            exclude: ['node_modules/**', 'dist/**', '**/*.test.ts', '**/*.stories.ts', 'src/zephyrex-cartography.ts'],
+            exclude: ['**/*.test.ts', '**/*.stories.ts', '**/*.d.ts', 'src/foundry/**', 'src/zephyrex-cartography.ts', 'src/canvas/test-fakes.ts'],
         },
     },
 });

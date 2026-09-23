@@ -70,7 +70,7 @@ pnpm exec lint-staged --hide-unstaged || exit 1
 echo "[pre-commit] phase 2: gate (parallel)"
 
 # Vitest is the slowest job — start it first so it overlaps the rest.
-run_bg "vitest"         ./node_modules/.bin/vitest run
+run_bg "vitest"         bash -c './node_modules/.bin/vitest run --coverage && node scripts/coverage-ratchet.mjs'
 
 # tsc passes — heaviest, several GB each.
 run_bg "typecheck"      pnpm -s typecheck

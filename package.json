@@ -23,6 +23,9 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
+        "coverage:ratchet": "node scripts/coverage-ratchet.mjs",
+        "coverage:ratchet:update": "node scripts/coverage-ratchet.mjs --update",
+        "test:coverage": "vitest run --coverage",
         "test:e2e": "playwright test -c playwright.foundry.config.ts",
         "type-coverage": "type-coverage --strict --no-detail",
         "knip": "knip",
@@ -42,7 +45,7 @@
         "deps:ratchet": "node scripts/depcruise-ratchet.mjs",
         "lockfile:validate": "node scripts/lockfile-validate.mjs",
         "check": "pnpm lint && pnpm lint:biome && pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test && pnpm type-coverage && pnpm knip && pnpm deps:check && pnpm build && pnpm size-limit",
-        "gate": "pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test && pnpm schema:check && pnpm lint:ratchet && pnpm biome:ratchet && pnpm ts:ratchet && pnpm strict:ratchet && pnpm test:typecheck:ratchet && pnpm type-coverage:ratchet && pnpm knip:ratchet && pnpm deps:ratchet && pnpm lockfile:validate && pnpm build && pnpm size-limit && pnpm build-storybook",
+        "gate": "pnpm format && pnpm stylelint && pnpm typecheck && pnpm typecheck:tests && pnpm test:coverage && pnpm coverage:ratchet && pnpm schema:check && pnpm lint:ratchet && pnpm biome:ratchet && pnpm ts:ratchet && pnpm strict:ratchet && pnpm test:typecheck:ratchet && pnpm type-coverage:ratchet && pnpm knip:ratchet && pnpm deps:ratchet && pnpm lockfile:validate && pnpm build && pnpm size-limit && pnpm build-storybook",
         "prepare": "husky"
     },
     "devDependencies": {
