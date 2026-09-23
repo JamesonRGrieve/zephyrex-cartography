@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { makePath } from './path';
 import { planDocuments } from './plan';
 import { makeRegion } from './region';
-import { makeRoom, withRoomDoors } from './room';
+import { makeRoom, withRoomDoor } from './room';
 
 const square = [
     { x: 0, y: 0 },
@@ -15,9 +15,11 @@ const square = [
 describe('planDocuments', () => {
     it('plans perimeter walls and a centre light for a room', () => {
         const room = makeRoom('r', 'dirt', square);
-        const plan = room ? planDocuments(withRoomDoors(room, [2])) : null;
+        const plan = room ? planDocuments(withRoomDoor(room, 2, { type: 'secret', state: 'locked' })) : null;
         expect(plan?.walls).toHaveLength(4);
-        expect(plan?.walls.map((w) => w.door)).toEqual(['none', 'none', 'door', 'none']);
+        expect(plan?.walls.map((w) => w.door)).toEqual(['none', 'none', 'secret', 'none']);
+        expect(plan?.walls[2]?.doorState).toBe('locked');
+        expect(plan?.walls.map((w) => w.segment)).toEqual([0, 1, 2, 3]);
         expect(plan?.lights).toHaveLength(1);
         expect(plan?.lights[0]?.x).toBe(50);
         expect(plan?.tiles).toEqual([]);

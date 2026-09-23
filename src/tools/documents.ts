@@ -8,7 +8,6 @@
  * can re-sync or delete exactly its own documents (the lifecycle rule).
  */
 import type { Point } from '../geometry/spline';
-import type { WallSpec } from '../geometry/wall';
 import type { PlacedBehaviour } from '../stamps/schema';
 import { isRecord, stringArray } from './guards';
 
@@ -34,6 +33,8 @@ export interface WallDoc {
     readonly blocks: SenseBlock;
     /** Level (elevation band) id the wall belongs to, or null for every level. */
     readonly level: string | null;
+    /** For a room wall, the perimeter segment it comes from (so a door changed in play maps back to its room door). */
+    readonly segment?: number;
 }
 
 interface LightAnimation {
@@ -111,11 +112,6 @@ export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], region
 
 export function hasDocs(docs: GeneratedDocs): boolean {
     return docs.walls.length + docs.lights.length + docs.tiles.length + docs.regions.length > 0;
-}
-
-/** A plain perimeter wall (door or not), blocking every sense, on every level. */
-export function wallDocFromSpec(spec: WallSpec, level: string | null = null): WallDoc {
-    return { a: spec.a, b: spec.b, door: spec.door ? 'door' : 'none', doorState: 'closed', blocks: BLOCKS_ALL, level };
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses the persisted generated-docs record of a scene-flag feature entry

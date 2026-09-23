@@ -43,6 +43,14 @@ export const I18N = {
         removeBlocked: key('Levels.RemoveBlocked'),
         list: key('Levels.List'),
     },
+    doors: {
+        title: key('Doors.Title'),
+        type: key('Doors.Type'),
+        state: key('Doors.State'),
+        remove: key('Doors.Remove'),
+        types: { door: key('Doors.Types.Door'), secret: key('Doors.Types.Secret') },
+        states: { closed: key('Doors.States.Closed'), open: key('Doors.States.Open'), locked: key('Doors.States.Locked') },
+    },
     regions: {
         transition: key('Regions.Transition'),
         entrance: key('Regions.Entrance'),

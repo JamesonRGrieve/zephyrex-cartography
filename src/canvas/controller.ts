@@ -22,7 +22,7 @@ import { findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLeve
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
 import { planDocuments } from '../tools/plan';
 import { makeRegion, type BiomeKind } from '../tools/region';
-import { makeRoom, withRoomDoors } from '../tools/room';
+import { type DoorSettings, doorOn, makeRoom, NEW_DOOR, type RoomDoor, type RoomFeature, withRoomDoor } from '../tools/room';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
@@ -394,12 +394,33 @@ export class CartographyController {
      */
     async applyDoorState(wallId: string, state: DoorState): Promise<boolean> {
         const feature = this.features.find((f) => f.docs.walls.includes(wallId));
+        if (feature?.type === 'room') {
+            return this.recordRoomDoorState(feature, wallId, state);
+        }
         const stamp = feature && isDoorStamp(feature) ? this.catalog.get(feature.stamp) : null;
         if (!feature || !isDoorStamp(feature) || !stamp || stampDoorState(feature) === state) {
             return false;
         }
         const index = stamp.variants.findIndex((_, i) => (effectiveProperties(stamp, i).doorState ?? 'closed') === state);
         return index >= 0 && this.setStampVariant(feature.id, index);
+    }
+
+    /**
+     * Record a room door's state changed in play, without touching its walls
+     * (the live wall already shows it). A later re-sync then keeps the door as
+     * it was left rather than resetting it.
+     */
+    private async recordRoomDoorState(room: RoomFeature, wallId: string, state: DoorState): Promise<boolean> {
+        const plan = planDocuments(room, { features: this.features, levels: this.levelList });
+        const segment = plan.walls[room.docs.walls.indexOf(wallId)]?.segment;
+        const door = segment === undefined ? null : doorOn(room, segment);
+        if (segment === undefined || !door || door.state === state) {
+            return false;
+        }
+        const next = withRoomDoor(room, segment, { type: door.type, state });
+        this.features = this.features.map((f) => (f.id === room.id ? next : f));
+        await this.store.save(this.features);
+        return true;
     }
 
     /** Switch a placed stamp to variant `index` (clamped); false if it is not a stamp or its pack is gone. */
@@ -669,14 +690,28 @@ export class CartographyController {
         return null;
     }
 
-    /** Toggle whether a room's perimeter segment is a door; re-syncs the native walls. */
+    /** Toggle whether a room's perimeter segment is a door (a new door is ordinary and closed); re-syncs the native walls. */
     async toggleDoor(id: string, index: number): Promise<boolean> {
         const f = this.getFeature(id);
         if (f?.type !== 'room') {
             return false;
         }
-        const doors = f.doors.includes(index) ? f.doors.filter((d) => d !== index) : [...f.doors, index];
-        await this.replaceFeature(id, withRoomDoors(f, doors));
+        return this.setRoomDoor(id, index, doorOn(f, index) ? null : NEW_DOOR);
+    }
+
+    /** The door on a room's perimeter segment, or null. */
+    roomDoor(id: string, index: number): RoomDoor | null {
+        const f = this.getFeature(id);
+        return f?.type === 'room' ? doorOn(f, index) : null;
+    }
+
+    /** Put a door with `settings` on a room's perimeter segment, or clear it with null; re-syncs the native walls. */
+    async setRoomDoor(id: string, index: number, settings: DoorSettings | null): Promise<boolean> {
+        const f = this.getFeature(id);
+        if (f?.type !== 'room' || index < 0 || index >= f.points.length) {
+            return false;
+        }
+        await this.replaceFeature(id, withRoomDoor(f, index, settings));
         return true;
     }
 

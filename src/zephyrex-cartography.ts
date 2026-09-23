@@ -13,6 +13,7 @@ import { type Brush, CartographyController } from './canvas/controller';
 import { IDLE, type Mode, modeForTool } from './canvas/modes';
 import { GraphicsFeatureRenderer } from './canvas/renderer';
 import { FoundryDocumentSink } from './foundry/documents';
+import { registerDoorRuntime } from './foundry/door-runtime';
 import { createItemPilesContainers } from './foundry/item-piles';
 import { registerLevelRuntime, regionName } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
@@ -45,6 +46,8 @@ const packs = registerPackRuntime(() => state?.controller ?? null);
 const levels = registerLevelRuntime(() => state?.controller ?? null);
 
 registerSubmapRuntime(() => state?.controller ?? null, packs.catalog);
+
+const doors = registerDoorRuntime(() => state?.controller ?? null);
 
 // Newly loaded packs or another texture set re-render the layer.
 packs.onChange(() => {
@@ -127,8 +130,11 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
             }
             return;
         case 'door': {
+            // A plain wall becomes a door; an existing door opens its panel (type, state, remove).
             const seg = st.controller.pickWallSegment(pt, WALL_PICK_TOL);
-            if (seg) {
+            if (seg && st.controller.roomDoor(seg.id, seg.index)) {
+                doors.edit(seg.id, seg.index);
+            } else if (seg) {
                 void st.controller.toggleDoor(seg.id, seg.index);
             }
             return;

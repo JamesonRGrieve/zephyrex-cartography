@@ -103,6 +103,40 @@ describe('CartographyController', () => {
         expect(doorCount).toBe(0);
     });
 
+    it('sets a room door type and state, and refuses segments the room lacks', async () => {
+        const { c, d } = make();
+        c.begin({ type: 'room', floor: 'dirt' }, 'click');
+        c.addPoint({ x: 0, y: 0 });
+        c.addPoint({ x: 100, y: 0 });
+        c.addPoint({ x: 100, y: 100 });
+        await c.commit();
+        expect(await c.setRoomDoor('p1', 1, { type: 'secret', state: 'locked' })).toBe(true);
+        expect(c.roomDoor('p1', 1)).toEqual({ segment: 1, type: 'secret', state: 'locked' });
+        expect(d.walls[d.walls.length - 1]?.[1]).toMatchObject({ door: 'secret', doorState: 'locked' });
+        expect(await c.setRoomDoor('p1', 7, { type: 'door', state: 'closed' })).toBe(false);
+        expect(await c.setRoomDoor('nope', 0, null)).toBe(false);
+        expect(c.roomDoor('nope', 0)).toBeNull();
+    });
+
+    it('records a room door opened in play without recreating its walls', async () => {
+        const { c, d, s } = make();
+        c.begin({ type: 'room', floor: 'dirt' }, 'click');
+        c.addPoint({ x: 0, y: 0 });
+        c.addPoint({ x: 100, y: 0 });
+        c.addPoint({ x: 100, y: 100 });
+        await c.commit();
+        await c.toggleDoor('p1', 1);
+        const doorWall = c.getFeature('p1')?.docs.walls[1] ?? '';
+        const batches = d.walls.length;
+        expect(await c.applyDoorState(doorWall, 'open')).toBe(true);
+        expect(c.roomDoor('p1', 1)?.state).toBe('open');
+        expect(d.walls.length).toBe(batches);
+        expect(s.last()[0]?.type === 'room' ? s.last()[0] : null).toMatchObject({ doors: [{ segment: 1, state: 'open' }] });
+        expect(await c.applyDoorState(doorWall, 'open')).toBe(false);
+        const plainWall = c.getFeature('p1')?.docs.walls[0] ?? '';
+        expect(await c.applyDoorState(plainWall, 'open')).toBe(false);
+    });
+
     it('commits a biome region', async () => {
         const { c, r, s } = make();
         c.begin({ type: 'region', biome: 'water' }, 'click');

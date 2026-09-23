@@ -126,6 +126,7 @@ describe('renderBrowser', () => {
         scale.value = 'exterior';
         scale.dispatchEvent(new Event('change'));
         expect(m.state.scale).toBe('exterior');
+        expect(m.root.querySelector<HTMLSelectElement>('#zc-stamp-scale')?.value).toBe('exterior');
         const search = m.root.querySelector<HTMLInputElement>('#zc-stamp-search');
         search?.focus();
         if (search) {

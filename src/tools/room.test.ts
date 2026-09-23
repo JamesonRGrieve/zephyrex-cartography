@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { NO_DOCS } from './documents';
 import { withDocs } from './feature';
-import { DEFAULT_FLOOR, makeRoom, parseRoom, roomLight, roomWalls, withRoomDoors, withRoomPoints } from './room';
+import { DEFAULT_FLOOR, doorOn, makeRoom, NEW_DOOR, parseRoom, roomLight, roomWalls, withRoomDoor, withRoomPoints } from './room';
 
 const pts = [
     { x: 0, y: 0 },
@@ -42,18 +42,30 @@ describe('withRoomPoints', () => {
 });
 
 describe('doors + roomWalls', () => {
-    it('flags door segments in the generated walls', () => {
+    it('carries each segment and the door on it into the generated walls', () => {
         const r = makeRoom('r', 'dirt', pts); // 4 points → 4 perimeter segments
-        const withDoor = r ? withRoomDoors(r, [1]) : null;
+        const withDoor = r ? withRoomDoor(r, 1, { type: 'secret', state: 'locked' }) : null;
         const walls = withDoor ? roomWalls(withDoor) : [];
         expect(walls).toHaveLength(4);
-        expect(walls[1]?.door).toBe(true);
-        expect(walls[0]?.door).toBe(false);
+        expect(walls[1]?.door).toEqual({ segment: 1, type: 'secret', state: 'locked' });
+        expect(walls[0]?.door).toBeNull();
+        expect(walls.map((w) => w.segment)).toEqual([0, 1, 2, 3]);
     });
 
-    it('drops door indices that no longer exist when the room shrinks', () => {
+    it('replaces, reads and clears doors, keeping them in segment order', () => {
         const r = makeRoom('r', 'dirt', pts);
-        const withDoor = r ? withRoomDoors(r, [3]) : null; // door on the 4th segment
+        const two = r ? withRoomDoor(withRoomDoor(r, 2, NEW_DOOR), 0, NEW_DOOR) : null;
+        expect(two?.doors.map((d) => d.segment)).toEqual([0, 2]);
+        const opened = two ? withRoomDoor(two, 2, { type: 'door', state: 'open' }) : null;
+        expect(opened ? doorOn(opened, 2) : null).toEqual({ segment: 2, type: 'door', state: 'open' });
+        const cleared = opened ? withRoomDoor(opened, 0, null) : null;
+        expect(cleared?.doors.map((d) => d.segment)).toEqual([2]);
+        expect(cleared ? doorOn(cleared, 0) : 'x').toBeNull();
+    });
+
+    it('drops doors on segments that no longer exist when the room shrinks', () => {
+        const r = makeRoom('r', 'dirt', pts);
+        const withDoor = r ? withRoomDoor(r, 3, NEW_DOOR) : null; // door on the 4th segment
         const shrunk = withDoor ? withRoomPoints(withDoor, pts.slice(0, 3)) : null; // now 3 segments
         expect(shrunk?.doors).toEqual([]);
     });
@@ -92,8 +104,19 @@ describe('parseRoom', () => {
         expect(parseRoom({ type: 'room', id: 'a', floor: 'sand', points: pts })?.docs).toEqual(NO_DOCS);
     });
 
-    it('parses door indices', () => {
-        expect(parseRoom({ type: 'room', id: 'a', floor: 'dirt', points: pts, doors: [0, 2] })?.doors).toEqual([0, 2]);
+    it('parses doors, reading bare indices (the original format) as ordinary closed doors', () => {
+        const doors = parseRoom({
+            type: 'room',
+            id: 'a',
+            floor: 'dirt',
+            points: pts,
+            doors: [0, { segment: 2, type: 'secret', state: 'open' }, { segment: 3, type: 'portal', state: 'ajar' }, { segment: -1 }, 'x'],
+        })?.doors;
+        expect(doors).toEqual([
+            { segment: 0, type: 'door', state: 'closed' },
+            { segment: 2, type: 'secret', state: 'open' },
+            { segment: 3, type: 'door', state: 'closed' },
+        ]);
     });
 
     it('rejects non-rooms, unknown floors, and too-few points', () => {

@@ -7,7 +7,7 @@
             "Road": "Road",
             "River": "River",
             "Room": "Room",
-            "Door": "Toggle Door",
+            "Door": "Doors (click a wall to add a door, click a door to edit it)",
             "Edit": "Edit Points",
             "Erase": "Erase",
             "Undo": "Undo",
@@ -29,6 +29,21 @@
             "Empty": "This scene has no levels yet. Everything drawn shows on every level until you add one.",
             "RemoveBlocked": "Remove or move this level's features before removing it.",
             "List": "Scene levels, top to bottom"
+        },
+        "Doors": {
+            "Title": "Door",
+            "Type": "Door type",
+            "State": "Door state",
+            "Remove": "Remove door",
+            "Types": {
+                "Door": "Door",
+                "Secret": "Secret door"
+            },
+            "States": {
+                "Closed": "Closed",
+                "Open": "Open",
+                "Locked": "Locked"
+            }
         },
         "Submap": {
             "Title": "Interior",

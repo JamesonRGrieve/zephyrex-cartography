@@ -217,8 +217,17 @@ cuts it out. The stretch is a door if either room marks it. When a room is
 added, moved or removed, only the neighbours whose planned walls change are
 re-synced.
 
-Follow-ups: room nesting; per-door type/state UI; floor/wall materials beyond
-biomes; per-point path width; Scene Regions from biomes.
+**Room doors [done]:** each room door has a Foundry type (door, secret) and
+state (closed, open, locked). A bare segment index, the original format,
+parses as a closed door.
+- The door tool turns a wall into a door, and clicking an existing door opens
+  the door panel to set type and state or remove it.
+- A door changed in play is recorded on its room without recreating walls, so
+  later re-syncs keep it as left. Each room wall doc carries its perimeter
+  `segment` for that mapping.
+
+Follow-ups: room nesting; floor/wall materials beyond biomes; per-point path
+width; Scene Regions from biomes.
 
 **Generative map builder [intent — last]:** build real maps
 *declaratively* with this module's own tools, not by generating images. A

@@ -8,15 +8,15 @@
  * (the other features and the levels): the declarative-first rule.
  */
 import { RIBBON_SAMPLES } from '../geometry/ribbon';
-import { catmullRom, type Point } from '../geometry/spline';
-import { cutSegment, perimeterSegments, splitSegment } from '../geometry/wall';
+import { catmullRom, distanceToSegment, type Point } from '../geometry/spline';
+import { cutSegment, perimeterSegments, type Segment, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
-import { BLOCKS_ALL, type LightDoc, type RegionDoc, type SenseBlock, type TileDoc, type WallDoc, wallDocFromSpec } from './documents';
+import { BLOCKS_ALL, type LightDoc, type RegionDoc, type SenseBlock, type TileDoc, type WallDoc } from './documents';
 import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
 import type { Feature } from './feature';
 import { adjacentLevel, findLevel, levelElevation, type Level } from './levels';
 import type { CartographyPath } from './path';
-import { roomLight, roomWalls, type RoomFeature } from './room';
+import { roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 
 export interface DocumentPlan {
@@ -221,6 +221,11 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
     };
 }
 
+/** A stretch of room wall, as a door if `door` is set; tagged with the perimeter segment it comes from. */
+function roomWallDoc(part: Segment, door: RoomDoor | null, segment: number, level: string | null): WallDoc {
+    return { a: part.a, b: part.b, door: door?.type ?? 'none', doorState: door?.state ?? 'closed', blocks: BLOCKS_ALL, level, segment };
+}
+
 /**
  * A room's perimeter walls, sharing edges with its neighbours on the same floor
  * without doubling them:
@@ -237,13 +242,18 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
     const here = order.get(room.id) ?? Number.POSITIVE_INFINITY;
     const rooms = sameFloor.filter((f): f is RoomFeature => f.type === 'room');
     const owned = rooms.filter((r) => (order.get(r.id) ?? 0) < here).flatMap((r) => perimeterSegments(r.points));
-    const laterDoors = rooms.filter((r) => (order.get(r.id) ?? 0) > here).flatMap((r) => roomWalls(r).filter((w) => w.door));
+    const laterDoors = rooms.filter((r) => (order.get(r.id) ?? 0) > here).flatMap((r) => roomWalls(r).filter((w) => w.door !== null));
     const cuts = [...doorOpenings(sameFloor), ...owned];
+    /** The later room's door lying over a covered stretch. */
+    const coveringDoor = (part: Segment): RoomDoor | null => {
+        const mid = { x: (part.a.x + part.b.x) / 2, y: (part.a.y + part.b.y) / 2 };
+        return laterDoors.find((w) => distanceToSegment(mid, w.a, w.b) <= OPENING_TOLERANCE)?.door ?? null;
+    };
     return {
-        walls: roomWalls(room).flatMap((spec) =>
-            cutSegment(spec, cuts, OPENING_TOLERANCE).flatMap((piece) =>
+        walls: roomWalls(room).flatMap((wall) =>
+            cutSegment(wall, cuts, OPENING_TOLERANCE).flatMap((piece) =>
                 splitSegment(piece, laterDoors, OPENING_TOLERANCE).map((part) =>
-                    wallDocFromSpec({ a: part.a, b: part.b, door: spec.door || part.covered }, floor.level),
+                    roomWallDoc(part, wall.door ?? (part.covered ? coveringDoor(part) : null), wall.segment, floor.level),
                 ),
             ),
         ),

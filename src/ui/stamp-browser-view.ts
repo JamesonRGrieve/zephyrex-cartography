@@ -60,9 +60,9 @@ function labelledSelect<T extends string>(
     for (const option of options) {
         const node = el('option', '', option);
         node.value = option;
-        node.selected = option === value;
         select.append(node);
     }
+    select.value = value ?? '';
     select.addEventListener('change', () => {
         onChange(options.find((o) => o === select.value) ?? null);
     });

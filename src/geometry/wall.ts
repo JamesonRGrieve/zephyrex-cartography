@@ -12,11 +12,6 @@ export interface Segment {
     readonly b: Point;
 }
 
-/** A wall segment plus whether it is a door (drives WallDocument.door at the boundary). */
-export interface WallSpec extends Segment {
-    readonly door: boolean;
-}
-
 /** Edge segments of a closed polygon (n points → n segments, including the closing edge). */
 export function perimeterSegments(points: readonly Point[]): Segment[] {
     const n = points.length;
