@@ -3,15 +3,17 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import type { BiomeKind } from '../tools/biome';
 import { parseSizePx } from '../tools/size-input';
+import { parseCostInput } from '../tools/terrain-cost';
 import { renderPaintPanel, type PaintChoice, type PaintLabels } from './paint-panel-view';
 
 export interface PaintArgs {
     readonly choices: readonly PaintChoice[];
     readonly biome: BiomeKind;
     readonly radius: number;
+    readonly movementCost: number;
 }
 
-const LABELS: PaintLabels = { texture: 'Texture', size: 'Brush size (px)' };
+const LABELS: PaintLabels = { texture: 'Texture', size: 'Brush size (px)', movementCost: 'Movement cost (×)' };
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
 export function mountPaintPanel(args: PaintArgs): HTMLElement {
@@ -19,9 +21,18 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
     windowEl.className = 'zephyrex-cartography zc-story-window';
     const root = document.createElement('div');
     windowEl.append(root);
-    let { biome, radius } = args;
+    let { biome, radius, movementCost } = args;
     const render = (): void => {
-        renderPaintPanel(root, { choices: args.choices, biome, radius }, LABELS, {
+        renderPaintPanel(root, { choices: args.choices, biome, radius, movementCost }, LABELS, {
+            setMovementCost: (typed) => {
+                const cost = parseCostInput(typed);
+                if (cost === null) {
+                    return false;
+                }
+                movementCost = cost;
+                render();
+                return true;
+            },
             pick: (picked) => {
                 biome = picked;
                 render();
@@ -60,7 +71,7 @@ const meta: Meta<PaintArgs> = {
     title: 'Terrain/Paint Panel',
     excludeStories: ['mountPaintPanel'],
     render: mountPaintPanel,
-    args: { choices: TEXTURED, biome: 'grassland', radius: 25 },
+    args: { choices: TEXTURED, biome: 'grassland', radius: 25, movementCost: 1 },
 };
 
 export default meta;
@@ -71,6 +82,10 @@ export const Grassland: Story = {};
 
 export const WaterWithAWideBrush: Story = {
     args: { biome: 'water', radius: 120 },
+};
+
+export const DifficultMarsh: Story = {
+    args: { biome: 'water', movementCost: 2 },
 };
 
 export const NoTextureSet: Story = {

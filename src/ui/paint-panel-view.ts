@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * The paint tool's panel: pick the texture to paint with from a swatch grid,
- * and the brush size for a freehand stroke. A swatch shows the texture from
+ * the brush size for a freehand stroke, and what crossing the painted ground
+ * costs (difficult terrain). A swatch shows the texture from
  * the active set, or the terrain's flat colour where the set has none (water
  * is always a tint). A pure function from the panel state to elements;
  * unit-tested under happy-dom.
@@ -23,17 +24,22 @@ export interface PaintPanel {
     readonly biome: BiomeKind;
     /** Brush radius, scene px. */
     readonly radius: number;
+    /** What crossing painted ground costs on foot (1: ordinary ground). */
+    readonly movementCost: number;
 }
 
 export interface PaintLabels {
     readonly texture: string;
     readonly size: string;
+    readonly movementCost: string;
 }
 
 export interface PaintHandlers {
     readonly pick: (biome: BiomeKind) => void;
     /** Apply a typed brush size; false rejects it (the input reverts). */
     readonly setSize: (typed: string) => boolean;
+    /** Apply a typed movement cost; false rejects it (the input reverts). */
+    readonly setMovementCost: (typed: string) => boolean;
 }
 
 function swatch(choice: PaintChoice, picked: boolean, onPick: () => void): HTMLButtonElement {
@@ -58,5 +64,9 @@ export function renderPaintPanel(root: HTMLElement, panel: PaintPanel, labels: P
             }),
         ),
     );
-    replacePreservingFocus(root, [group, labelledInput(labels.size, 'number', String(panel.radius), 'paint-size', handlers.setSize)]);
+    replacePreservingFocus(root, [
+        group,
+        labelledInput(labels.size, 'number', String(panel.radius), 'paint-size', handlers.setSize),
+        labelledInput(labels.movementCost, 'number', String(panel.movementCost), 'paint-cost', handlers.setMovementCost),
+    ]);
 }

@@ -49,6 +49,46 @@ test('a spec sets the scene’s own darkness, fog, vision, weather and transitio
     expect(scene).toEqual({ darkness: 0.75, lock: true, globalLight: true, tokenVision: false, fog: 2, transition: { type: 'fade', duration: 800 } });
 });
 
+test('difficult painted ground becomes a Modify Movement Cost region, with terrain mirroring off', async ({ world }) => {
+    const regions = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            features: [
+                {
+                    type: 'region',
+                    biome: 'marsh',
+                    movementCost: 2,
+                    points: [
+                        { x: 1, y: 1 },
+                        { x: 5, y: 1 },
+                        { x: 5, y: 5 },
+                    ],
+                },
+                {
+                    type: 'region',
+                    biome: 'grassland',
+                    points: [
+                        { x: 7, y: 1 },
+                        { x: 11, y: 1 },
+                        { x: 11, y: 5 },
+                    ],
+                },
+            ],
+        });
+        return (canvas?.scene?.regions.contents ?? []).map((r) => ({ name: r.name, behaviors: r.behaviors.contents.map((b) => b.toObject()) }));
+    });
+    expect(regions).toEqual([
+        expect.objectContaining({
+            behaviors: [
+                expect.objectContaining({
+                    type: 'modifyMovementCost',
+                    system: expect.objectContaining({ difficulties: expect.objectContaining({ walk: 2 }) }),
+                }),
+            ],
+        }),
+    ]);
+});
+
 test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
     const walls = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

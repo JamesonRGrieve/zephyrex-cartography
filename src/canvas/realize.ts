@@ -15,6 +15,7 @@ import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
 import type { StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
+import { storedCost } from '../tools/terrain-cost';
 import { DEFAULT_WALL_PRESET } from '../tools/wall-presets';
 import type { CartographyController } from './controller';
 
@@ -55,9 +56,11 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
     const points = spec.points.map(scale.point);
     let feature: Feature | null;
     if (spec.type === 'region') {
-        feature = makeRegion(id, spec.biome, points);
+        const region = makeRegion(id, spec.biome, points);
+        feature = region && { ...region, movementCost: storedCost(spec.movementCost) };
     } else if (spec.type === 'stroke') {
-        feature = makeStroke(id, spec.biome, points, spec.radius === undefined ? DEFAULT_BRUSH_RADIUS : scale.length(spec.radius));
+        const stroke = makeStroke(id, spec.biome, points, spec.radius === undefined ? DEFAULT_BRUSH_RADIUS : scale.length(spec.radius));
+        feature = stroke && { ...stroke, movementCost: storedCost(spec.movementCost) };
     } else if (spec.type === 'path') {
         const base = LIQUID_LOOKS[spec.liquid ?? 'water'];
         const river = {

@@ -34,8 +34,15 @@ const positive = z.number().positive();
 const biome = z.enum(BIOMES);
 const level = text.optional().describe('Key of an entry in `levels`. Omitted: the feature shows on every level.');
 
+const movementCost = z
+    .number()
+    .min(0)
+    .max(5)
+    .default(1)
+    .describe("Difficult ground: what crossing it on foot costs, times the distance (1 ordinary, 2 mud), as Foundry's Modify Movement Cost.");
+
 const regionSpec = z
-    .object({ type: z.literal('region'), biome, points: z.array(point).min(3).describe('Boundary control points.'), level })
+    .object({ type: z.literal('region'), biome, points: z.array(point).min(3).describe('Boundary control points.'), movementCost, level })
     .strict()
     .describe('A closed, smoothed area of one biome.');
 
@@ -45,6 +52,7 @@ const strokeSpec = z
         biome,
         points: z.array(point).min(2).describe('Centerline.'),
         radius: positive.optional().describe('Half-width of the swath (default: the brush default).'),
+        movementCost,
         level,
     })
     .strict()

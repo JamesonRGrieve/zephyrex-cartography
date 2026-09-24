@@ -55,6 +55,7 @@ import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
 import { sameTarget, type SwitchTarget, toggleTarget } from '../tools/switch-targets';
 import { lampVariant, switchOf } from '../tools/switches';
+import { NORMAL_COST, storedCost } from '../tools/terrain-cost';
 import type { WallPreset } from '../tools/wall-presets';
 import type { FeatureRenderer } from './renderer';
 import { type DocumentKind, StagedChanges, type StagedWrite } from './staged-changes';
@@ -201,6 +202,8 @@ export class CartographyController {
     riverLook: RiverLook = LIQUID_LOOKS.water;
     /** Radius (scene px) applied to newly painted terrain strokes. */
     brushRadius = DEFAULT_BRUSH_RADIUS;
+    /** Movement cost of newly painted areas and strokes (1: ordinary ground). */
+    movementCost = NORMAL_COST;
     /** Scene grid for snapping room vertices; null disables snapping. */
     grid: Grid | null = null;
     /** The kind of Foundry walls newly drawn paths put along their centerline, or null for none. */
@@ -314,8 +317,10 @@ export class CartographyController {
      */
     async setTerrainRegions(on: boolean): Promise<void> {
         this.terrainRegions = on;
-        // Only terrain whose regions disagree with the setting is re-synced.
-        const stale = this.features.filter((f) => (f.type === 'region' || f.type === 'stroke') && f.docs.regions.length > 0 !== on);
+        // Only terrain whose regions disagree with its plan is re-synced (difficult ground keeps its region either way).
+        const stale = this.features.filter(
+            (f) => (f.type === 'region' || f.type === 'stroke') && f.docs.regions.length !== planDocuments(f, this.planContext()).regions.length,
+        );
         await this.transaction(async () =>
             stale.reduce(async (previous, f) => {
                 await previous;
@@ -1259,12 +1264,14 @@ export class CartographyController {
             return makePath(id, this.brush.kind, pts, this.halfWidth, this.pathWalls, this.riverLook);
         }
         if (this.brush.type === 'region') {
-            return makeRegion(id, this.brush.biome, pts);
+            const region = makeRegion(id, this.brush.biome, pts);
+            return region && { ...region, movementCost: storedCost(this.movementCost) };
         }
         if (this.brush.type === 'room') {
             return makeRoom(id, this.brush.floor, pts, this.brush.wall ?? null, this.brush.wallKind);
         }
-        return makeStroke(id, this.brush.biome, pts, this.brushRadius);
+        const stroke = makeStroke(id, this.brush.biome, pts, this.brushRadius);
+        return stroke && { ...stroke, movementCost: storedCost(this.movementCost) };
     }
 
     private redraw(): void {

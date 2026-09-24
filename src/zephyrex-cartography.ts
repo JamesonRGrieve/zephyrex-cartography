@@ -71,6 +71,7 @@ const paint = registerPaintRuntime(packs.textures, (settings) => {
         return;
     }
     state.controller.brushRadius = settings.radius;
+    state.controller.movementCost = settings.movementCost;
     const { mode } = state;
     if (mode.kind === 'brush' && mode.brush.type === 'region' && mode.brush.biome !== settings.biome) {
         enterMode(state, toolMode('paint', true));
@@ -317,6 +318,7 @@ function setupDrawLayer(): void {
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.gridDistance = canvas.scene?.grid.distance ?? 0;
     controller.brushRadius = paint.current().radius;
+    controller.movementCost = paint.current().movementCost;
     applyPathSettings(controller, paths.current());
     built = controller;
     controller.load();

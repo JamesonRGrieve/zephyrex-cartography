@@ -8,12 +8,13 @@ import { closedSpline, type Point } from '../geometry/spline';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord } from './guards';
+import { parseMovementCost, type Costed } from './terrain-cost';
 
 /** Default half-count of samples per region-boundary span. */
 const REGION_SAMPLES = 10;
 
 /** A closed biome area; its `points` are the boundary control points (>= 3). */
-export interface RegionFeature extends FeatureCommon {
+export interface RegionFeature extends FeatureCommon, Costed {
     readonly type: 'region';
     readonly biome: BiomeKind;
 }
@@ -55,5 +56,5 @@ export function parseRegion(v: unknown): RegionFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const region = makeRegion(v['id'], v['biome'], points);
-    return region && { ...region, ...parseFeatureCommon(v) };
+    return region && { ...region, movementCost: parseMovementCost(v['movementCost']), ...parseFeatureCommon(v) };
 }

@@ -8,6 +8,7 @@ function mount(story: { readonly args?: Partial<stories.PaintArgs> }): HTMLEleme
         choices: story.args?.choices ?? base?.choices ?? [],
         biome: story.args?.biome ?? base?.biome ?? 'grassland',
         radius: story.args?.radius ?? base?.radius ?? 25,
+        movementCost: story.args?.movementCost ?? base?.movementCost ?? 1,
     });
     document.body.replaceChildren(el);
     return el;
@@ -63,8 +64,21 @@ describe('paint panel', () => {
         expect(size(root).value).toBe('60');
     });
 
+    it('sets what crossing the painted ground costs, refusing a cost Foundry does not take', () => {
+        const root = mount(stories.DifficultMarsh);
+        const cost = (): HTMLInputElement => root.querySelectorAll<HTMLInputElement>('input[type="number"]')[1] ?? size(root);
+        expect(cost().value).toBe('2');
+        expect(cost().closest('label')?.textContent).toBe('Movement cost (×)');
+        cost().value = '3';
+        cost().dispatchEvent(new Event('change'));
+        expect(cost().value).toBe('3');
+        cost().value = '9';
+        cost().dispatchEvent(new Event('change'));
+        expect(cost().value).toBe('3');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.NoTextureSet]) {
+        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.NoTextureSet]) {
             expect(mount(story).querySelectorAll('button')).toHaveLength(6);
         }
     });

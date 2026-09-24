@@ -181,6 +181,13 @@
                                 },
                                 "description": "Boundary control points."
                             },
+                            "movementCost": {
+                                "default": 1,
+                                "description": "Difficult ground: what crossing it on foot costs, times the distance (1 ordinary, 2 mud), as Foundry's Modify Movement Cost.",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5
+                            },
                             "level": {
                                 "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
                                 "type": "string",
@@ -245,6 +252,13 @@
                                 "description": "Half-width of the swath (default: the brush default).",
                                 "type": "number",
                                 "exclusiveMinimum": 0
+                            },
+                            "movementCost": {
+                                "default": 1,
+                                "description": "Difficult ground: what crossing it on foot costs, times the distance (1 ordinary, 2 mud), as Foundry's Modify Movement Cost.",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5
                             },
                             "level": {
                                 "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",

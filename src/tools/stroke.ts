@@ -9,12 +9,13 @@ import type { Point } from '../geometry/spline';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr } from './guards';
+import { parseMovementCost, type Costed } from './terrain-cost';
 
 /** Default brush radius (scene px) for a freshly painted terrain stroke. */
 export const DEFAULT_BRUSH_RADIUS = 25;
 
 /** A painted biome swath; its `points` are the painted centerline. */
-export interface StrokeFeature extends FeatureCommon {
+export interface StrokeFeature extends FeatureCommon, Costed {
     readonly type: 'stroke';
     readonly biome: BiomeKind;
     /** Half-width (scene px) of the painted swath. */
@@ -47,5 +48,5 @@ export function parseStroke(v: unknown): StrokeFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const stroke = makeStroke(v['id'], v['biome'], points, numberOr(v['radius'], DEFAULT_BRUSH_RADIUS));
-    return stroke && { ...stroke, ...parseFeatureCommon(v) };
+    return stroke && { ...stroke, movementCost: parseMovementCost(v['movementCost']), ...parseFeatureCommon(v) };
 }

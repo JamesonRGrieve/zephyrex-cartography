@@ -31,6 +31,7 @@ import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } f
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
 import { SWITCH_BLOCKS } from './switches';
+import { movementCostOf, NORMAL_COST } from './terrain-cost';
 import { type PresetWall, presetWall, type WallPreset } from './wall-presets';
 
 export interface DocumentPlan {
@@ -433,7 +434,8 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
     if (feature.type === 'path' && feature.walls !== null) {
         return { ...NO_PLAN, walls: pathWalls(feature, feature.walls, floorOf(feature, context)) };
     }
-    if ((feature.type === 'region' || feature.type === 'stroke') && context.terrainRegions) {
+    // Painted ground is mirrored as a region when the world asks for it, and always where it is difficult to cross.
+    if ((feature.type === 'region' || feature.type === 'stroke') && (context.terrainRegions || movementCostOf(feature) !== NORMAL_COST)) {
         return { ...NO_PLAN, regions: [terrainRegion(feature, context.levels)] };
     }
     return NO_PLAN;
@@ -451,8 +453,9 @@ function outlinePoints(flat: readonly number[]): Point[] {
 /**
  * Terrain as a Scene Region over exactly what is painted (the smoothed region
  * fill, or the stroke's swath), named after its biome, on its level's band.
- * It carries no behaviours: GMs and systems attach their own (difficult
- * terrain, weather, and so on).
+ * Difficult ground makes walking across it cost what the GM painted it at
+ * (Modify Movement Cost); otherwise it carries no behaviours, for GMs and
+ * systems to attach their own (weather and so on).
  */
 function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly Level[]): RegionDoc {
     const outline =
@@ -467,6 +470,7 @@ function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly 
                   ),
               );
     const band = findLevel(levels, feature.level);
+    const cost = movementCostOf(feature);
     return {
         id: null,
         label: { kind: 'terrain', biome: feature.biome },
@@ -475,6 +479,6 @@ function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly 
         top: band?.top ?? null,
         level: feature.level,
         spans: [],
-        behaviour: null,
+        behaviour: cost === NORMAL_COST ? null : { kind: 'terrain', difficulties: { walk: cost } },
     };
 }

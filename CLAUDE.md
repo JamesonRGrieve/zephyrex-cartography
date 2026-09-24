@@ -597,7 +597,11 @@ These make everything after them cheaper and safer, so they come first.
   level, with the pack's cost per movement action (actions left out keep
   Foundry's 1). The roadmap's earlier name for it, `increaseMovementCost`,
   is not the v14 type key. Still to add:
-  - difficult terrain on painted terrain and rooms;
+  - **[done] difficult painted ground:** the paint panel and the scene spec
+    give a painted area or stroke a movement cost (0–5, 1 ordinary). Ground
+    that is not ordinary always gets its terrain region, with a Modify
+    Movement Cost for walking, whether or not terrain is mirrored;
+  - difficult terrain in rooms;
   - `adjustDarknessLevel`, `suppressWeather` and `applyActiveEffect`;
   - `displayScrollingText`, `executeMacro`, `executeScript`, `pauseGame` and
     `toggleBehavior`.

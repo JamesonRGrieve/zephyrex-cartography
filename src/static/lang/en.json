@@ -43,7 +43,8 @@
         "Paint": {
             "Title": "Paint terrain",
             "Texture": "Texture",
-            "Size": "Brush size (px)"
+            "Size": "Brush size (px)",
+            "MovementCost": "Movement cost (×)"
         },
         "Paths": {
             "Title": "Roads and rivers",

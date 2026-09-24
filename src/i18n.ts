@@ -72,6 +72,7 @@ export const I18N = {
         title: key('Paint.Title'),
         texture: key('Paint.Texture'),
         size: key('Paint.Size'),
+        movementCost: key('Paint.MovementCost'),
     },
     paths: {
         title: key('Paths.Title'),
