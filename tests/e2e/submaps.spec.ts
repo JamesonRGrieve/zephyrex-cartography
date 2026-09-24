@@ -40,7 +40,8 @@ test('an enterable stamp opens into a new interior scene, each side teleporting 
         .poll(async () =>
             world.evaluate(() => {
                 const entrance = canvas?.scene?.regions.contents[0];
-                const xs = entrance?.shapes.flatMap((shape) => ('points' in shape ? [...shape.points].filter((_, i) => i % 2 === 0) : [])) ?? [];
+                // The stamp's footprint is a rectangle, so the entrance is Foundry's own rectangle shape, centred on the stamp.
+                const xs = entrance?.shapes.flatMap((shape) => (shape.type === 'rectangle' && 'x' in shape ? [shape.x] : [])) ?? [];
                 const system: object | undefined = entrance?.behaviors.contents[0]?.system;
                 const destinations =
                     system !== undefined && 'destinations' in system && system.destinations instanceof Set ? [...system.destinations].map(String) : [];

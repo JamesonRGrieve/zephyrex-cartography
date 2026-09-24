@@ -134,6 +134,25 @@ interface SurfaceSystem {
     readonly exposure: boolean;
 }
 
+/**
+ * A region shape (14.359 `common/data/data.mjs`): a polygon's flat
+ * `[x0, y0, x1, y1, …]`, or a rectangle whose `x`, `y` is its anchor point and
+ * which rotates about it (degrees).
+ */
+export type RegionShape =
+    | { readonly type: 'polygon'; readonly points: readonly number[]; readonly hole: boolean }
+    | {
+          readonly type: 'rectangle';
+          readonly x: number;
+          readonly y: number;
+          readonly width: number;
+          readonly height: number;
+          readonly anchorX: number;
+          readonly anchorY: number;
+          readonly rotation: number;
+          readonly hole: boolean;
+      };
+
 /** The behaviours an area effect becomes, with their 14.359 schemas (`client/data/region-behaviors/`). */
 export type AreaEffectBehaviour =
     /** `mode` is an `AdjustDarknessLevelRegionBehaviorType.MODES` value. */
@@ -162,7 +181,7 @@ export interface RegionCreateData extends OnLevels {
     readonly color: string;
     /** A barrier to tokens (`move`), lights, sight or sound; absent for none. */
     readonly restriction?: { readonly enabled: boolean; readonly type: 'move'; readonly priority: number };
-    readonly shapes: readonly { readonly type: 'polygon'; readonly points: readonly number[]; readonly hole: boolean }[];
+    readonly shapes: readonly RegionShape[];
     /** A null bound is open-ended. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
     /** `changeLevel` has an empty schema in v14 (14.359). */

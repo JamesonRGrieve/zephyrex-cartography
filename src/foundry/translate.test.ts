@@ -7,6 +7,7 @@ import {
     lightCreateData,
     pxToDistance,
     regionCreateData,
+    regionShape,
     regionUuid,
     sceneSettingsData,
     soundCreateData,
@@ -355,6 +356,27 @@ describe('regionCreateData', () => {
             { type: 'executeScript', system: { events: ['tokenExit'], source: 'return;' } },
             { type: 'applyActiveEffect', system: { effects: ['Item.i.ActiveEffect.e'] } },
         ]);
+    });
+
+    it('sends a rectangular outline, rotated or not, as Foundry’s own rectangle shape centred on its anchor', () => {
+        expect(
+            regionShape([
+                { x: 100, y: 100 },
+                { x: 200, y: 100 },
+                { x: 300, y: 100 },
+                { x: 300, y: 200 },
+                { x: 100, y: 200 },
+            ]),
+        ).toEqual({ type: 'rectangle', x: 200, y: 150, width: 200, height: 100, anchorX: 0.5, anchorY: 0.5, rotation: 0, hole: false });
+        expect(
+            regionShape([
+                { x: 0, y: 0 },
+                { x: 0, y: 100 },
+                { x: -50, y: 100 },
+                { x: -50, y: 0 },
+            ]),
+        ).toMatchObject({ type: 'rectangle', x: -25, y: 50, width: 100, height: 50, rotation: 90 });
+        expect(regionShape(square)).toEqual({ type: 'polygon', points: [0, 0, 10, 0, 10, 10], hole: false });
     });
 
     it('makes an impassable stamp body a region barring movement, and leaves other regions unrestricted', () => {

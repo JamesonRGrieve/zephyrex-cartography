@@ -619,9 +619,16 @@ These make everything after them cheaper and safer, so they come first.
 - **Shapes beyond polygons** [14.349, 14.352, 14.356]:
   - rectangle, circle, ellipse, cone, ring, line, emanation and token;
   - **grid** (`GridShapeData`): an arbitrary set of grid cells.
-  Shapes other than polygons can be grid-based. Rooms become rectangle shapes
-  where they are rectangles, and terrain painted on the grid becomes exact
-  grid cells.
+  Shapes other than polygons can be grid-based.
+  - **[done] Rectangles.** Any generated region whose outline is a
+    rectangle becomes Foundry's own rectangle shape, centre-anchored and
+    turned by its rotation (`geometry/rectangle.ts`, `regionShape`). That
+    covers rooms, a door's split points and all, and every stamp footprint
+    region, rotated ones included. So the GM edits it as a rectangle.
+    Anything else stays a polygon.
+  - **Still open:** grid cells for terrain painted on the grid (painted
+    terrain is smoothed today, so it has no cell outline to give), and the
+    other shape types.
 - **Region fields**:
   - **[done]** `color`: every generated region is coloured by what it is
     (`tools/region-colours.ts`), terrain in its biome's colour, instead of
@@ -690,8 +697,10 @@ These make everything after them cheaper and safer, so they come first.
   with behaviours and fit the same model.
 
 ### Priority 6: sounds, particles and effects
-- **Ambient sounds**, as stamp emitters (a generator's hum, a fountain), at
-  the right elevation (Priority 1).
+- **[done] Ambient sounds**, as stamp emitters (a generator's hum, a
+  fountain): a stamp's `sound` is a native AmbientSound on its level at its
+  floor plus its own elevation (Priority 1), proven in
+  `tests/e2e/emitters.spec.ts`.
 - **[done] Particle emitters.** Each emitter a stamp's variant declares
   (smoke, embers, sparks, dripping water) runs as v14's native
   `ParticleGenerator` [14.355] in effect mode, keeping its count alive

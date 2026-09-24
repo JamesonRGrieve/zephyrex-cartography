@@ -6,6 +6,7 @@
  * dependency, so it is unit-tested even though it sits at the boundary.
  */
 import type { TileFrame } from '../canvas/controller';
+import { rectangleOf } from '../geometry/rectangle';
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
 import { type AreaEffect, DARKNESS_MODES, TEXT_VISIBILITIES } from '../tools/area-effects';
@@ -24,7 +25,16 @@ import type {
 } from '../tools/documents';
 import { regionColour } from '../tools/region-colours';
 import { FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
-import type { AreaEffectBehaviour, LightCreateData, RegionCreateData, SceneSettingsUpdate, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
+import type {
+    AreaEffectBehaviour,
+    LightCreateData,
+    RegionCreateData,
+    RegionShape,
+    SceneSettingsUpdate,
+    SoundCreateData,
+    TileCreateData,
+    WallCreateData,
+} from './boundary';
 
 /** A scene's settings as the partial Scene update Foundry takes; settings not given are left out, so they keep their values. */
 export function sceneSettingsData(settings: SceneSettings): SceneSettingsUpdate {
@@ -274,6 +284,24 @@ function flatten(points: readonly Point[]): number[] {
     return points.flatMap((p) => [p.x, p.y]);
 }
 
+/**
+ * A region's outline as a native shape: a rectangle (centred on its anchor,
+ * turned by its rotation) where the outline is one, as rooms and stamp
+ * footprints are, so the GM edits it as Foundry's own rectangle; otherwise a
+ * polygon.
+ */
+export function regionShape(polygon: readonly Point[]): RegionShape {
+    const rectangle = rectangleOf(polygon);
+    if (rectangle === null) {
+        return { type: 'polygon', points: flatten(polygon), hole: false };
+    }
+    const { centre, width, height, rotation } = rectangle;
+    return { type: 'rectangle', x: centre.x, y: centre.y, width, height, anchorX: CENTRE_ANCHOR, anchorY: CENTRE_ANCHOR, rotation, hole: false };
+}
+
+/** A shape anchored at its centre. */
+const CENTRE_ANCHOR = 0.5;
+
 /** A Scene Region's UUID. */
 export function regionUuid(scene: string, region: string): string {
     return `Scene.${scene}.Region.${region}`;
@@ -374,7 +402,7 @@ export function regionCreateData(regions: readonly RegionDoc[], ids: readonly st
         _id: ids[i] ?? '',
         name: nameOf(region),
         color: regionColour(region),
-        shapes: [{ type: 'polygon', points: flatten(region.polygon), hole: false }],
+        shapes: [regionShape(region.polygon)],
         ...(region.restriction === undefined ? {} : { restriction: { enabled: true, type: region.restriction, priority: 0 } }),
         elevation: { bottom: region.bottom, top: region.top },
         behaviors: [...behaviourData(region.behaviour), ...(region.effects ?? []).map(effectBehaviour)],
