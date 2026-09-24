@@ -42,7 +42,8 @@
             "Title": "Room materials",
             "Floor": "Floor",
             "Wall": "Walls",
-            "NoWall": "Not drawn"
+            "NoWall": "Not drawn",
+            "WallKind": "Wall kind"
         },
         "Levels": {
             "Title": "Levels",

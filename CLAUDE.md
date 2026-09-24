@@ -477,13 +477,17 @@ These make everything after them cheaper and safer, so they come first.
   after a level edit.
 
 ### Priority 3: full wall and door options
-- **Senses beyond on/off.** `light`, `sight` and `sound` take the whole
-  `EDGE_SENSE_TYPES` range: NONE, LIMITED (terrain walls), NORMAL, PROXIMITY
-  and DISTANCE. `move` is NONE or NORMAL. Today only NONE and NORMAL are
-  generated.
-- **One-way walls:** `dir` (BOTH, LEFT, RIGHT).
-- **Proximity thresholds:** `threshold` (light, sight, sound distances, and
-  `attenuation`).
+- **[done] Senses, one-way walls and thresholds.**
+  - Stamp occlusion walls take the whole `EDGE_SENSE_TYPES` range per sense
+    (NONE, LIMITED, NORMAL, PROXIMITY, DISTANCE), movement on or off, `dir`,
+    and `threshold` (light, sight and sound distances, and `attenuation`).
+  - **Rooms** take a wall kind: Foundry's own Walls palette presets (solid,
+    terrain, invisible, ethereal, window), mirrored exactly in
+    `tools/wall-presets.ts`. It is set in the materials panel, named with
+    Foundry's own strings, and in the scene spec (`wallKind`), and the
+    floor-plan generator passes it on. A room's doors still block everything
+    while shut.
+  - **Still open:** path walls, which are always solid.
 - **[done] Door sounds and animation.** A door wall carries a `look`: a
   `CONFIG.Wall.doorSounds` key and an animation, each null for Foundry's
   default. These become the Wall's `doorSound` and `animation`.
@@ -492,11 +496,9 @@ These make everything after them cheaper and safer, so they come first.
   - Room doors pick a sound and an animation type in the door panel, from
     Foundry's own lists, and the scene spec's room doors take both.
   - Still open: the animation `texture`. Door types and states are complete.
-- **No accidental blank walls.** Foundry groups walls that block nothing as
-  "Blank Walls" [14.361]. The engine only emits one when a feature asks for
-  it.
-- Rooms, room doors, door stamps, stamp occlusion walls, path walls and the
-  scene spec all take these options.
+- **[done] No blank walls.** Foundry groups walls that block nothing as
+  "Blank Walls" [14.361]. The engine never emits one. A stamp whose walls
+  would block nothing gets none, and every room wall kind blocks something.
 
 ### Priority 4: tiles and lights
 - **Stamp tiles.** They should take:

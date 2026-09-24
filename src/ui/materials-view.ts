@@ -6,6 +6,7 @@
  * materials and the choices to elements; unit-tested under happy-dom.
  */
 import type { RoomMaterials } from '../tools/room';
+import { isWallPreset, WALL_PRESETS, type WallPreset } from '../tools/wall-presets';
 import { el, focusKey, replacePreservingFocus } from './dom';
 
 export interface MaterialChoice {
@@ -24,6 +25,8 @@ export interface MaterialsLabels {
     readonly wall: string;
     /** The "walls not drawn" choice. */
     readonly noWall: string;
+    readonly wallKind: string;
+    readonly wallKinds: Readonly<Record<WallPreset, string>>;
 }
 
 /** Select value standing for "walls not drawn" (no real role is empty). */
@@ -62,5 +65,16 @@ export function renderMaterialsPanel(root: HTMLElement, panel: MaterialsPanel, l
         select('zc-room-wall', labels.wall, wallChoices, current.wall ?? NO_WALL, (wall) => {
             onChange({ ...current, wall: wall === NO_WALL ? null : wall });
         }),
+        select(
+            'zc-room-wall-kind',
+            labels.wallKind,
+            WALL_PRESETS.map((kind) => ({ role: kind, label: labels.wallKinds[kind] })),
+            current.wallKind,
+            (kind) => {
+                if (isWallPreset(kind)) {
+                    onChange({ ...current, wallKind: kind });
+                }
+            },
+        ),
     ]);
 }

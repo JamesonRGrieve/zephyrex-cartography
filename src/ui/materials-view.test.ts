@@ -5,7 +5,7 @@ import * as stories from './materials-view.stories';
 function mount(story: { readonly args?: Partial<stories.MaterialsArgs> }): HTMLElement {
     const base = stories.default.args;
     const el = stories.mountMaterialsPanel({
-        current: story.args?.current ?? base?.current ?? { floor: 'dirt', wall: null },
+        current: story.args?.current ?? base?.current ?? { floor: 'dirt', wall: null, wallKind: 'solid' },
         floors: story.args?.floors ?? base?.floors ?? [],
         walls: story.args?.walls ?? base?.walls ?? [],
     });
@@ -56,9 +56,23 @@ describe('materials panel', () => {
         expect(control(root, 'zc-room-wall').value).toBe('wall.granite');
     });
 
+    it('offers Foundry’s wall kinds, showing the room’s and changing it', () => {
+        const root = mount(stories.GlassWalledRoom);
+        expect(control(root, 'zc-room-wall-kind').value).toBe('window');
+        expect([...control(root, 'zc-room-wall-kind').options].map((o) => o.textContent)).toEqual([
+            'Solid Wall',
+            'Terrain Wall',
+            'Invisible Wall',
+            'Ethereal Wall',
+            'Window',
+        ]);
+        choose(root, 'zc-room-wall-kind', 'terrain');
+        expect(control(root, 'zc-room-wall-kind').value).toBe('terrain');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.DirtFloorNoWalls, stories.OakWithBrickWalls, stories.MaterialsMissingFromTheSet]) {
-            expect(mount(story).querySelectorAll('select')).toHaveLength(2);
+        for (const story of [stories.DirtFloorNoWalls, stories.OakWithBrickWalls, stories.GlassWalledRoom, stories.MaterialsMissingFromTheSet]) {
+            expect(mount(story).querySelectorAll('select')).toHaveLength(3);
         }
     });
 });

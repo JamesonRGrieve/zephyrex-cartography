@@ -14,6 +14,7 @@ import { DOOR_ANIMATIONS, type DoorAnimationType, type DoorLook, type DoorState,
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, stringArray } from './guards';
 import { type FloorMaterial, isFloorMaterial, parseWallMaterial, type WallMaterial } from './materials';
+import { DEFAULT_WALL_PRESET, isWallPreset, type WallPreset } from './wall-presets';
 
 /** Default floor material for a freshly drawn room. */
 export const DEFAULT_FLOOR: BiomeKind = 'dirt';
@@ -55,13 +56,16 @@ export interface RoomFeature extends FeatureCommon {
     readonly floor: FloorMaterial;
     /** Visible wall material (a pack `wall.<name>` role), or null for walls that are not drawn. */
     readonly wall: WallMaterial;
+    /** What kind of walls the room has, as Foundry's Walls palette names them: solid, window, terrain… */
+    readonly wallKind: WallPreset;
     readonly doors: RoomDoor[];
 }
 
-/** A room's floor and wall materials. */
+/** What a room is made of: its floor, its drawn walls, and the kind of walls they are. */
 export interface RoomMaterials {
     readonly floor: FloorMaterial;
     readonly wall: WallMaterial;
+    readonly wallKind: WallPreset;
 }
 
 /** One perimeter segment of a room, and the door on it if any. */
@@ -71,16 +75,27 @@ export interface RoomWall extends Segment {
 }
 
 /** Build a committed room from a boundary point stream, or null if fewer than 3 points. */
-export function makeRoom(id: string, floor: FloorMaterial, points: readonly Point[], wall: WallMaterial = null): RoomFeature | null {
+export function makeRoom(
+    id: string,
+    floor: FloorMaterial,
+    points: readonly Point[],
+    wall: WallMaterial = null,
+    wallKind: WallPreset = DEFAULT_WALL_PRESET,
+): RoomFeature | null {
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id, floor, wall, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], ...NEW_FEATURE };
+    return { type: 'room', id, floor, wall, wallKind, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], ...NEW_FEATURE };
 }
 
 /** The same room in other materials. */
 export function withRoomMaterials(room: RoomFeature, materials: RoomMaterials): RoomFeature {
-    return { ...room, floor: materials.floor, wall: materials.wall };
+    return { ...room, floor: materials.floor, wall: materials.wall, wallKind: materials.wallKind };
+}
+
+/** What `room` is made of. */
+export function roomMaterialsOf(room: RoomFeature): RoomMaterials {
+    return { floor: room.floor, wall: room.wall, wallKind: room.wallKind };
 }
 
 /** Rebuild a room with new boundary points (edit ops), preserving floor + doors + document links, or null if < 3. */
@@ -160,6 +175,8 @@ export function parseRoom(v: unknown): RoomFeature | null {
         id: v['id'],
         floor: v['floor'],
         wall: parseWallMaterial(v['wall']),
+        // Rooms saved before wall kinds existed have solid walls, as they always did.
+        wallKind: isWallPreset(v['wallKind']) ? v['wallKind'] : DEFAULT_WALL_PRESET,
         points: points.map((p) => ({ x: p.x, y: p.y })),
         doors,
         ...parseFeatureCommon(v),

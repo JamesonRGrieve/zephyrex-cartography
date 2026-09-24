@@ -30,6 +30,7 @@ import { regionOutline, type RegionFeature } from './region';
 import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
+import { type PresetWall, presetWall } from './wall-presets';
 
 export interface DocumentPlan {
     readonly walls: readonly WallDoc[];
@@ -299,9 +300,13 @@ function roomFloor(room: RoomFeature, levels: readonly Level[]): RegionDoc | nul
 }
 
 /** A stretch of room wall, as a door if `door` is set; tagged with the perimeter segment it comes from. */
-function roomWallDoc(part: Segment, door: RoomDoor | null, segment: number, level: string | null): WallDoc {
-    const wall: WallDoc = { a: part.a, b: part.b, door: door?.type ?? 'none', doorState: door?.state ?? 'closed', blocks: BLOCKS_ALL, level, segment };
-    return door === null ? wall : { ...wall, look: roomDoorLook(door) };
+function roomWallDoc(part: Segment, door: RoomDoor | null, segment: number, level: string | null, kind: PresetWall): WallDoc {
+    if (door !== null) {
+        // A door is a door, whatever the walls around it are: it blocks everything while shut.
+        return { a: part.a, b: part.b, door: door.type, doorState: door.state, look: roomDoorLook(door), blocks: BLOCKS_ALL, level, segment };
+    }
+    const wall: WallDoc = { a: part.a, b: part.b, door: 'none', doorState: 'closed', blocks: kind.blocks, level, segment };
+    return kind.threshold === undefined ? wall : { ...wall, threshold: kind.threshold };
 }
 
 /**
@@ -331,7 +336,7 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
         walls: roomWalls(room).flatMap((wall) =>
             cutSegment(wall, cuts, OPENING_TOLERANCE).flatMap((piece) =>
                 splitSegment(piece, laterDoors, OPENING_TOLERANCE).map((part) =>
-                    roomWallDoc(part, wall.door ?? (part.covered ? coveringDoor(part) : null), wall.segment, floor.level),
+                    roomWallDoc(part, wall.door ?? (part.covered ? coveringDoor(part) : null), wall.segment, floor.level, presetWall(room.wallKind)),
                 ),
             ),
         ),

@@ -8,6 +8,7 @@
  */
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { NEW_DOOR } from '../tools/room';
+import { DEFAULT_WALL_PRESET, type WallPreset } from '../tools/wall-presets';
 import { pick, randomInt, seededRandom, type Random } from './random';
 import { SCENE_SPEC_SCHEMA_VERSION, type RoomSpec, type SceneSpec } from './spec';
 
@@ -24,6 +25,7 @@ export interface FloorPlanOptions {
     readonly entrance: boolean;
     readonly floor: FloorMaterial;
     readonly wall: WallMaterial;
+    readonly wallKind: WallPreset;
 }
 
 export const DEFAULT_FLOOR_PLAN: FloorPlanOptions = {
@@ -35,6 +37,7 @@ export const DEFAULT_FLOOR_PLAN: FloorPlanOptions = {
     entrance: true,
     floor: 'dirt',
     wall: null,
+    wallKind: DEFAULT_WALL_PRESET,
 };
 
 /** Chance that a room-sized part, which could still be split, is kept whole: variety in room size. */
@@ -190,7 +193,7 @@ function roomSpec(room: Rect, slots: readonly DoorSlot[], o: FloorPlanOptions): 
         .map((d) => points.findIndex((p) => p.x === d.x && p.y === d.y))
         .filter((segment) => segment >= 0)
         .map((segment) => ({ segment, ...NEW_DOOR }));
-    return { type: 'room', points, floor: o.floor, wall: o.wall, doors };
+    return { type: 'room', points, floor: o.floor, wall: o.wall, wallKind: o.wallKind, doors };
 }
 
 /** Generate a floor plan; the same options always give the same plan. */

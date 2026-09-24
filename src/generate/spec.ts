@@ -16,6 +16,7 @@ import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
 import type { PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
+import { DEFAULT_WALL_PRESET, WALL_PRESETS } from '../tools/wall-presets';
 
 export const SCENE_SPEC_SCHEMA_VERSION = 1;
 
@@ -83,6 +84,10 @@ const roomSpec = z
             .nullable()
             .default(null)
             .describe('A pack "wall.<name>" material to draw the walls in; null leaves them undrawn.'),
+        wallKind: z
+            .enum(WALL_PRESETS)
+            .default(DEFAULT_WALL_PRESET)
+            .describe("What kind of walls, as Foundry's Walls palette names them: solid, terrain, invisible, ethereal or window."),
         doors: z.array(doorSpec).default([]),
         level,
     })

@@ -10,7 +10,14 @@ export interface MaterialsArgs {
     readonly walls: readonly MaterialChoice[];
 }
 
-const LABELS: MaterialsLabels = { floor: 'Floor', wall: 'Walls', noWall: 'Not drawn' };
+const LABELS: MaterialsLabels = {
+    floor: 'Floor',
+    wall: 'Walls',
+    noWall: 'Not drawn',
+    wallKind: 'Wall kind',
+    // Named as Foundry's own Walls palette names them.
+    wallKinds: { solid: 'Solid Wall', terrain: 'Terrain Wall', invisible: 'Invisible Wall', ethereal: 'Ethereal Wall', window: 'Window' },
+};
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
 export function mountMaterialsPanel(args: MaterialsArgs): HTMLElement {
@@ -39,7 +46,7 @@ const meta: Meta<MaterialsArgs> = {
     title: 'Rooms/Materials Panel',
     excludeStories: ['mountMaterialsPanel'],
     render: mountMaterialsPanel,
-    args: { current: { floor: 'dirt', wall: null }, floors: FLOORS, walls: [{ role: 'wall.brick', label: 'brick' }] },
+    args: { current: { floor: 'dirt', wall: null, wallKind: 'solid' }, floors: FLOORS, walls: [{ role: 'wall.brick', label: 'brick' }] },
 };
 
 export default meta;
@@ -49,9 +56,13 @@ type Story = StoryObj<MaterialsArgs>;
 export const DirtFloorNoWalls: Story = {};
 
 export const OakWithBrickWalls: Story = {
-    args: { current: { floor: 'floor.oak', wall: 'wall.brick' } },
+    args: { current: { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'solid' } },
+};
+
+export const GlassWalledRoom: Story = {
+    args: { current: { floor: 'floor.oak', wall: null, wallKind: 'window' } },
 };
 
 export const MaterialsMissingFromTheSet: Story = {
-    args: { current: { floor: 'floor.marble', wall: 'wall.granite' }, walls: [] },
+    args: { current: { floor: 'floor.marble', wall: 'wall.granite', wallKind: 'solid' }, walls: [] },
 };

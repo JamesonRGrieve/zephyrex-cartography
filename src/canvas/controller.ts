@@ -44,12 +44,14 @@ import {
     type RoomDoor,
     type RoomFeature,
     type RoomMaterials,
+    roomMaterialsOf,
     withRoomDoor,
     withRoomMaterials,
 } from '../tools/room';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
+import type { WallPreset } from '../tools/wall-presets';
 import type { FeatureRenderer } from './renderer';
 import { type DocumentKind, StagedChanges, type StagedWrite } from './staged-changes';
 
@@ -141,7 +143,7 @@ export type Brush =
     | { readonly type: 'path'; readonly kind: PathKind }
     | { readonly type: 'region'; readonly biome: BiomeKind }
     | { readonly type: 'stroke'; readonly biome: BiomeKind }
-    | { readonly type: 'room'; readonly floor: FloorMaterial; readonly wall?: WallMaterial };
+    | { readonly type: 'room'; readonly floor: FloorMaterial; readonly wall?: WallMaterial; readonly wallKind?: WallPreset };
 
 /** Cap on retained undo snapshots — bounds memory on a long editing session. */
 const MAX_HISTORY = 50;
@@ -836,7 +838,7 @@ export class CartographyController {
     /** A room's floor and wall materials, or null for anything else. */
     roomMaterials(id: string): RoomMaterials | null {
         const f = this.getFeature(id);
-        return f?.type === 'room' ? { floor: f.floor, wall: f.wall } : null;
+        return f?.type === 'room' ? roomMaterialsOf(f) : null;
     }
 
     /** Give a room other floor and wall materials; false if it is not a room. */
@@ -1144,7 +1146,7 @@ export class CartographyController {
             return makeRegion(id, this.brush.biome, pts);
         }
         if (this.brush.type === 'room') {
-            return makeRoom(id, this.brush.floor, pts, this.brush.wall ?? null);
+            return makeRoom(id, this.brush.floor, pts, this.brush.wall ?? null, this.brush.wallKind);
         }
         return makeStroke(id, this.brush.biome, pts, this.brushRadius);
     }

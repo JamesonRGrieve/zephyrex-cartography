@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { BLOCKS_ALL } from './documents';
 import { makePath } from './path';
 import { planDocuments } from './plan';
 import { makeRegion } from './region';
@@ -23,6 +24,19 @@ describe('planDocuments', () => {
         expect(plan?.lights).toHaveLength(1);
         expect(plan?.lights[0]?.x).toBe(50);
         expect(plan?.tiles).toEqual([]);
+    });
+
+    it('gives a room’s walls its wall kind, while its doors block everything when shut', () => {
+        const room = makeRoom('r', 'dirt', square, null, 'window');
+        const plan = room ? planDocuments(withRoomDoor(room, 2, NEW_DOOR)) : null;
+        const [wall, , door] = plan?.walls ?? [];
+        expect(wall).toMatchObject({
+            door: 'none',
+            blocks: { sight: 'proximity', light: 'proximity', sound: 'normal', movement: true },
+            threshold: { light: 2, sight: 2, attenuation: true },
+        });
+        expect(door).toMatchObject({ door: 'door', blocks: BLOCKS_ALL });
+        expect(door).not.toHaveProperty('threshold');
     });
 
     it('plans centerline walls only for a path that asks for them', () => {

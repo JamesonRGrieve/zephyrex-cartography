@@ -322,6 +322,18 @@
                                     }
                                 ]
                             },
+                            "wallKind": {
+                                "default": "solid",
+                                "description": "What kind of walls, as Foundry's Walls palette names them: solid, terrain, invisible, ethereal or window.",
+                                "type": "string",
+                                "enum": [
+                                    "solid",
+                                    "terrain",
+                                    "invisible",
+                                    "ethereal",
+                                    "window"
+                                ]
+                            },
                             "doors": {
                                 "default": [],
                                 "type": "array",

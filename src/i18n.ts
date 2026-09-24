@@ -71,6 +71,7 @@ export const I18N = {
         floor: key('Materials.Floor'),
         wall: key('Materials.Wall'),
         noWall: key('Materials.NoWall'),
+        wallKind: key('Materials.WallKind'),
     },
     doors: {
         title: key('Doors.Title'),

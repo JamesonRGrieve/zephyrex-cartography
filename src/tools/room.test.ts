@@ -45,9 +45,11 @@ describe('materials', () => {
     it('defaults to no drawn wall and swaps floor and wall together', () => {
         const r = makeRoom('r', 'dirt', pts);
         expect(r?.wall).toBeNull();
-        const dressed = r ? withRoomMaterials(r, { floor: 'floor.oak', wall: 'wall.brick' }) : null;
+        expect(r?.wallKind).toBe('solid');
+        const dressed = r ? withRoomMaterials(r, { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'terrain' }) : null;
         expect(dressed?.floor).toBe('floor.oak');
         expect(dressed?.wall).toBe('wall.brick');
+        expect(dressed?.wallKind).toBe('terrain');
         expect(dressed?.points).toEqual(r?.points);
     });
 

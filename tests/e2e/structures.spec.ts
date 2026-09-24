@@ -1,6 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, frameScene, test } from './lib/foundry';
 
+test('a room of window walls gets Foundry’s window walls, and its door stays solid', async ({ world }) => {
+    const walls = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            features: [
+                {
+                    type: 'room',
+                    wallKind: 'window',
+                    points: [
+                        { x: 2, y: 2 },
+                        { x: 6, y: 2 },
+                        { x: 6, y: 6 },
+                        { x: 2, y: 6 },
+                    ],
+                    doors: [{ segment: 0 }],
+                },
+            ],
+        });
+        return (canvas?.scene?.walls.contents ?? []).map((w) => ({ door: w.door, sight: w.sight, light: w.light, lightThreshold: w.threshold.light }));
+    });
+    // EDGE_SENSE_TYPES: NORMAL 20, PROXIMITY 30. A window reaches 2 squares: 10 distance units at the scene's 5 per square.
+    expect(walls.filter((w) => w.door === 0)).toEqual(Array.from({ length: 3 }, () => ({ door: 0, sight: 30, light: 30, lightThreshold: 10 })));
+    expect(walls.filter((w) => w.door === 1)).toEqual([{ door: 1, sight: 20, light: 20, lightThreshold: null }]);
+});
+
 test('a room spec becomes native walls, a door and a light', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const outcome = await game.modules?.get('zephyrex-cartography').api.buildSpec({
