@@ -93,6 +93,9 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
                 if (l.bottom !== undefined && l.top !== undefined) {
                     await controller.setLevelBand(id, l.bottom, l.top);
                 }
+                if (l.background !== undefined || l.foreground !== undefined || l.fog !== undefined) {
+                    await controller.setLevelArt(id, { background: l.background ?? null, foreground: l.foreground ?? null, fog: l.fog ?? null });
+                }
             }
         }, Promise.resolve());
 

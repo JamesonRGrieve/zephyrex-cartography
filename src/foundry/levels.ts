@@ -25,7 +25,8 @@ function fromNative(level: NativeLevel, height: number): Level | null {
     }
     // Foundry reports an open bound as null in source data and as ±Infinity once prepared.
     const bottom = finiteOr(level.elevation.bottom, 0);
-    return { id: level.id, name: level.name, bottom, top: finiteOr(level.elevation.top, bottom + height) };
+    const art = { background: level.background.src, foreground: level.foreground.src, fog: level.fog.src };
+    return { id: level.id, name: level.name, bottom, top: finiteOr(level.elevation.top, bottom + height), art };
 }
 
 function finiteOr(value: number | null, fallback: number): number {
@@ -57,7 +58,11 @@ export function createLevelStore(getScene: () => FoundryScene | null): LevelStor
                 return;
             }
             const band = { bottom: patch.bottom ?? current.bottom, top: patch.top ?? current.top };
-            await scene.updateEmbeddedDocuments('Level', [{ _id: id, ...(patch.name === undefined ? {} : { name: patch.name }), elevation: band }]);
+            const art =
+                patch.art === undefined
+                    ? {}
+                    : { background: { src: patch.art.background }, foreground: { src: patch.art.foreground }, fog: { src: patch.art.fog } };
+            await scene.updateEmbeddedDocuments('Level', [{ _id: id, ...(patch.name === undefined ? {} : { name: patch.name }), elevation: band, ...art }]);
         },
         remove: async (id) => {
             await getScene()?.deleteEmbeddedDocuments('Level', [id]);

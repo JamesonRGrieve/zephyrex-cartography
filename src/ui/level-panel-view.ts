@@ -5,7 +5,7 @@
  * below, and removes empty ones. A pure function from a {@link LevelPanel} to
  * elements; unit-tested under happy-dom.
  */
-import type { LevelPanel, LevelRow } from '../tools/levels';
+import type { Level, LevelArt, LevelPanel, LevelRow } from '../tools/levels';
 import { button, el, labelledInput, pressable, replacePreservingFocus } from './dom';
 
 export interface LevelPanelLabels {
@@ -21,6 +21,9 @@ export interface LevelPanelLabels {
     readonly empty: string;
     readonly removeBlocked: string;
     readonly list: string;
+    readonly art: Readonly<Record<keyof LevelArt, string>>;
+    /** Formats the browse button's label for one of the images. */
+    readonly browse: (image: string) => string;
 }
 
 export interface LevelPanelHandlers {
@@ -29,7 +32,30 @@ export interface LevelPanelHandlers {
     readonly add: (position: 'above' | 'below') => void;
     readonly rename: (id: string, name: string) => void;
     readonly setBand: (id: string, bottom: number, top: number) => void;
+    readonly setArt: (id: string, art: LevelArt) => void;
+    /** Pick one of the level's images with Foundry's file picker. */
+    readonly browse: (id: string, image: keyof LevelArt) => void;
     readonly remove: (id: string) => void;
+}
+
+const ART_IMAGES: readonly (keyof LevelArt)[] = ['background', 'foreground', 'fog'];
+
+/** A level's image paths, each typed in or browsed for; clearing a path removes the image. */
+function artFields(level: Level, labels: LevelPanelLabels, handlers: LevelPanelHandlers): HTMLElement {
+    const fields = el('div', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    for (const image of ART_IMAGES) {
+        const path = labelledInput(labels.art[image], 'text', level.art[image] ?? '', `${image}:${level.id}`, (typed) => {
+            handlers.setArt(level.id, { ...level.art, [image]: typed.trim() === '' ? null : typed.trim() });
+            return true;
+        });
+        const browse = button('tw-text-xs', '…', `browse-${image}:${level.id}`, () => {
+            handlers.browse(level.id, image);
+        });
+        browse.setAttribute('aria-label', labels.browse(labels.art[image]));
+        browse.title = labels.browse(labels.art[image]);
+        fields.append(path, browse);
+    }
+    return fields;
 }
 
 function levelRow(row: LevelRow, labels: LevelPanelLabels, handlers: LevelPanelHandlers): HTMLLIElement {
@@ -65,6 +91,7 @@ function levelRow(row: LevelRow, labels: LevelPanelLabels, handlers: LevelPanelH
         labelledInput(labels.top, 'number', String(level.top), `top:${level.id}`, (value) => band(level.bottom, value === '' ? Number.NaN : Number(value))),
         el('span', 'tw-text-xs', labels.features(row.count)),
         remove,
+        artFields(level, labels, handlers),
     );
     return item;
 }

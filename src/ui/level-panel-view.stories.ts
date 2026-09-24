@@ -5,7 +5,7 @@
  * adding and removing all work in Storybook.
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import { levelPanel, nextLevelBand, type Level } from '../tools/levels';
+import { levelPanel, nextLevelBand, NO_LEVEL_ART, type Level } from '../tools/levels';
 import { renderLevelPanel, type LevelPanelLabels } from './level-panel-view';
 
 export interface LevelPanelArgs {
@@ -26,7 +26,12 @@ const LABELS: LevelPanelLabels = {
     empty: 'This scene has no levels yet. Everything drawn shows on every level until you add one.',
     removeBlocked: "Remove or move this level's features before removing it.",
     list: 'Scene levels, top to bottom',
+    art: { background: 'Background image', foreground: 'Foreground image', fog: 'Fog image' },
+    browse: (image) => `Browse for ${image}`,
 };
+
+/** A stand-in for Foundry's file picker: the path it would return. */
+const PICKED = 'maps/levels/picked.webp';
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
 export function mountLevelPanel(args: LevelPanelArgs): HTMLElement {
@@ -46,7 +51,7 @@ export function mountLevelPanel(args: LevelPanelArgs): HTMLElement {
             add: (position) => {
                 created += 1;
                 const id = `new-${created}`;
-                levels = [...levels, { id, name: `Level ${levels.length + 1}`, ...nextLevelBand(levels, position) }];
+                levels = [...levels, { id, name: `Level ${levels.length + 1}`, ...nextLevelBand(levels, position), art: NO_LEVEL_ART }];
                 active = id;
                 render();
             },
@@ -56,6 +61,14 @@ export function mountLevelPanel(args: LevelPanelArgs): HTMLElement {
             },
             setBand: (id, bottom, ceiling) => {
                 levels = levels.map((l) => (l.id === id ? { ...l, bottom, top: ceiling } : l));
+                render();
+            },
+            setArt: (id, art) => {
+                levels = levels.map((l) => (l.id === id ? { ...l, art } : l));
+                render();
+            },
+            browse: (id, image) => {
+                levels = levels.map((l) => (l.id === id ? { ...l, art: { ...l.art, [image]: PICKED } } : l));
                 render();
             },
             remove: (id) => {
@@ -70,9 +83,9 @@ export function mountLevelPanel(args: LevelPanelArgs): HTMLElement {
 }
 
 const HAB_LEVELS: readonly Level[] = [
-    { id: 'cellar', name: 'Cellar', bottom: -10, top: 0 },
-    { id: 'ground', name: 'Ground floor', bottom: 0, top: 10 },
-    { id: 'upper', name: 'Upper floor', bottom: 10, top: 20 },
+    { id: 'cellar', name: 'Cellar', bottom: -10, top: 0, art: NO_LEVEL_ART },
+    { id: 'ground', name: 'Ground floor', bottom: 0, top: 10, art: { background: 'maps/hab/ground.webp', foreground: 'maps/hab/roof.webp', fog: null } },
+    { id: 'upper', name: 'Upper floor', bottom: 10, top: 20, art: NO_LEVEL_ART },
 ];
 
 const meta: Meta<LevelPanelArgs> = {

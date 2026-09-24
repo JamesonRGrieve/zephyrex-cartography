@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, describe, expect, it } from 'vitest';
+import { NO_LEVEL_ART } from '../tools/levels';
 import * as stories from './level-panel-view.stories';
 
 const base: stories.LevelPanelArgs = {
     levels: [
-        { id: 'ground', name: 'Ground floor', bottom: 0, top: 10 },
-        { id: 'upper', name: 'Upper floor', bottom: 10, top: 20 },
+        { id: 'ground', name: 'Ground floor', bottom: 0, top: 10, art: { ...NO_LEVEL_ART, background: 'maps/ground.webp' } },
+        { id: 'upper', name: 'Upper floor', bottom: 10, top: 20, art: NO_LEVEL_ART },
     ],
     active: 'ground',
     counts: { ground: 3 },
@@ -83,6 +84,19 @@ describe('level panel', () => {
         expect(input(root, 'Ceiling elevation', 1).value).toBe('10');
         change(input(root, 'Level name', 1), '   ');
         expect(input(root, 'Level name', 1).value).toBe('Ground floor');
+    });
+
+    it('shows each level’s images, sets a typed path, clears a blanked one, and browses for another', () => {
+        const root = mount();
+        // Rows read top to bottom: Upper, then Ground.
+        expect(input(root, 'Background image', 1).value).toBe('maps/ground.webp');
+        change(input(root, 'Foreground image', 1), '  maps/roof.webp ');
+        expect(input(root, 'Foreground image', 1).value).toBe('maps/roof.webp');
+        change(input(root, 'Background image', 1), ' ');
+        expect(input(root, 'Background image', 1).value).toBe('');
+        const browseFog = [...root.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'Browse for Fog image');
+        browseFog?.click();
+        expect(input(root, 'Fog image', 0).value).toBe('maps/levels/picked.webp');
     });
 
     it('explains an empty scene and still offers to add a level', () => {

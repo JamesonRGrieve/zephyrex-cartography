@@ -172,7 +172,7 @@ describe('realizeSpec', () => {
             h.c,
             spec({
                 levels: [
-                    { key: 'cellar', name: 'Cellar', bottom: -10, top: 0 },
+                    { key: 'cellar', name: 'Cellar', bottom: -10, top: 0, background: 'maps/cellar.webp', fog: 'maps/damp.webp' },
                     { key: 'ground', name: 'Ground' },
                 ],
                 features: [
@@ -201,7 +201,8 @@ describe('realizeSpec', () => {
         );
         expect(report.levels).toEqual({ cellar: 'lv1', ground: 'lv2' });
         expect(h.c.levels.map((l) => l.name)).toEqual(['Cellar', 'Ground']);
-        expect(h.c.levels[0]).toMatchObject({ bottom: -10, top: 0 });
+        expect(h.c.levels[0]).toMatchObject({ bottom: -10, top: 0, art: { background: 'maps/cellar.webp', foreground: null, fog: 'maps/damp.webp' } });
+        expect(h.c.levels[1]?.art).toEqual({ background: null, foreground: null, fog: null });
         expect(h.s.last().map((f) => f.level)).toEqual(['lv1', null]);
         expect(h.c.activeLevel).toBeNull();
     });

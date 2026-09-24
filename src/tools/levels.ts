@@ -7,12 +7,30 @@
  * The levels are the scene's native Level documents. Pure and unit-tested.
  */
 
+/**
+ * A level's own images, which Foundry draws for that floor alone (the native
+ * Level's background, foreground and fog). Null: none.
+ */
+export interface LevelArt {
+    readonly background: string | null;
+    readonly foreground: string | null;
+    readonly fog: string | null;
+}
+
+export const NO_LEVEL_ART: LevelArt = { background: null, foreground: null, fog: null };
+
 export interface Level {
     readonly id: string;
     readonly name: string;
     /** Elevation band, bottom inclusive, top exclusive (scene distance units). */
     readonly bottom: number;
     readonly top: number;
+    readonly art: LevelArt;
+}
+
+/** The levels as features see them: art changes what Foundry draws, never what the plugin plans. */
+export function planningLevels(levels: readonly Level[]): string {
+    return JSON.stringify(levels.map(({ art: _art, ...planned }) => planned));
 }
 
 /** Height given to a new level when the scene's grid is unknown, in scene distance units; editable afterwards. */

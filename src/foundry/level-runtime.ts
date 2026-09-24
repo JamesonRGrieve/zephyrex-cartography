@@ -34,7 +34,15 @@ function panelLabels(): LevelPanelLabels {
         empty: localize(l.empty),
         removeBlocked: localize(l.removeBlocked),
         list: localize(l.list),
+        art: { background: localize(l.background), foreground: localize(l.foreground), fog: localize(l.fog) },
+        browse: (image) => format(l.browse, { image }),
     };
+}
+
+/** Pick an image with Foundry's own file picker, starting from `current`. */
+async function pickImage(current: string | null, picked: (path: string) => void): Promise<void> {
+    const picker = new foundry.applications.apps.FilePicker.implementation({ type: 'image', current: current ?? '', callback: picked });
+    await picker.render({ force: true });
 }
 
 export function registerLevelRuntime(controller: () => CartographyController | null): LevelRuntime {
@@ -68,6 +76,17 @@ export function registerLevelRuntime(controller: () => CartographyController | n
                 },
                 setBand: (id, bottom, ceiling) => {
                     run(async (c) => c.setLevelBand(id, bottom, ceiling));
+                },
+                setArt: (id, art) => {
+                    run(async (c) => c.setLevelArt(id, art));
+                },
+                browse: (id, image) => {
+                    const level = active?.levels.find((l) => l.id === id);
+                    if (level) {
+                        void pickImage(level.art[image], (path) => {
+                            run(async (c) => c.setLevelArt(id, { ...level.art, [image]: path }));
+                        });
+                    }
                 },
                 remove: (id) => {
                     run(async (c) => c.removeLevel(id));

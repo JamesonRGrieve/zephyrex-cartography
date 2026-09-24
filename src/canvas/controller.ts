@@ -19,7 +19,18 @@ import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
-import { DEFAULT_LEVEL_HEIGHT, findLevel, type Level, levelElevation, nextLevelBand, onLevel, sortLevels } from '../tools/levels';
+import {
+    DEFAULT_LEVEL_HEIGHT,
+    findLevel,
+    type Level,
+    type LevelArt,
+    levelElevation,
+    nextLevelBand,
+    NO_LEVEL_ART,
+    onLevel,
+    planningLevels,
+    sortLevels,
+} from '../tools/levels';
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { drawOrder } from '../tools/nesting';
 import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
@@ -327,7 +338,7 @@ export class CartographyController {
         }
         await this.transaction(async () => {
             await this.dropOrphans();
-            if (JSON.stringify(before) !== JSON.stringify(this.levelList)) {
+            if (planningLevels(before) !== planningLevels(this.levelList)) {
                 await this.resyncLevelled();
             }
         });
@@ -336,12 +347,22 @@ export class CartographyController {
 
     /** Add a level stacked above (or below) the existing ones and make it active; returns its id. */
     async addLevel(position: 'above' | 'below', levelName: string): Promise<string | null> {
-        const id = await this.levelStore.create({ name: levelName, ...nextLevelBand(this.levelList, position, this.levelHeight) });
+        const id = await this.levelStore.create({ name: levelName, ...nextLevelBand(this.levelList, position, this.levelHeight), art: NO_LEVEL_ART });
         await this.reloadLevels();
         if (id !== null) {
             this.setActiveLevel(id);
         }
         return id;
+    }
+
+    /** Set a level's own background, foreground and fog images; false for an unknown level. */
+    async setLevelArt(id: string, art: LevelArt): Promise<boolean> {
+        if (!findLevel(this.levelList, id)) {
+            return false;
+        }
+        await this.levelStore.update(id, { art });
+        await this.reloadLevels();
+        return true;
     }
 
     async renameLevel(id: string, levelName: string): Promise<void> {

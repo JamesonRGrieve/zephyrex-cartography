@@ -60,6 +60,18 @@ test('a room on an upper level has a floor Foundry treats as a solid surface fro
     expect(result.fromGround).toEqual([floor]);
 });
 
+test('a level’s own images are its native Level background, foreground and fog', async ({ world }) => {
+    const result = await world.evaluate(async () => {
+        const art = { background: 'modules/zc-e2e-pack/stamps/hab.svg', foreground: null, fog: 'modules/zc-e2e-pack/stamps/crate.svg' };
+        await game.modules
+            ?.get('zephyrex-cartography')
+            .api.buildSpec({ schemaVersion: 1, levels: [{ key: 'g', name: 'Painted', background: art.background, fog: art.fog }], features: [] });
+        const level = canvas?.scene?.levels.contents.find((l) => l.name === 'Painted');
+        return { expected: art, actual: { background: level?.background.src ?? null, foreground: level?.foreground.src ?? null, fog: level?.fog.src ?? null } };
+    });
+    expect(result.actual).toEqual(result.expected);
+});
+
 test('levels are native Level documents, and a room on one has walls on that level only', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const api = game.modules?.get('zephyrex-cartography').api;

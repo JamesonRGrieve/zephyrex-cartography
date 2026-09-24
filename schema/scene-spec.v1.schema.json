@@ -42,6 +42,21 @@
                     },
                     "top": {
                         "type": "number"
+                    },
+                    "background": {
+                        "description": "Image Foundry draws as this level's background, for this floor alone.",
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "foreground": {
+                        "description": "Image Foundry draws over this level's tokens (roofs, canopies).",
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "fog": {
+                        "description": "Image shown in unexplored fog on this level.",
+                        "type": "string",
+                        "minLength": 1
                     }
                 },
                 "required": [

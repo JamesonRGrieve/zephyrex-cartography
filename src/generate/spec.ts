@@ -115,6 +115,9 @@ const levelSpec = z
         name: text,
         bottom: z.number().optional().describe('Floor elevation (scene distance units); with `top`, sets the band.'),
         top: z.number().optional(),
+        background: text.optional().describe("Image Foundry draws as this level's background, for this floor alone."),
+        foreground: text.optional().describe("Image Foundry draws over this level's tokens (roofs, canopies)."),
+        fog: text.optional().describe('Image shown in unexplored fog on this level.'),
     })
     .strict();
 

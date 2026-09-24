@@ -57,7 +57,11 @@
             "NewLevel": "Level {number}",
             "Empty": "This scene has no levels yet. Everything drawn shows on every level until you add one.",
             "RemoveBlocked": "Remove or move this level's features before removing it.",
-            "List": "Scene levels, top to bottom"
+            "List": "Scene levels, top to bottom",
+            "Background": "Background image",
+            "Foreground": "Foreground image",
+            "Fog": "Fog image",
+            "Browse": "Browse for {image}"
         },
         "Doors": {
             "Title": "Door",

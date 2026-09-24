@@ -61,6 +61,10 @@ export const I18N = {
         empty: key('Levels.Empty'),
         removeBlocked: key('Levels.RemoveBlocked'),
         list: key('Levels.List'),
+        background: key('Levels.Background'),
+        foreground: key('Levels.Foreground'),
+        fog: key('Levels.Fog'),
+        browse: key('Levels.Browse'),
     },
     materials: {
         title: key('Materials.Title'),

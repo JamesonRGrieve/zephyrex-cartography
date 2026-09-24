@@ -457,12 +457,14 @@ These make everything after them cheaper and safer, so they come first.
     from observers almost directly below and show more to those further off.
     Roof stamps and room ceilings offer it.
   - It pairs with the tile **SURFACE** occlusion mode (Priority 4).
-- **Per-level art.** Level documents carry:
-  - `background` (src, colour, tint, alpha threshold), `foreground` and `fog`
-    images, non-nullable since 14.359;
-  - `textures` (anchor, offset, fit, scale, rotation);
-  - `visibility.levels`.
-  The levels panel and the scene spec set them.
+- **[done] Per-level images.** A `Level` carries its `art`: the native
+  Level's `background`, `foreground` and `fog` image paths. The levels panel
+  sets each by typing a path or with Foundry's file picker, and a scene spec
+  level entry sets them too. Art never re-syncs features: `planningLevels`
+  leaves it out.
+  - **Still open:** the rest of the Level's look. That is the background
+    colour, the tints and alpha thresholds, `textures` (anchor, offset, fit,
+    scale, rotation) and `visibility.levels`.
 - **Level preloading** [14.364]. The levels panel can preload a level's
   images before the party climbs to it.
 - **Buildings: interior scene or upper levels.** A building can open into a

@@ -115,10 +115,18 @@ interface LevelCreateData {
     readonly elevation: { readonly bottom: number; readonly top: number };
 }
 
+/** A Level image's source (v14 `background`, `foreground` and `fog` each have one); null: none. */
+interface LevelImage {
+    readonly src: string | null;
+}
+
 interface LevelUpdateData {
     readonly _id: string;
     readonly name?: string;
     readonly elevation?: { readonly bottom: number; readonly top: number };
+    readonly background?: LevelImage;
+    readonly foreground?: LevelImage;
+    readonly fog?: LevelImage;
 }
 
 export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level';
@@ -158,6 +166,9 @@ export interface NativeLevel {
     readonly name: string;
     /** An open bound is null in source data and ±Infinity once Foundry prepares it. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
+    readonly background: LevelImage;
+    readonly foreground: LevelImage;
+    readonly fog: LevelImage;
 }
 
 /*

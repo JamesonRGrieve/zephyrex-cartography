@@ -132,6 +132,20 @@ describe('CartographyController levels', () => {
         expect(await c.setLevelBand('nope', 0, 5)).toBe(false);
     });
 
+    it('sets a level’s own images without re-syncing what stands on it, and refuses an unknown level', async () => {
+        const { c, d, l } = makeHarness();
+        await c.addLevel('above', 'Ground');
+        c.setActiveLevel('lv1');
+        await drawRoom(c);
+        const writes = d.writes.length;
+        const art = { background: 'maps/ground.webp', foreground: null, fog: 'maps/fog.webp' };
+        expect(await c.setLevelArt('lv1', art)).toBe(true);
+        expect(l.levels[0]?.art).toEqual(art);
+        expect(c.levels[0]?.art).toEqual(art);
+        expect(d.writes).toHaveLength(writes);
+        expect(await c.setLevelArt('nope', art)).toBe(false);
+    });
+
     it('gives a room on an upper level a solid floor over the level below, and a ground-floor room none', async () => {
         const { c, d } = makeHarness();
         await c.addLevel('above', 'Ground');
