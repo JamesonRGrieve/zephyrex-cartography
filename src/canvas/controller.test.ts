@@ -226,6 +226,7 @@ describe('CartographyController', () => {
                 ],
                 halfWidths: [10, 10],
                 walls: false,
+                river: null,
                 docs: { walls: [], lights: [], tiles: [], regions: [], sounds: [] },
                 level: null,
             },

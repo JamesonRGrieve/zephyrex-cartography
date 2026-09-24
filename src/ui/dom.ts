@@ -57,6 +57,39 @@ export function labelledInput(label: string, type: 'text' | 'number', value: str
     return wrap;
 }
 
+/**
+ * A labelled select over typed `[value, shown]` entries; `onChange` gets the
+ * picked entry's value (never a string the entries do not hold).
+ */
+export function choice<T extends string>(
+    id: string,
+    label: string,
+    entries: readonly (readonly [T, string])[],
+    value: T,
+    onChange: (v: T) => void,
+): HTMLElement {
+    const wrap = el('div', 'tw-flex tw-items-center tw-gap-2');
+    const labelEl = el('label', 'tw-text-xs', label);
+    labelEl.htmlFor = id;
+    const select = el('select', 'tw-text-xs');
+    select.id = id;
+    focusKey(select, id);
+    for (const [option, shown] of entries) {
+        const node = el('option', '', shown);
+        node.value = option;
+        select.append(node);
+    }
+    select.value = value;
+    select.addEventListener('change', () => {
+        const picked = entries.find(([option]) => option === select.value);
+        if (picked !== undefined) {
+            onChange(picked[0]);
+        }
+    });
+    wrap.append(labelEl, select);
+    return wrap;
+}
+
 /** Replace `root`'s children, returning keyboard focus (and an input's caret) to the control that had it. */
 export function replacePreservingFocus(root: HTMLElement, children: readonly HTMLElement[]): void {
     const active = root.ownerDocument.activeElement;

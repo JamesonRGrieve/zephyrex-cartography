@@ -33,7 +33,7 @@ import {
 } from '../tools/levels';
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { drawOrder } from '../tools/nesting';
-import { DEFAULT_HALF_WIDTH, makePath, type PathKind } from '../tools/path';
+import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath, type PathKind, type RiverLook } from '../tools/path';
 import { NO_PLAN, type PlanContext, planDocuments } from '../tools/plan';
 import { makeRegion } from '../tools/region';
 import {
@@ -194,6 +194,8 @@ export class CartographyController {
 
     /** Half-width (scene px) applied to newly drawn paths. */
     halfWidth = DEFAULT_HALF_WIDTH;
+    /** The look of newly drawn rivers: liquid, shade and bed. */
+    riverLook: RiverLook = LIQUID_LOOKS.water;
     /** Radius (scene px) applied to newly painted terrain strokes. */
     brushRadius = DEFAULT_BRUSH_RADIUS;
     /** Scene grid for snapping room vertices; null disables snapping. */
@@ -1233,7 +1235,7 @@ export class CartographyController {
         }
         const pts = this.session.simplified();
         if (this.brush.type === 'path') {
-            return makePath(id, this.brush.kind, pts, this.halfWidth, this.emitWalls);
+            return makePath(id, this.brush.kind, pts, this.halfWidth, this.emitWalls, this.riverLook);
         }
         if (this.brush.type === 'region') {
             return makeRegion(id, this.brush.biome, pts);

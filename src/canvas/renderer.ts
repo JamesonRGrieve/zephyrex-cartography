@@ -8,10 +8,12 @@
 import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { perimeterSegments, segmentBand } from '../geometry/wall';
 import { BIOME_STYLES, isBiomeKind, type BiomeKind } from '../tools/biome';
+import { tintToward } from '../tools/colour';
 import type { Feature } from '../tools/feature';
-import type { PathKind } from '../tools/path';
+import type { CartographyPath, Liquid } from '../tools/path';
+import { proceduralRole, type Pattern } from '../tools/procedural';
 import { regionOutline } from '../tools/region';
-import { BIOME_TEXTURE, BIOME_TINT, PATH_TEXTURE, type TextureResolver } from '../tools/texture';
+import { BIOME_TEXTURE, BIOME_TINT, ROAD_TEXTURE, type TextureResolver } from '../tools/texture';
 
 /** Opacity for a textured fill — higher than a flat tint so the tile reads, but still blends. */
 const TEXTURE_ALPHA = 0.9;
@@ -24,15 +26,60 @@ interface RibbonStyle {
     readonly alpha: number;
 }
 
-const STYLES: Record<PathKind, RibbonStyle> = {
-    road: { fill: 0x6b5a44, alpha: 0.85 },
-    river: { fill: 0x2f5d7c, alpha: 0.8 },
-};
+const ROAD_STYLE: RibbonStyle = { fill: 0x6b5a44, alpha: 0.85 };
 
 const PREVIEW_STYLE: RibbonStyle = { fill: 0xff9c00, alpha: 0.4 };
 
-/** Flat colour of a pack floor material the active texture set does not have. */
-const ROOM_FLOOR_FALLBACK = 0x6e6457;
+/** How opaque each liquid is: water lets its bed show through, lava hides it. */
+const LIQUID_ALPHA: Record<Liquid, number> = { water: 0.7, lava: 0.92, poison: 0.8, acid: 0.8 };
+
+/** Texture roles a liquid is drawn in, the first the active set has; with none, it ripples. */
+const LIQUID_ROLES: Record<Liquid, readonly string[]> = {
+    water: ['water', 'floor.shallow-water', 'floor.calm-sea'],
+    lava: ['lava'],
+    poison: ['poison', 'floor.toxic-sludge'],
+    acid: ['acid', 'floor.toxic-sludge'],
+};
+
+/**
+ * How far a liquid's shade tints a pack texture: a water or sludge texture
+ * has its own colour and takes the shade gently, while the lava tile is dark
+ * rock that the shade turns molten.
+ */
+const LIQUID_TINT_STRENGTH: Record<Liquid, number> = { water: 0.5, lava: 1, poison: 0.6, acid: 0.6 };
+
+/** Texture roles of the untextured water biomes, the first the active set has; with none, they ripple. */
+const OPEN_WATER_ROLES: Readonly<Partial<Record<BiomeKind, readonly string[]>>> = {
+    water: LIQUID_ROLES.water,
+    ocean: ['ocean', 'floor.calm-sea', 'floor.rough-sea'],
+};
+
+/** A fill's texture and its multiply tint. */
+interface Texturing {
+    readonly texture: string | null;
+    readonly tint: number;
+}
+
+/**
+ * The first of `roles` the active set has, tinted `packTint`; failing that,
+ * procedural `pattern` tinted `colour`, so a fill is never a flat colour.
+ */
+function texturing(resolve: TextureResolver, roles: readonly string[], packTint: number, pattern: Pattern, colour: number): Texturing {
+    for (const role of roles) {
+        const texture = resolve(role);
+        if (texture !== null) {
+            return { texture, tint: packTint };
+        }
+    }
+    return { texture: resolve(proceduralRole(pattern)), tint: colour };
+}
+
+/** A river's bed runs this much wider than the river, plus a fixed bank either side, so even a stream shows its banks. */
+const BED_SCALE = 1.5;
+const BED_BANK_PX = 16;
+
+/** Flat colour of a pack floor material, or a bed, the active texture set does not have. */
+const ROLE_FALLBACK = 0x6e6457;
 
 /** Flat colour of a wall material the active texture set does not have. */
 const WALL_FALLBACK = 0x3a3a3a;
@@ -73,15 +120,51 @@ interface Filled {
 function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean, resolve: TextureResolver): Filled {
     const style = BIOME_STYLES[biome];
     const role = BIOME_TEXTURE[biome];
-    const texture = role === null ? null : resolve(role);
-    return {
-        outline,
-        fill: style.fill,
-        alpha: texture !== null ? TEXTURE_ALPHA : style.alpha,
-        texture,
-        tint: BIOME_TINT[biome],
-        feather,
-    };
+    // Water and ocean stay translucent, rippling; land is its texture, or grain in its colour.
+    if (role === null) {
+        const water = texturing(resolve, OPEN_WATER_ROLES[biome] ?? [], NO_TINT, 'ripple', style.fill);
+        return { outline, fill: style.fill, alpha: style.alpha, texture: water.texture, tint: water.tint, feather };
+    }
+    const land = texturing(resolve, [role], BIOME_TINT[biome], 'grain', style.fill);
+    return { outline, fill: style.fill, alpha: TEXTURE_ALPHA, texture: land.texture, tint: land.tint, feather };
+}
+
+/** Fill descriptor for a texture role: a biome as a biome, any other role (a pack material) by its texture, or grain. */
+function roleFilled(role: string, outline: number[], feather: boolean, resolve: TextureResolver): Filled {
+    if (isBiomeKind(role)) {
+        return biomeFilled(role, outline, feather, resolve);
+    }
+    const { texture, tint } = texturing(resolve, [role], NO_TINT, 'grain', ROLE_FALLBACK);
+    return { outline, fill: ROLE_FALLBACK, alpha: TEXTURE_ALPHA, texture, tint, feather };
+}
+
+/** A path's ribbon outline at `halfWidths`; rivers taper to a point at each end, roads keep a constant carriageway. */
+function pathOutline(path: CartographyPath, halfWidths: readonly number[]): number[] {
+    return ribbonOutline(buildRibbon(path.points, halfWidths, RIBBON_SAMPLES, path.kind === 'river'));
+}
+
+function pathFilled(path: CartographyPath, resolve: TextureResolver): Filled {
+    const outline = pathOutline(path, path.halfWidths);
+    if (path.river === null) {
+        const road = texturing(resolve, [ROAD_TEXTURE], NO_TINT, 'grain', ROAD_STYLE.fill);
+        return { outline, fill: ROAD_STYLE.fill, alpha: TEXTURE_ALPHA, ...road, feather: false };
+    }
+    const { liquid, shade } = path.river;
+    const flow = texturing(resolve, LIQUID_ROLES[liquid], tintToward(shade, LIQUID_TINT_STRENGTH[liquid]), 'ripple', shade);
+    return { outline, fill: shade, alpha: LIQUID_ALPHA[liquid], ...flow, feather: false };
+}
+
+/** Fills drawn beneath a feature's own: a river's bed, wider than the river and feathered into the map. */
+function underlays(feature: Feature, resolve: TextureResolver): Filled[] {
+    const bed = feature.type === 'path' ? feature.river?.bed ?? null : null;
+    if (feature.type !== 'path' || bed === null) {
+        return [];
+    }
+    const outline = pathOutline(
+        feature,
+        feature.halfWidths.map((w) => w * BED_SCALE + BED_BANK_PX),
+    );
+    return [roleFilled(bed, outline, true, resolve)];
 }
 
 /** Nothing to draw: the feature is realised entirely as native documents (a stamp is its Tile). */
@@ -100,26 +183,14 @@ function outlineAndStyle(feature: Feature, resolve: TextureResolver): Filled {
     }
     if (feature.type === 'room') {
         // The exact polygon with a crisp edge: a room's walls are straight and cover its boundary.
-        const outline = feature.points.flatMap((p) => [p.x, p.y]);
-        if (isBiomeKind(feature.floor)) {
-            return biomeFilled(feature.floor, outline, false, resolve);
-        }
-        const texture = resolve(feature.floor);
-        return { outline, fill: ROOM_FLOOR_FALLBACK, alpha: TEXTURE_ALPHA, texture, tint: NO_TINT, feather: false };
+        return roleFilled(
+            feature.floor,
+            feature.points.flatMap((p) => [p.x, p.y]),
+            false,
+            resolve,
+        );
     }
-    const pathStyle = STYLES[feature.kind];
-    const pathRole = PATH_TEXTURE[feature.kind];
-    const pathTexture = pathRole === null ? null : resolve(pathRole);
-    // Rivers taper to a point at each end; roads keep a constant carriageway.
-    const taperEnds = feature.kind === 'river';
-    return {
-        outline: ribbonOutline(buildRibbon(feature.points, feature.halfWidths, RIBBON_SAMPLES, taperEnds)),
-        fill: pathStyle.fill,
-        alpha: pathTexture !== null ? TEXTURE_ALPHA : pathStyle.alpha,
-        texture: pathTexture,
-        tint: NO_TINT,
-        feather: false,
-    };
+    return pathFilled(feature, resolve);
 }
 
 const PREVIEW_ID = '__preview__';
@@ -129,34 +200,38 @@ function wallBands(feature: Feature, resolve: TextureResolver): Filled[] {
     if (feature.type !== 'room' || feature.wall === null) {
         return [];
     }
-    const texture = resolve(feature.wall);
+    const { texture, tint } = texturing(resolve, [feature.wall], NO_TINT, 'grain', WALL_FALLBACK);
     return perimeterSegments(feature.points).map((seg) => ({
         outline: segmentBand(seg, WALL_BAND_WIDTH),
         fill: WALL_FALLBACK,
         alpha: 1,
         texture,
-        tint: NO_TINT,
+        tint,
         feather: false,
     }));
 }
 
 export class GraphicsFeatureRenderer implements FeatureRenderer {
-    /** Surface ids of the wall bands drawn for each feature, so they go with it. */
-    private readonly bands = new Map<string, string[]>();
+    /** Surface ids of the extra fills drawn for each feature (a river's bed, a room's wall bands), so they go with it. */
+    private readonly extras = new Map<string, string[]>();
 
     constructor(private readonly surface: DrawSurface, private readonly resolve: TextureResolver) {}
 
+    /** Draw a feature: what lies beneath it first (each draw goes on top), then the feature, then its wall bands. */
     set(id: string, feature: Feature): void {
+        this.removeExtras(id);
+        const below = underlays(feature, this.resolve).map((fill, i) => this.drawExtra(`${id}:bed:${i}`, fill));
         this.draw(id, outlineAndStyle(feature, this.resolve));
-        this.removeBands(id);
-        const bandIds = wallBands(feature, this.resolve).map((band, i) => {
-            const bandId = `${id}:wall:${i}`;
-            this.draw(bandId, band);
-            return bandId;
-        });
-        if (bandIds.length > 0) {
-            this.bands.set(id, bandIds);
+        const above = wallBands(feature, this.resolve).map((band, i) => this.drawExtra(`${id}:wall:${i}`, band));
+        const drawn = [...below, ...above];
+        if (drawn.length > 0) {
+            this.extras.set(id, drawn);
         }
+    }
+
+    private drawExtra(extraId: string, fill: Filled): string {
+        this.draw(extraId, fill);
+        return extraId;
     }
 
     private draw(id: string, { outline, fill, alpha, texture, tint, feather }: Filled): void {
@@ -169,11 +244,11 @@ export class GraphicsFeatureRenderer implements FeatureRenderer {
         }
     }
 
-    private removeBands(id: string): void {
-        for (const bandId of this.bands.get(id) ?? []) {
-            this.surface.remove(bandId);
+    private removeExtras(id: string): void {
+        for (const extraId of this.extras.get(id) ?? []) {
+            this.surface.remove(extraId);
         }
-        this.bands.delete(id);
+        this.extras.delete(id);
     }
 
     preview(feature: Feature): void {
@@ -187,7 +262,7 @@ export class GraphicsFeatureRenderer implements FeatureRenderer {
 
     remove(id: string): void {
         this.surface.remove(id);
-        this.removeBands(id);
+        this.removeExtras(id);
     }
 
     clearPreview(): void {
@@ -196,6 +271,6 @@ export class GraphicsFeatureRenderer implements FeatureRenderer {
 
     clear(): void {
         this.surface.clear();
-        this.bands.clear();
+        this.extras.clear();
     }
 }

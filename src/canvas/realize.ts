@@ -8,8 +8,9 @@
  */
 import type { FeatureSpec, SceneSpec } from '../generate/spec';
 import type { Point } from '../geometry/spline';
+import { parseCssHex } from '../tools/colour';
 import type { Feature } from '../tools/feature';
-import { DEFAULT_HALF_WIDTH, makePath } from '../tools/path';
+import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath } from '../tools/path';
 import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
 import type { StampPlacement } from '../tools/stamp';
@@ -57,7 +58,13 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
     } else if (spec.type === 'stroke') {
         feature = makeStroke(id, spec.biome, points, spec.radius === undefined ? DEFAULT_BRUSH_RADIUS : scale.length(spec.radius));
     } else if (spec.type === 'path') {
-        feature = makePath(id, spec.kind, points, spec.halfWidth === undefined ? DEFAULT_HALF_WIDTH : scale.length(spec.halfWidth), spec.walls);
+        const base = LIQUID_LOOKS[spec.liquid ?? 'water'];
+        const river = {
+            ...base,
+            shade: (spec.shade === undefined ? null : parseCssHex(spec.shade)) ?? base.shade,
+            bed: spec.bed === undefined ? base.bed : spec.bed,
+        };
+        feature = makePath(id, spec.kind, points, spec.halfWidth === undefined ? DEFAULT_HALF_WIDTH : scale.length(spec.halfWidth), spec.walls, river);
     } else {
         const room = makeRoom(id, spec.floor ?? DEFAULT_FLOOR, points, spec.wall, spec.wallKind);
         feature =

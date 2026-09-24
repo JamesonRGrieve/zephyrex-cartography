@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_HALF_WIDTH, makePath, parsePath } from './path';
+import { DEFAULT_HALF_WIDTH, isLiquid, LIQUID_LOOKS, LIQUIDS, makePath, parsePath, type RiverLook } from './path';
+
+const LINE = [
+    { x: 0, y: 0 },
+    { x: 10, y: 0 },
+];
 
 describe('parsePath', () => {
     it('returns null for non-path input', () => {
@@ -61,13 +66,42 @@ describe('makePath', () => {
             ],
             8,
             true,
+            LIQUID_LOOKS.lava,
         );
         expect(p?.type).toBe('path');
         expect(p?.halfWidths).toEqual([8, 8]);
         expect(p?.walls).toBe(true);
+        expect(p?.river).toBeNull(); // a road has no look, whatever is passed
+    });
+
+    it('gives a river the look it is drawn with', () => {
+        const look = { liquid: 'acid', shade: 0x00ff00, bed: null } as const;
+        expect(makePath('id', 'river', LINE, 8, false, look)?.river).toEqual(look);
     });
 
     it('returns null for fewer than two points', () => {
-        expect(makePath('id', 'road', [{ x: 0, y: 0 }], 8, false)).toBeNull();
+        expect(makePath('id', 'road', [{ x: 0, y: 0 }], 8, false, LIQUID_LOOKS.water)).toBeNull();
+    });
+});
+
+describe('river looks', () => {
+    it('reads a river’s look field by field over its liquid’s defaults', () => {
+        const river = (look: Readonly<Record<string, string | number | null>>): RiverLook | null | undefined =>
+            parsePath({ type: 'path', id: 'r', kind: 'river', points: LINE, river: look })?.river;
+        expect(river({ liquid: 'poison', shade: 0x123456, bed: 'sand' })).toEqual({ liquid: 'poison', shade: 0x123456, bed: 'sand' });
+        expect(river({ liquid: 'lava' })).toEqual(LIQUID_LOOKS.lava);
+        expect(river({ liquid: 'lava', bed: null })).toEqual({ ...LIQUID_LOOKS.lava, bed: null });
+        expect(river({ liquid: 'mercury', shade: 'red', bed: 7 })).toEqual(LIQUID_LOOKS.water);
+    });
+
+    it('gives a river saved before looks water on its usual bed, and a road none', () => {
+        expect(parsePath({ type: 'path', id: 'r', kind: 'river', points: LINE })?.river).toEqual(LIQUID_LOOKS.water);
+        expect(parsePath({ type: 'path', id: 'a', kind: 'road', points: LINE, river: LIQUID_LOOKS.lava })?.river).toBeNull();
+    });
+
+    it('offers every liquid a look of its own', () => {
+        expect(LIQUIDS.map((liquid) => LIQUID_LOOKS[liquid].liquid)).toEqual(LIQUIDS);
+        expect(LIQUIDS.every(isLiquid)).toBe(true);
+        expect(isLiquid('mercury')).toBe(false);
     });
 });

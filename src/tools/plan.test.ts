@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL } from './documents';
-import { makePath } from './path';
+import { LIQUID_LOOKS, makePath } from './path';
 import { planDocuments } from './plan';
 import { makeRegion } from './region';
 import { makeRoom, NEW_DOOR, withRoomDoor } from './room';
@@ -44,8 +44,8 @@ describe('planDocuments', () => {
             { x: 0, y: 0 },
             { x: 100, y: 0 },
         ];
-        const walled = makePath('p', 'river', pts, 10, true);
-        const unwalled = makePath('q', 'road', pts, 10, false);
+        const walled = makePath('p', 'river', pts, 10, true, LIQUID_LOOKS.water);
+        const unwalled = makePath('q', 'road', pts, 10, false, LIQUID_LOOKS.water);
         expect(walled ? planDocuments(walled).walls.length : 0).toBeGreaterThan(1);
         expect(unwalled ? planDocuments(unwalled).walls : null).toEqual([]);
     });

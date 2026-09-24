@@ -18,7 +18,7 @@ const PANEL_WIDTH = 320;
 const PANEL_HEIGHT = 180;
 
 /** A material's display label: a biome's localised name, or a pack material's name. */
-function label(role: string): string {
+export function materialLabel(role: string): string {
     return isBiomeKind(role) ? localize(BIOME_TITLE_KEYS[role]) : materialName(role);
 }
 
@@ -47,7 +47,7 @@ export function registerMaterialsRuntime(controller: () => CartographyController
                 return;
             }
             const roles = textureRoles();
-            const choices = (list: readonly string[]): { role: string; label: string }[] => list.map((role) => ({ role, label: label(role) }));
+            const choices = (list: readonly string[]): { role: string; label: string }[] => list.map((role) => ({ role, label: materialLabel(role) }));
             renderMaterialsPanel(
                 root,
                 { current, floors: choices(floorMaterials(roles)), walls: choices(wallMaterials(roles)) },

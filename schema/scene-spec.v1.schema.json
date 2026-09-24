@@ -240,6 +240,33 @@
                                 "description": "Also emit walls along the centerline.",
                                 "type": "boolean"
                             },
+                            "liquid": {
+                                "description": "What a river carries (default: water). Ignored for a road.",
+                                "type": "string",
+                                "enum": [
+                                    "water",
+                                    "lava",
+                                    "poison",
+                                    "acid"
+                                ]
+                            },
+                            "shade": {
+                                "description": "A river's liquid colour, #rrggbb (default: the liquid's usual shade).",
+                                "type": "string",
+                                "pattern": "^#[0-9a-fA-F]{6}$"
+                            },
+                            "bed": {
+                                "description": "Texture role of a river's bed, e.g. \"sand\"; null: no bed (default: the liquid's usual bed).",
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
                             "level": {
                                 "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
                                 "type": "string",
@@ -252,7 +279,7 @@
                             "points"
                         ],
                         "additionalProperties": false,
-                        "description": "A road or river."
+                        "description": "A road, or a river of water, lava, poison or acid."
                     },
                     {
                         "type": "object",

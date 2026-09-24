@@ -213,6 +213,18 @@ that type's own control group, after Foundry's tools
   tool for every terrain texture: its panel is a swatch grid of the biomes
   (each shown in the active set's texture, or its flat colour) and a brush
   size. Clicking points paints an area, dragging paints a stroke.
+- **Roads and rivers.** Their panel sets the next path's width. Water,
+  lava, poison and acid are all the **river tool**: the panel picks the
+  liquid (which resets the shade and bed to that liquid's own), its shade,
+  and the texture of the **bed** laid beneath it, wider than the river and
+  feathered (or none). A river is drawn in the first of its liquid's
+  texture roles the active set has (`water`, `floor.shallow-water`, …),
+  tinted by the shade, and the scene spec's paths take `liquid`, `shade`
+  and `bed`.
+- **No flat fills.** Anything the active set has no texture for (a biome,
+  a material, a bed, a liquid) is drawn in a seamless procedural pattern
+  (`tools/procedural.ts`: ripples for liquids, grain for the rest) tinted in
+  its colour.
 - **Names.** Tools in a native group are named `zephyrex-<tool>`, so they
   never clash with Foundry's own (Walls has `doors`).
 - **Inert native layers.** The tools set none of `interaction`, `creation`
@@ -716,8 +728,10 @@ imports).
 
 ## Terrain / biomes
 
-`BiomeKind` is the terrain enum. Water, ocean, and **river are untextured** —
-they render as a translucent tint. Every other biome is a tiled texture.
+`BiomeKind` is the terrain enum. Water and ocean have no land texture role:
+they render translucent, in a water texture from the set or a procedural
+ripple. Every other biome is a tiled texture, or procedural grain in its
+colour.
 
 **Adding or renaming a biome requires lockstep updates**, or the build breaks /
 tests fail: `tools/biome.ts` (`BiomeKind`, `BIOMES`, `BIOME_STYLES`) →

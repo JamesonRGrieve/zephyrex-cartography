@@ -5,7 +5,7 @@
  * tool that never receives the pointer.
  */
 import type { Page } from '@playwright/test';
-import { expect, test } from './lib/foundry';
+import { expect, frameScene, test } from './lib/foundry';
 
 type Point = { readonly x: number; readonly y: number };
 
@@ -70,10 +70,30 @@ async function activate(page: Page, control: string, tool: string): Promise<void
     );
 }
 
-/** Pick module tool `tool` from wherever it sits: rooms and doors with the Walls tools, stamps with the Tiles tools. */
-async function useTool(page: Page, tool: string): Promise<void> {
+/** The panels tools open when picked. */
+const TOOL_PANELS = ['paint', 'paths'] as const;
+
+/** Tuck the tool panels away, as a GM would, so clicks land on the canvas; the choices made in them stand. */
+async function tuckPanels(page: Page): Promise<void> {
+    await page.evaluate(
+        async (ids) => {
+            await Promise.all(ids.map(async (id) => foundry.applications.instances.get(id)?.minimize()));
+        },
+        TOOL_PANELS.map((panel) => `${MODULE_ID}-${panel}`),
+    );
+}
+
+/**
+ * Pick module tool `tool` from wherever it sits: rooms and doors with the
+ * Walls tools, stamps with the Tiles tools. A panel the tool opens is tucked
+ * away unless the test is to use it.
+ */
+async function useTool(page: Page, tool: string, options: { panel?: boolean } = {}): Promise<void> {
     const home = NATIVE_HOME[tool];
     await (home === undefined ? activate(page, MODULE_ID, tool) : activate(page, home, `zephyrex-${tool}`));
+    if (options.panel !== true) {
+        await tuckPanels(page);
+    }
 }
 
 /** Click each point, then right-click to finish the shape. */
@@ -213,17 +233,14 @@ test('the layer takes the pointer only while one of its tools is active', async 
 });
 
 test('the paint tool paints the texture and brush size picked in its panel: an area by clicks, a stroke by dragging', async ({ world }) => {
-    await useTool(world, 'paint');
+    await useTool(world, 'paint', { panel: true });
     const panel = world.locator(`#${MODULE_ID}-paint`);
     await expect(panel).toBeVisible();
     await panel.getByRole('button', { name: 'Forest' }).click();
     await expect(panel.getByRole('button', { name: 'Forest' })).toHaveAttribute('aria-pressed', 'true');
     await panel.getByLabel('Brush size (px)').fill('60');
     await panel.getByLabel('Brush size (px)').press('Enter');
-    // Tuck the panel away, as a GM would, so the clicks land on the canvas.
-    await world.evaluate(async (id) => {
-        await foundry.applications.instances.get(id)?.minimize();
-    }, `${MODULE_ID}-paint`);
+    await tuckPanels(world);
     await holdView(world);
     await drawShape(world, SQUARE);
     await dragScene(world, { x: 1000, y: 300 }, [
@@ -233,6 +250,38 @@ test('the paint tool paints the texture and brush size picked in its panel: an a
     ]);
     await expect.poll(async () => featureAt(world, { x: 450, y: 450 })).toMatchObject({ type: 'region', biome: 'forest' });
     await expect.poll(async () => featureAt(world, { x: 1100, y: 320 })).toMatchObject({ type: 'stroke', biome: 'forest', radius: 60 });
+});
+
+test('the river tool draws the liquid, shade, bed and width picked in its panel', async ({ world }) => {
+    await useTool(world, 'river', { panel: true });
+    const panel = world.locator(`#${MODULE_ID}-paths`);
+    await expect(panel).toBeVisible();
+    await panel.getByLabel('Liquid').selectOption('lava');
+    // A new liquid starts from its own shade and bed.
+    await expect(panel.getByLabel('Shade')).toHaveValue('#ff5a1e');
+    await expect(panel.getByLabel('Bed')).toHaveValue('rock');
+    await panel.getByLabel('Bed').selectOption('sand');
+    await panel.getByLabel('Width (px)').fill('80');
+    await panel.getByLabel('Width (px)').press('Enter');
+    await tuckPanels(world);
+    await holdView(world);
+    await drawShape(world, [
+        { x: 300, y: 600 },
+        { x: 900, y: 650 },
+        { x: 1500, y: 600 },
+    ]);
+    await expect
+        .poll(async () =>
+            world.evaluate(() => {
+                const controller = game.modules?.get('zephyrex-cartography').api.controller();
+                const id = controller?.hitTest({ x: 900, y: 650 }) ?? null;
+                const river = id === null ? null : controller?.getFeature(id);
+                return river?.type === 'path' ? { river: river.river, halfWidth: river.halfWidths[1] } : null;
+            }),
+        )
+        .toEqual({ river: { liquid: 'lava', shade: 0xff5a1e, bed: 'sand' }, halfWidth: 40 });
+    await frameScene(world);
+    await expect(world.locator('#board')).toHaveScreenshot('lava-river-on-sand.png');
 });
 
 test('the edit tool drags a room corner, and right-click deletes one', async ({ world }) => {

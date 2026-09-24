@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BIOMES } from './biome';
-import { BIOME_TEXTURE, BIOME_TINT, biomeSwatches, PATH_TEXTURE, pickTextureSet, textureResolver, textureSetChoices } from './texture';
+import { BIOME_TEXTURE, BIOME_TINT, biomeSwatches, pickTextureSet, textureResolver, textureSetChoices } from './texture';
 
 const sets = [
     { key: 'a:photo', name: 'Photo (CC0)', textures: { grassland: 'modules/a/grass.jpg', road: 'modules/a/road.jpg' } },
@@ -30,12 +30,8 @@ describe('BIOME_TEXTURE / BIOME_TINT', () => {
     });
 });
 
-describe('PATH_TEXTURE', () => {
-    it('textures roads and leaves rivers translucent', () => {
-        expect(PATH_TEXTURE.road).toBe('road');
-        expect(PATH_TEXTURE.river).toBeNull();
-    });
-});
+/** Each pattern's image, as the boundary would give it. */
+const PATTERNS = (pattern: string): string => `pattern:${pattern}`;
 
 describe('texture sets', () => {
     it('picks the chosen set, else the first, else none', () => {
@@ -44,11 +40,12 @@ describe('texture sets', () => {
         expect(pickTextureSet([], 'a:photo')).toBeNull();
     });
 
-    it('resolves roles to URLs, null for a role the set lacks or with no set', () => {
-        const resolve = textureResolver(pickTextureSet(sets, 'b:paint'));
+    it('resolves roles to URLs, null for a role the set lacks or with no set, and patterns whatever the set', () => {
+        const resolve = textureResolver(pickTextureSet(sets, 'b:paint'), PATTERNS);
         expect(resolve('grassland')).toBe('modules/b/grass.png');
         expect(resolve('road')).toBeNull();
-        expect(textureResolver(null)('grassland')).toBeNull();
+        expect(textureResolver(null, PATTERNS)('grassland')).toBeNull();
+        expect(textureResolver(null, PATTERNS)('procedural.ripple')).toBe('pattern:ripple');
     });
 
     it('offers each set by name as a setting choice', () => {
@@ -56,7 +53,7 @@ describe('texture sets', () => {
     });
 
     it('gives every biome a swatch: the set’s texture where it has one, and always a flat colour', () => {
-        const swatches = biomeSwatches(textureResolver(pickTextureSet(sets, 'a:photo')));
+        const swatches = biomeSwatches(textureResolver(pickTextureSet(sets, 'a:photo'), PATTERNS));
         expect(swatches.map((s) => s.biome)).toEqual(BIOMES);
         expect(swatches.find((s) => s.biome === 'grassland')).toEqual({ biome: 'grassland', image: 'modules/a/grass.jpg', colour: '#5a7b3c' });
         expect(swatches.find((s) => s.biome === 'water')).toEqual({ biome: 'water', image: null, colour: '#2f5d7c' });

@@ -60,3 +60,32 @@ export function createViewWindow(options: ViewWindowOptions): ViewWindow {
         },
     };
 }
+
+export interface SettingsWindowOptions<S> extends Omit<ViewWindowOptions, 'render'> {
+    readonly initial: S;
+    /** Runs after every choice, to put it in the tool's hand. */
+    readonly onChange: (settings: S) => void;
+    /** Render the view for `settings`; `choose` applies a new choice and re-renders. */
+    readonly render: (root: HTMLElement, settings: S, choose: (settings: S) => void) => void;
+}
+
+export interface SettingsWindow<S> extends ViewWindow {
+    readonly current: () => S;
+}
+
+/** A window over a tool's settings: it holds the current choice, which the tool reads when it next draws. */
+export function createSettingsWindow<S>(options: SettingsWindowOptions<S>): SettingsWindow<S> {
+    let settings = options.initial;
+    const choose = (next: S): void => {
+        settings = next;
+        options.onChange(settings);
+        view.refresh();
+    };
+    const view = createViewWindow({
+        ...options,
+        render: (root) => {
+            options.render(root, settings, choose);
+        },
+    });
+    return { ...view, current: () => settings };
+}

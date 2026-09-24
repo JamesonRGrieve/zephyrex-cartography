@@ -7,7 +7,7 @@
  */
 import type { RoomMaterials } from '../tools/room';
 import { isWallPreset, WALL_PRESETS, type WallPreset } from '../tools/wall-presets';
-import { el, focusKey, replacePreservingFocus } from './dom';
+import { choice, replacePreservingFocus } from './dom';
 
 export interface MaterialChoice {
     readonly role: string;
@@ -33,23 +33,13 @@ export interface MaterialsLabels {
 const NO_WALL = '';
 
 function select(id: string, label: string, choices: readonly MaterialChoice[], value: string, onChange: (role: string) => void): HTMLElement {
-    const wrap = el('div', 'tw-flex tw-items-center tw-gap-2');
-    const labelEl = el('label', 'tw-text-xs', label);
-    labelEl.htmlFor = id;
-    const control = el('select', 'tw-text-xs');
-    control.id = id;
-    focusKey(control, id);
-    for (const choice of choices) {
-        const option = el('option', '', choice.label);
-        option.value = choice.role;
-        control.append(option);
-    }
-    control.value = value;
-    control.addEventListener('change', () => {
-        onChange(control.value);
-    });
-    wrap.append(labelEl, control);
-    return wrap;
+    return choice(
+        id,
+        label,
+        choices.map((c) => [c.role, c.label] as const),
+        value,
+        onChange,
+    );
 }
 
 export function renderMaterialsPanel(root: HTMLElement, panel: MaterialsPanel, labels: MaterialsLabels, onChange: (materials: RoomMaterials) => void): void {

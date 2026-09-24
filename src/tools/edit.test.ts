@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { deletePoint, MIN_HALF_WIDTH, movePoint, setHalfWidth } from './edit';
 import type { Feature } from './feature';
-import { makePath } from './path';
+import { LIQUID_LOOKS, makePath } from './path';
 import { makeRegion } from './region';
 import { makeRoom } from './room';
 import { makeStroke } from './stroke';
@@ -18,6 +18,7 @@ function road(): Feature {
         ],
         5,
         false,
+        LIQUID_LOOKS.water,
     );
     if (!p) {
         throw new Error('fixture');
@@ -76,6 +77,7 @@ describe('deletePoint', () => {
             ],
             5,
             false,
+            LIQUID_LOOKS.water,
         );
         expect(two).not.toBeNull();
         expect(deletePoint(two as Feature, 0)).toBeNull();

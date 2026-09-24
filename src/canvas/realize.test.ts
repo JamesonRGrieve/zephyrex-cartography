@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_FLOOR_PLAN, generateFloorPlan } from '../generate/floor-plan';
 import { parseSceneSpec, type SceneSpec } from '../generate/spec';
 import type { WallDoc } from '../tools/documents';
+import { LIQUID_LOOKS } from '../tools/path';
 import { realizeSpec } from './realize';
 import { catalogStamps, makeHarness } from './test-fakes';
 
@@ -164,6 +165,31 @@ describe('realizeSpec', () => {
         const river = px.s.last()[0];
         expect(river?.points[1]).toEqual({ x: 30, y: 0 });
         expect(river?.type === 'path' ? river.halfWidths : null).toEqual([7, 7]);
+        expect(river?.type === 'path' ? river.river : null).toEqual(LIQUID_LOOKS.water);
+    });
+
+    it('builds a river of any liquid, in its shade and on its bed, each defaulting to the liquid’s own', async () => {
+        const h = makeHarness();
+        const line = [
+            { x: 0, y: 0 },
+            { x: 3, y: 0 },
+        ];
+        await realizeSpec(
+            h.c,
+            spec({
+                features: [
+                    { type: 'path', kind: 'river', points: line, liquid: 'acid', shade: '#00FF00', bed: null },
+                    { type: 'path', kind: 'river', points: line, liquid: 'lava' },
+                    { type: 'path', kind: 'road', points: line, liquid: 'lava' },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        expect(h.s.last().map((f) => (f.type === 'path' ? f.river : undefined))).toEqual([
+            { liquid: 'acid', shade: 0x00ff00, bed: null },
+            LIQUID_LOOKS.lava,
+            null,
+        ]);
     });
 
     it('creates levels bottom to top, puts features on them, and restores the level being edited', async () => {

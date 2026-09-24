@@ -21,6 +21,7 @@ import { pickTextureSet, textureResolver, textureSetChoices, type TextureResolve
 import type { BrowserLabels } from '../ui/stamp-browser-view';
 import { format, localize } from './localize';
 import { fetchPacks } from './packs';
+import { patternImage } from './procedural-textures';
 import { type ArmedStamp, createStampBrowser } from './stamp-browser';
 import { doorStateFromDs, tileFrame } from './translate';
 
@@ -273,7 +274,7 @@ export function registerPackRuntime(controller: () => CartographyController | nu
     });
 
     return {
-        textures: () => textureResolver(activeSet()),
+        textures: () => textureResolver(activeSet(), patternImage),
         textureRoles: () => Object.keys(activeSet()?.textures ?? {}),
         onChange: (listener) => {
             listeners.push(listener);

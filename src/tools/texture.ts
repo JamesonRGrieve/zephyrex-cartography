@@ -2,14 +2,15 @@
 /**
  * Terrain texturing. Each biome and path kind fills with a texture *role*.
  * Asset packs ship texture sets that map roles to images, and the GM picks one
- * set. Water, ocean and river have no role: water reads best as a translucent
- * tint, not a tiled photo. A role the active set lacks falls back to the flat
- * biome colour. Pure data plus set resolution; unit-tested. The concrete PIXI
- * tiling lives at the Foundry boundary.
+ * set. Water and ocean have no land role: they draw translucent, in a water
+ * texture where the set has one. A role the active set lacks falls back to a
+ * procedural pattern in the fill's colour, never a flat fill. Pure data plus
+ * set resolution; unit-tested. The concrete PIXI tiling lives at the Foundry
+ * boundary.
  */
 import { BIOMES, BIOME_STYLES, type BiomeKind } from './biome';
 import { cssHex } from './colour';
-import type { PathKind } from './path';
+import { patternOf, type Pattern } from './procedural';
 
 /** A pack texture set as the renderer needs it: role → module-served image URL. */
 export interface TextureSetRef {
@@ -59,11 +60,8 @@ export const BIOME_TINT: Record<BiomeKind, number> = {
     tundra: 0xffffff,
 };
 
-/** Texture role per path kind, or null (rivers render as translucent water). */
-export const PATH_TEXTURE: Record<PathKind, string | null> = {
-    road: 'road',
-    river: null,
-};
+/** Texture role of a road (a river is drawn in its liquid's). */
+export const ROAD_TEXTURE = 'road';
 
 /** How a biome looks in a picker: its texture from the set (null: none, so its flat colour) and its flat colour. */
 export interface BiomeSwatch {
@@ -85,9 +83,16 @@ export function pickTextureSet(sets: readonly TextureSetRef[], chosen: string): 
     return sets.find((set) => set.key === chosen) ?? sets[0] ?? null;
 }
 
-/** A resolver over one texture set; with no set, everything renders as flat colour. */
-export function textureResolver(set: TextureSetRef | null): TextureResolver {
-    return (role) => set?.textures[role] ?? null;
+/**
+ * A resolver over one texture set, plus the procedural patterns (`patterns`
+ * gives each one's image). A pack role the set lacks resolves to null, and
+ * the renderer falls back to a pattern.
+ */
+export function textureResolver(set: TextureSetRef | null, patterns: (pattern: Pattern) => string): TextureResolver {
+    return (role) => {
+        const pattern = patternOf(role);
+        return pattern === null ? set?.textures[role] ?? null : patterns(pattern);
+    };
 }
 
 /** Setting choices: texture set key → display name. */

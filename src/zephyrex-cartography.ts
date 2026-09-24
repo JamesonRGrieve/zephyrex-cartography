@@ -24,6 +24,7 @@ import { createLevelStore } from './foundry/levels';
 import { registerMaterialsRuntime } from './foundry/materials-runtime';
 import { registerPackRuntime } from './foundry/pack-runtime';
 import { registerPaintRuntime } from './foundry/paint-runtime';
+import { type PathSettings, registerPathRuntime } from './foundry/path-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { activeScene, modifyBatch } from './foundry/scene-bridge';
 import { FoundrySceneStore } from './foundry/scene-store';
@@ -71,6 +72,18 @@ const paint = registerPaintRuntime(packs.textures, (settings) => {
     const { mode } = state;
     if (mode.kind === 'brush' && mode.brush.type === 'region' && mode.brush.biome !== settings.biome) {
         enterMode(state, toolMode('paint', true));
+    }
+});
+
+/** Put the road and river panel's width and river look in the controller's hand for the next path. */
+function applyPathSettings(controller: CartographyController, settings: PathSettings): void {
+    controller.halfWidth = settings.width / 2;
+    controller.riverLook = settings.river;
+}
+
+const paths = registerPathRuntime(packs.textureRoles, (settings) => {
+    if (state) {
+        applyPathSettings(state.controller, settings);
     }
 });
 
@@ -295,6 +308,7 @@ function setupDrawLayer(): void {
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.levelHeight = levelHeightFor(canvas.scene?.grid.distance ?? 0);
     controller.brushRadius = paint.current().radius;
+    applyPathSettings(controller, paths.current());
     controller.load();
     levels.refresh();
     // The scene may have been edited under the other terrain setting; only the active GM writes documents.
@@ -385,6 +399,9 @@ function activateTool(tool: string, active: boolean): void {
     }
     if (tool === 'paint' && active) {
         paint.open();
+    }
+    if ((tool === 'road' || tool === 'river') && active) {
+        paths.open(tool);
     }
 }
 

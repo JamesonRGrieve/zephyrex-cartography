@@ -7,12 +7,35 @@
  */
 import type { Point } from '../geometry/spline';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
-import { isPoint, isRecord, numberArray } from './guards';
+import { isPoint, isRecord, numberArray, numberOr } from './guards';
 
 /** Scene-flag key (under the module-id scope) holding the persisted feature blob. */
 export const FLAG_KEY = 'features';
 
 export type PathKind = 'road' | 'river';
+
+/** What a river carries. */
+export type Liquid = 'water' | 'lava' | 'poison' | 'acid';
+
+export const LIQUIDS: readonly Liquid[] = ['water', 'lava', 'poison', 'acid'];
+
+/**
+ * How a river looks: its liquid, the liquid's shade (0xRRGGBB), and the
+ * texture role of the bed laid beneath and beside it (null: no bed).
+ */
+export interface RiverLook {
+    readonly liquid: Liquid;
+    readonly shade: number;
+    readonly bed: string | null;
+}
+
+/** Each liquid's look when first picked: its usual shade, on a bed that suits it. */
+export const LIQUID_LOOKS: Readonly<Record<Liquid, RiverLook>> = {
+    water: { liquid: 'water', shade: 0x2f5d7c, bed: 'dirt' },
+    lava: { liquid: 'lava', shade: 0xff5a1e, bed: 'rock' },
+    poison: { liquid: 'poison', shade: 0x5f9e2f, bed: 'marsh' },
+    acid: { liquid: 'acid', shade: 0xb5e61d, bed: 'rock' },
+};
 
 export interface CartographyPath extends FeatureCommon {
     readonly type: 'path';
@@ -21,6 +44,32 @@ export interface CartographyPath extends FeatureCommon {
     readonly halfWidths: number[];
     /** Emit Foundry walls along the centerline when true. */
     readonly walls: boolean;
+    /** A river's look; null for a road. */
+    readonly river: RiverLook | null;
+}
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: a persisted liquid arrives as untyped scene-flag JSON; this guard narrows it to Liquid
+export function isLiquid(v: unknown): v is Liquid {
+    return typeof v === 'string' && (LIQUIDS as readonly string[]).includes(v);
+}
+
+/**
+ * A persisted river look, field by field over its liquid's defaults. A
+ * missing look (a river from before looks) is water on its usual bed; a bed
+ * saved as null stays bare.
+ */
+// eslint-disable-next-line no-restricted-syntax -- boundary: parses a river look from untyped scene-flag JSON
+function parseRiverLook(v: unknown): RiverLook {
+    if (!isRecord(v)) {
+        return LIQUID_LOOKS.water;
+    }
+    const base = LIQUID_LOOKS[isLiquid(v['liquid']) ? v['liquid'] : 'water'];
+    const bed = v['bed'];
+    return {
+        liquid: base.liquid,
+        shade: numberOr(v['shade'], base.shade),
+        bed: bed === null || typeof bed === 'string' ? bed : base.bed,
+    };
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: a persisted path kind arrives as untyped scene-flag JSON; this guard is the validation that narrows it to PathKind
@@ -43,14 +92,19 @@ export function parsePath(v: unknown): CartographyPath | null {
     // A missing/short width list is normalised to a uniform default per point.
     const rawWidths = numberArray(v['halfWidths']);
     const halfWidths = points.map((_, i) => rawWidths[i] ?? rawWidths[0] ?? DEFAULT_HALF_WIDTH);
-    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: v['walls'] === true, ...parseFeatureCommon(v) };
+    const river = v['kind'] === 'river' ? parseRiverLook(v['river']) : null;
+    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: v['walls'] === true, river, ...parseFeatureCommon(v) };
 }
 
 /** Default half-width (scene px) for a freshly drawn path. */
 export const DEFAULT_HALF_WIDTH = 20;
 
-/** Build a committed path from a point stream + uniform half-width, or null if too short. */
-export function makePath(id: string, kind: PathKind, points: readonly Point[], halfWidth: number, walls: boolean): CartographyPath | null {
+/**
+ * Build a committed path from a point stream + uniform half-width, or null
+ * if too short. A river takes `river` as its look; a road has none, whatever
+ * is passed.
+ */
+export function makePath(id: string, kind: PathKind, points: readonly Point[], halfWidth: number, walls: boolean, river: RiverLook): CartographyPath | null {
     if (points.length < 2) {
         return null;
     }
@@ -61,6 +115,7 @@ export function makePath(id: string, kind: PathKind, points: readonly Point[], h
         points: points.map((p) => ({ x: p.x, y: p.y })),
         halfWidths: points.map(() => halfWidth),
         walls,
+        river: kind === 'river' ? river : null,
         ...NEW_FEATURE,
     };
 }

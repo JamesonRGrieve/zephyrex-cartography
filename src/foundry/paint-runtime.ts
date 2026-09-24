@@ -11,7 +11,7 @@ import { DEFAULT_BRUSH_RADIUS } from '../tools/stroke';
 import { biomeSwatches, type TextureResolver } from '../tools/texture';
 import { renderPaintPanel } from '../ui/paint-panel-view';
 import { localize } from './localize';
-import { createViewWindow } from './view-window';
+import { createSettingsWindow, type SettingsWindow } from './view-window';
 
 const PANEL_WIDTH = 340;
 const PANEL_HEIGHT = 380;
@@ -25,27 +25,16 @@ export interface PaintSettings {
     readonly radius: number;
 }
 
-export interface PaintRuntime {
-    readonly open: () => void;
-    readonly current: () => PaintSettings;
-}
-
 /** `onChange` runs after every choice, to put it in the tool's hand. */
-export function registerPaintRuntime(textures: () => TextureResolver, onChange: (settings: PaintSettings) => void): PaintRuntime {
-    let settings: PaintSettings = { biome: DEFAULT_PAINT, radius: DEFAULT_BRUSH_RADIUS };
-
-    const choose = (next: PaintSettings): void => {
-        settings = next;
-        onChange(settings);
-        panel.refresh();
-    };
-
-    const panel = createViewWindow({
+export function registerPaintRuntime(textures: () => TextureResolver, onChange: (settings: PaintSettings) => void): SettingsWindow<PaintSettings> {
+    return createSettingsWindow<PaintSettings>({
         id: 'paint',
         title: () => localize(I18N.paint.title),
         width: PANEL_WIDTH,
         height: PANEL_HEIGHT,
-        render: (root) => {
+        initial: { biome: DEFAULT_PAINT, radius: DEFAULT_BRUSH_RADIUS },
+        onChange,
+        render: (root, settings, choose) => {
             const choices = biomeSwatches(textures()).map((swatch) => ({ ...swatch, label: localize(BIOME_TITLE_KEYS[swatch.biome]) }));
             renderPaintPanel(
                 root,
@@ -66,6 +55,4 @@ export function registerPaintRuntime(textures: () => TextureResolver, onChange: 
             );
         },
     });
-
-    return { open: panel.open, current: () => settings };
 }

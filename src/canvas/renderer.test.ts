@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { tintToward } from '../tools/colour';
 import type { Feature } from '../tools/feature';
 import { NEW_FEATURE } from '../tools/feature-common';
-import type { CartographyPath } from '../tools/path';
+import { LIQUID_LOOKS, type CartographyPath } from '../tools/path';
 import type { RegionFeature } from '../tools/region';
 import type { RoomFeature } from '../tools/room';
 import type { TextureResolver } from '../tools/texture';
@@ -40,9 +41,10 @@ const road: CartographyPath = {
     ],
     halfWidths: [5, 5],
     walls: false,
+    river: null,
     ...NEW_FEATURE,
 };
-const river: Feature = { ...road, id: 'r', kind: 'river' };
+const river: Feature = { ...road, id: 'r', kind: 'river', river: { ...LIQUID_LOOKS.water, bed: null } };
 const lake: RegionFeature = {
     type: 'region',
     id: 'b',
@@ -93,11 +95,56 @@ describe('GraphicsFeatureRenderer', () => {
         expect(s.textured[0]?.n ?? 0).toBeGreaterThanOrEqual(6);
     });
 
-    it('renders a river as a flat translucent fill (water is untextured)', () => {
+    it('draws a river in the set’s water texture, gently tinted by its shade', () => {
         const s = new FakeSurface();
         new GraphicsFeatureRenderer(s, RESOLVE).set('r', river);
-        expect(s.filled).toHaveLength(1);
-        expect(s.textured).toHaveLength(0);
+        expect(s.filled).toHaveLength(0);
+        expect(s.textured).toEqual([expect.objectContaining({ id: 'r', textureFile: 'water.jpg', tint: tintToward(LIQUID_LOOKS.water.shade, 0.5) })]);
+    });
+
+    it('draws each liquid in the first of its textures the set has, else ripples in its full shade', () => {
+        const s = new FakeSurface();
+        const painted: TextureResolver = (role) => (['floor.toxic-sludge', 'lava', 'procedural.ripple'].includes(role) ? `${role}.png` : null);
+        const gr = new GraphicsFeatureRenderer(s, painted);
+        gr.set('p', { ...river, id: 'p', river: { ...LIQUID_LOOKS.poison, bed: null } });
+        gr.set('l', { ...river, id: 'l', river: { ...LIQUID_LOOKS.lava, bed: null } });
+        gr.set('w', { ...river, id: 'w', river: { ...LIQUID_LOOKS.water, shade: 0x0000ff, bed: null } });
+        expect(s.textured.map((t) => [t.id, t.textureFile, t.tint])).toEqual([
+            ['p', 'floor.toxic-sludge.png', tintToward(LIQUID_LOOKS.poison.shade, 0.6)],
+            ['l', 'lava.png', LIQUID_LOOKS.lava.shade],
+            ['w', 'procedural.ripple.png', 0x0000ff],
+        ]);
+    });
+
+    it('never draws a flat colour where a pattern will do: land, materials, walls and roads fall back to grain', () => {
+        const s = new FakeSurface();
+        const patternsOnly: TextureResolver = (role) => (role.startsWith('procedural.') ? `${role}.png` : null);
+        const gr = new GraphicsFeatureRenderer(s, patternsOnly);
+        gr.set('m', meadow);
+        gr.set('a', road);
+        gr.set('rm', { ...room, floor: 'floor.oak', wall: 'wall.brick' });
+        gr.set('b', lake);
+        expect(s.filled).toEqual([]);
+        expect(s.textured.find((t) => t.id === 'm')).toMatchObject({ textureFile: 'procedural.grain.png', tint: 0x5a7b3c });
+        expect(s.textured.find((t) => t.id === 'b')).toMatchObject({ textureFile: 'procedural.ripple.png', tint: 0x2f5d7c });
+        expect(s.textured.find((t) => t.id === 'rm:wall:0')?.textureFile).toBe('procedural.grain.png');
+    });
+
+    it('lays a river’s bed beneath it, wider and feathered, and takes the bed away with the river', () => {
+        const s = new FakeSurface();
+        const gr = new GraphicsFeatureRenderer(s, RESOLVE);
+        gr.set('r', { ...river, river: LIQUID_LOOKS.water });
+        // The bed is drawn first, so the river lies on top of it.
+        expect(s.textured.map((t) => [t.id, t.textureFile, t.feather])).toEqual([
+            ['r:bed:0', 'dirt.jpg', true],
+            ['r', 'water.jpg', false],
+        ]);
+        gr.set('r', river); // the bed taken away
+        expect(s.removed).toContain('r:bed:0');
+        gr.set('r', { ...river, river: { ...LIQUID_LOOKS.water, bed: 'floor.stone' } });
+        expect(s.textured.at(-2)).toMatchObject({ id: 'r:bed:0', textureFile: 'floor.stone.jpg' });
+        gr.remove('r');
+        expect(s.removed.filter((id) => id === 'r:bed:0')).toHaveLength(2);
     });
 
     it('textures a land biome region and recolours nothing (white tint)', () => {
@@ -108,12 +155,12 @@ describe('GraphicsFeatureRenderer', () => {
         expect(s.textured[0]?.tint).toBe(0xffffff);
     });
 
-    it('fills a water region with a flat colour (untextured)', () => {
+    it('draws a water region translucent in the set’s water texture, untinted', () => {
         const s = new FakeSurface();
         new GraphicsFeatureRenderer(s, RESOLVE).set('b', lake);
-        expect(s.filled).toHaveLength(1);
-        expect(s.textured).toHaveLength(0);
-        expect(s.filled[0]?.n ?? 0).toBeGreaterThanOrEqual(6);
+        expect(s.filled).toHaveLength(0);
+        expect(s.textured).toEqual([expect.objectContaining({ id: 'b', textureFile: 'water.jpg', tint: 0xffffff })]);
+        expect(s.textured[0]?.n ?? 0).toBeGreaterThanOrEqual(6);
     });
 
     it('textures a brush stroke as a feathered biome swath', () => {
@@ -133,7 +180,7 @@ describe('GraphicsFeatureRenderer', () => {
         expect(s.textured[0]?.n).toBe(8);
     });
 
-    it('fills a pack floor material by role, or a flat colour when the set lacks it', () => {
+    it('fills a pack floor material by role, or a flat colour when not even a pattern resolves', () => {
         const s = new FakeSurface();
         new GraphicsFeatureRenderer(s, (role) => (role === 'floor.oak' ? 'oak.jpg' : null)).set('rm', { ...room, floor: 'floor.oak' });
         expect(s.textured[0]?.textureFile).toBe('oak.jpg');
@@ -160,14 +207,14 @@ describe('GraphicsFeatureRenderer', () => {
         const s = new FakeSurface();
         const gr = new GraphicsFeatureRenderer(s, RESOLVE);
         gr.set('m', meadow); // textured land region
-        gr.set('b', lake); // flat water region
+        gr.set('b', lake); // water region
         gr.set('a', road); // textured path
         expect(s.textured.find((t) => t.id === 'm')?.feather).toBe(true);
-        expect(s.filled.find((f) => f.id === 'b')?.feather).toBe(true);
+        expect(s.textured.find((t) => t.id === 'b')?.feather).toBe(true);
         expect(s.textured.find((t) => t.id === 'a')?.feather).toBe(false);
     });
 
-    it('falls back to the flat biome colour for a role the texture set lacks', () => {
+    it('falls back to the flat biome colour only when neither the role nor a pattern resolves', () => {
         const s = new FakeSurface();
         const gr = new GraphicsFeatureRenderer(s, (role) => (role === 'road' ? 'road.png' : null));
         gr.set('m', meadow);

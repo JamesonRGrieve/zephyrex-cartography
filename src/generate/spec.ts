@@ -14,7 +14,7 @@
 import { z } from 'zod';
 import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
-import type { PathKind } from '../tools/path';
+import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
 import { DEFAULT_WALL_PRESET, WALL_PRESETS } from '../tools/wall-presets';
 
@@ -23,6 +23,7 @@ export const SCENE_SPEC_SCHEMA_VERSION = 1;
 export const SCENE_SPEC_SCHEMA_URL = 'https://raw.githubusercontent.com/JamesonRGrieve/zephyrex-cartography/main/schema/scene-spec.v1.schema.json';
 
 const PATH_KINDS = ['road', 'river'] as const satisfies readonly PathKind[];
+const SPEC_LIQUIDS = ['water', 'lava', 'poison', 'acid'] as const satisfies readonly Liquid[];
 const DOOR_TYPES = ['door', 'secret'] as const satisfies readonly RoomDoorType[];
 const DOOR_STATES = ['closed', 'open', 'locked'] as const satisfies readonly DoorState[];
 
@@ -55,10 +56,17 @@ const pathSpec = z
         points: z.array(point).min(2).describe('Centerline control points.'),
         halfWidth: positive.optional().describe('Half-width at every point (default: the path default).'),
         walls: z.boolean().default(false).describe('Also emit walls along the centerline.'),
+        liquid: z.enum(SPEC_LIQUIDS).optional().describe('What a river carries (default: water). Ignored for a road.'),
+        shade: z
+            .string()
+            .regex(/^#[0-9a-fA-F]{6}$/u)
+            .optional()
+            .describe("A river's liquid colour, #rrggbb (default: the liquid's usual shade)."),
+        bed: text.nullable().optional().describe('Texture role of a river\'s bed, e.g. "sand"; null: no bed (default: the liquid\'s usual bed).'),
         level,
     })
     .strict()
-    .describe('A road or river.');
+    .describe('A road, or a river of water, lava, poison or acid.');
 
 const doorSpec = z
     .object({

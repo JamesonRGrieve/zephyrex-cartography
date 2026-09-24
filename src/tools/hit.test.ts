@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Feature } from './feature';
 import { featureHit } from './hit';
-import { makePath } from './path';
+import { LIQUID_LOOKS, makePath } from './path';
 import { makeRegion } from './region';
 import { makeRoom } from './room';
 import { makeStroke } from './stroke';
@@ -30,6 +30,7 @@ describe('featureHit', () => {
             ],
             10,
             false,
+            LIQUID_LOOKS.water,
         );
         expect(road).not.toBeNull();
         // 8px off a 10px half-width road: a hit.
