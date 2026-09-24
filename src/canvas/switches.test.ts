@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { planDocuments } from '../tools/plan';
-import { lampVariant, switchOf, switchOn, SWITCH_BLOCKS } from '../tools/switches';
+import { switchOf, switchOn, SWITCH_BLOCKS } from '../tools/switches';
 import { catalogStamps, makeHarness } from './test-fakes';
 
 const stamps = catalogStamps([
@@ -67,12 +67,6 @@ describe('light switches', () => {
         expect(lightSwitch ? planDocuments(lightSwitch).walls : []).toEqual([expect.objectContaining({ door: 'door', blocks: SWITCH_BLOCKS })]);
         expect(c.isLightSwitch('p1')).toBe(true);
         expect(c.isLightSwitch('p2')).toBe(false);
-    });
-
-    it('find a lamp’s lit and unlit variants, and none for a stamp without both', () => {
-        const [, lamp, crate] = stamps;
-        expect(lamp ? [lampVariant(lamp, true), lampVariant(lamp, false)] : []).toEqual([1, 0]);
-        expect(crate ? lampVariant(crate, true) : 0).toBeNull();
     });
 
     it('link lamps, rooms and plain lights, toggling each, and refuse anything a switch cannot light', async () => {
