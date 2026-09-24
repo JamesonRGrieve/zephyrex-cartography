@@ -31,11 +31,6 @@
                 "id": "item-piles",
                 "type": "module",
                 "reason": "Container stamps become lootable Item Piles containers."
-            },
-            {
-                "id": "zephyrex-cartography-assets",
-                "type": "module",
-                "reason": "Stamp art and terrain texture sets."
             }
         ]
     },
