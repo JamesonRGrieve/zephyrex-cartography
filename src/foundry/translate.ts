@@ -104,6 +104,7 @@ export function wallCreateData(wall: WallDoc, grid: SceneGrid): WallCreateData {
         ...(wall.threshold === undefined ? {} : { threshold: thresholdData(wall.threshold, grid) }),
         ...doorLookData(wall),
         ...levelsField(wall.level),
+        ...(wall.lightSwitch === true ? { flags: { [MODULE_ID]: { lightSwitch: true } } } : {}),
     };
 }
 

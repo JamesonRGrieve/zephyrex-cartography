@@ -25,6 +25,8 @@ export interface WallCreateData extends OnLevels {
     readonly threshold?: { readonly light: number | null; readonly sight: number | null; readonly sound: number | null; readonly attenuation: boolean };
     /** A door's `CONFIG.Wall.doorSounds` key. */
     readonly doorSound?: string;
+    /** Marks a light switch's wall, whose door control shows a light instead of a door. */
+    readonly flags?: Readonly<Record<string, { readonly lightSwitch: true }>>;
     /** A door's animation; left-out (or undefined) options take Foundry's defaults. */
     readonly animation?: {
         readonly type: string;

@@ -195,9 +195,9 @@ function stampDoorWall(stamp: StampFeature, floor: Floor): WallDoc | null {
     }
     const axis = stampDoorAxis(stamp);
     const look = { sound: door.sound ?? null, animation: door.animation ?? null };
+    const wall: WallDoc = { a: axis.a, b: axis.b, door: door.type, doorState: stampDoorState(stamp), look, blocks: BLOCKS_ALL, level: floor.level };
     // A light switch's wall only carries the door control players click; it blocks nothing.
-    const blocks = door.switch === true ? SWITCH_BLOCKS : BLOCKS_ALL;
-    return { a: axis.a, b: axis.b, door: door.type, doorState: stampDoorState(stamp), look, blocks, level: floor.level };
+    return door.switch === true ? { ...wall, blocks: SWITCH_BLOCKS, lightSwitch: true } : wall;
 }
 
 /**

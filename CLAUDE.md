@@ -606,8 +606,13 @@ These make everything after them cheaper and safer, so they come first.
     rejects duplicate keys and keys that name nothing. Links are made once
     everything is built, so a switch may come before what it controls. A
     target that cannot be linked is reported as a `switch` problem.
-  - **Still open:** a switch icon in place of Foundry's door icon (check
-    whether v14 can show one for one wall).
+  - **[done] Switch icon.** A switch's wall carries the module's
+    `lightSwitch` flag. At `setup`, the module subclasses whatever
+    `CONFIG.Canvas.doorControlClass` is configured, so another module's
+    override still applies to other doors. A flagged wall's control shows
+    Foundry's own `CONFIG.controlIcons.light` while on (door open) and
+    `lightOff` while off. A switch placed before this gains the flag when
+    its walls next re-sync.
 
 ### Priority 5: regions
 - **Shapes beyond polygons** [14.349, 14.352, 14.356]:

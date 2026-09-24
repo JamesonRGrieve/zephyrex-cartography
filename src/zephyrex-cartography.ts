@@ -34,6 +34,7 @@ import { createSilhouetteSource } from './foundry/silhouette';
 import { createSplatRenderer } from './foundry/splat-renderer';
 import { createSplatStore } from './foundry/splat-store';
 import { registerSubmapRuntime } from './foundry/submap-runtime';
+import { registerSwitchDoorControl } from './foundry/switch-door-control';
 import { createSwitchLinker, type SwitchLinker } from './foundry/switch-linker';
 import { distance, type Point } from './geometry/spline';
 import { I18N } from './i18n';
@@ -429,6 +430,9 @@ Hooks.once('init', () => {
         },
     });
 });
+
+// After every module's init, so a light switch's control extends whatever door control another module configured.
+Hooks.once('setup', registerSwitchDoorControl);
 
 type Tool = foundry.applications.ui.SceneControls.Tool;
 

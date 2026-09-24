@@ -29,7 +29,9 @@ describe('light switches', () => {
         expect(lightSwitch?.id).toBe('p1');
         expect(switchOf(c.getFeature('p2'))).toBeNull();
         expect(lightSwitch && switchOn(lightSwitch)).toBe(false);
-        expect(lightSwitch ? planDocuments(lightSwitch).walls : []).toEqual([expect.objectContaining({ door: 'door', blocks: SWITCH_BLOCKS })]);
+        expect(lightSwitch ? planDocuments(lightSwitch).walls : []).toEqual([
+            expect.objectContaining({ door: 'door', blocks: SWITCH_BLOCKS, lightSwitch: true }),
+        ]);
         expect(c.isLightSwitch('p1')).toBe(true);
         expect(c.isLightSwitch('p2')).toBe(false);
     });

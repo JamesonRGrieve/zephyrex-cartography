@@ -60,6 +60,12 @@ describe('wallCreateData', () => {
         expect(plain).not.toHaveProperty('doorSound');
     });
 
+    it('flags a light switch’s wall, so its door control shows a light, and no other wall', () => {
+        const door = { ...BLOCKS_WALL, door: 'door' as const };
+        expect(wallCreateData({ ...door, lightSwitch: true }, GRID).flags).toEqual({ 'zephyrex-cartography': { lightSwitch: true } });
+        expect(wallCreateData(door, GRID)).not.toHaveProperty('flags');
+    });
+
     it('translates every sense level, one-way walls and thresholds in scene distance units', () => {
         const data = wallCreateData(
             {

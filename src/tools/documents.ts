@@ -91,6 +91,8 @@ export interface WallDoc {
     readonly level: string | null;
     /** For a room wall, the perimeter segment it comes from (so a door changed in play maps back to its room door). */
     readonly segment?: number;
+    /** A light switch's wall: its door control shows a light, on or off, instead of a door. */
+    readonly lightSwitch?: true;
 }
 
 interface LightAnimation {

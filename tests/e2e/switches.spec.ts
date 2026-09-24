@@ -24,7 +24,7 @@ async function wireSwitch(page: Page): Promise<string> {
 /** Open (on) or close (off) the switch's door, as Foundry's own door control does. */
 async function flip(page: Page, on: boolean): Promise<void> {
     await page.evaluate(async (switchedOn) => {
-        const wall = canvas?.scene?.walls.contents.find((w) => w.door === CONST.WALL_DOOR_TYPES.DOOR);
+        const wall = canvas?.scene?.walls.contents.find((w) => 'zephyrex-cartography' in w.flags);
         await wall?.update({ ds: switchedOn ? CONST.WALL_DOOR_STATES.OPEN : CONST.WALL_DOOR_STATES.CLOSED });
     }, on);
 }
@@ -35,6 +35,38 @@ async function lampAndLight(page: Page, plainId: string): Promise<{ lamp: string
         return { lamp: lamp?.split('/').at(-1) ?? '', plainHidden: canvas?.scene?.lights.contents.find((light) => light.id === id)?.hidden };
     }, plainId);
 }
+
+test('a light switch’s door control shows Foundry’s light icon, lit when on and unlit when off; other doors keep theirs', async ({ world }) => {
+    await wireSwitch(world);
+    // A room with an ordinary door beside it.
+    await world.evaluate(async () => {
+        const points = [
+            { x: 1200, y: 200 },
+            { x: 1500, y: 200 },
+            { x: 1500, y: 500 },
+        ];
+        await game.modules
+            ?.get('zephyrex-cartography')
+            .api.buildSpec({ schemaVersion: 1, units: 'px', features: [{ type: 'room', points, doors: [{ segment: 0 }] }] });
+    });
+    const icons = async (): Promise<{ switch: string | null; door: string | null }> =>
+        world.evaluate(() => {
+            const icon = (lightSwitch: boolean): string | null => {
+                const wall = canvas?.walls?.placeables.find((w) => w.isDoor && 'zephyrex-cartography' in w.document.flags === lightSwitch);
+                // Foundry wraps each cached icon in a new Texture, so the icons are told apart by their base texture.
+                const shown = wall?.doorControl?.icon?.texture.baseTexture;
+                const named = Object.entries(CONFIG.controlIcons).find(([, path]) => {
+                    const texture = foundry.canvas.getTexture(path);
+                    return texture !== null && texture.baseTexture === shown;
+                });
+                return named?.[0] ?? null;
+            };
+            return { switch: icon(true), door: icon(false) };
+        });
+    await expect.poll(icons).toEqual({ switch: 'lightOff', door: 'doorClosed' });
+    await flip(world, true);
+    await expect.poll(icons).toEqual({ switch: 'light', door: 'doorClosed' });
+});
 
 test('a light switch’s wall is a door that blocks nothing', async ({ world }) => {
     await wireSwitch(world);
