@@ -454,8 +454,13 @@ These make everything after them cheaper and safer, so they come first.
   new emitter (particles) follows the same rule and gets the same proof.
   A fresh v14 scene already has a default Level; nothing may assume level
   bands start at 0.
-- **Level-aware helpers for the UI:** `CanvasDocument#locatedInLevel`
-  [14.364] and `PlaceableObject#isFilteredOut` [14.364].
+- **[done] Level-aware helpers for the UI** [14.364].
+  - `TokenDocument#locatedInLevel`: a zone offers to move with the tokens
+    Foundry locates on its own level (all of them for a zone on every level),
+    and keeps the one it follows listed wherever that token has gone.
+  - `PlaceableObject#isFilteredOut` reflects only the Placeables sidebar's
+    filter over Foundry's own placeables. The plugin's features are drawn on
+    its own layer, not as placeables, so nothing here uses it.
 
 ### Priority 2: native levels
 - **[done] Stairs → `changeLevel`.** A transition stamp makes one region

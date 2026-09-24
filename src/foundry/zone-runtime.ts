@@ -80,9 +80,15 @@ async function savePresets(next: readonly ZonePreset[]): Promise<void> {
     await game.settings?.set(MODULE_ID, PRESETS_SETTING, serializeZonePresets(next));
 }
 
-/** The viewed scene's tokens, by name. */
-function tokens(): TokenChoice[] {
-    return (canvas?.scene?.tokens.contents ?? []).map((token) => ({ id: token.id, name: token.name }));
+/**
+ * The tokens a zone on `level` can move with, by name: those Foundry locates
+ * on that level (`TokenDocument#locatedInLevel`, 14.364), every token for a
+ * zone on every level, and the one it follows now wherever that has gone.
+ */
+function tokens(level: string | null, attached: string | null): TokenChoice[] {
+    return (canvas?.scene?.tokens.contents ?? [])
+        .filter((token) => level === null || token.id === attached || token.locatedInLevel(level))
+        .map((token) => ({ id: token.id, name: token.name }));
 }
 
 /** The viewed scene's cell size, for zones of grid spaces: only a square grid has cells the zone math follows. */
@@ -152,7 +158,9 @@ export function registerZoneRuntime(controller: () => CartographyController | nu
                 })();
             };
             const saved = presets();
-            renderZonePanel(root, { settings, tokens: tokens(), presets: saved.map((p) => p.name), cellSize: cellSize() }, labels(), {
+            const level = active.getFeature(id)?.level ?? null;
+            const choices = tokens(level, settings.attachedTo);
+            renderZonePanel(root, { settings, tokens: choices, presets: saved.map((p) => p.name), cellSize: cellSize() }, labels(), {
                 set: (next) => {
                     after(async () => active.setZoneSettings(id, next));
                     return true;

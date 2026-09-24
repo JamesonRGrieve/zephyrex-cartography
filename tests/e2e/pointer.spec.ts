@@ -437,6 +437,27 @@ test('the effects tool, with the Regions tools, gives a room difficult ground an
     ]);
 });
 
+test('a zone offers to move with the tokens Foundry locates on its own level', async ({ world }) => {
+    await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const ground = (await controller?.addLevel('above', 'Ground')) ?? '';
+        const upper = (await controller?.addLevel('above', 'Upper')) ?? '';
+        await canvas?.scene?.createEmbeddedDocuments('Token', [
+            { name: 'Gun-servitor', x: 1200, y: 1200, level: ground },
+            { name: 'Gargoyle', x: 1400, y: 1200, level: upper },
+        ]);
+        controller?.setActiveLevel(ground);
+    });
+    await useTool(world, 'zone');
+    await holdView(world);
+    await clickScene(world, { x: 700, y: 500 });
+    const panel = world.locator(`#${MODULE_ID}-zone`);
+    await expect(panel).toBeVisible();
+    const choices = panel.getByLabel('Attached Token').locator('option');
+    // "None", then only the ground's token.
+    await expect(choices).toHaveText([/.+/u, 'Gun-servitor']);
+});
+
 test('the zone tool, with the Regions tools, places a native Region in Foundry’s own shape, and erase removes it', async ({ world }) => {
     await useTool(world, 'zone');
     await holdView(world);
