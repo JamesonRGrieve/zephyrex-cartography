@@ -255,6 +255,28 @@
             ]
         },
         {
+            "id": "ladder",
+            "name": "Ladder",
+            "category": "Access",
+            "scale": "interior",
+            "perspective": "top-down",
+            "transition": {
+                "kind": "ladder",
+                "direction": "up",
+                "movement": [
+                    "climb"
+                ]
+            },
+            "variants": [
+                {
+                    "state": "iron",
+                    "image": "stamps/stairs.svg",
+                    "width": 100,
+                    "height": 100
+                }
+            ]
+        },
+        {
             "id": "switch",
             "name": "Light Switch",
             "category": "Lighting",

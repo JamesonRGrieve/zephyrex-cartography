@@ -26,6 +26,23 @@ test('a stair is one native changeLevel region spanning the floors it joins', as
     expect(result.levels).toEqual(expect.arrayContaining(result.joins));
 });
 
+test('a ladder’s changeLevel region is taken only by climbing, and a stair’s by any movement', async ({ world }) => {
+    await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const ground = await controller?.addLevel('above', 'Ground');
+        await controller?.addLevel('above', 'Upper');
+        controller?.setActiveLevel(ground ?? null);
+        await controller?.placeStamp({ stamp: 'zc-e2e-pack:ladder', x: 300, y: 300 });
+        await controller?.placeStamp({ stamp: 'zc-e2e-pack:stairs', x: 900, y: 900 });
+    });
+    // The behaviour's system data is typed by no fvtt-types release yet (14.361), so it is read from plain script.
+    const actions = await world.evaluate<string>(
+        `JSON.stringify(canvas.scene.regions.contents.map((region) => [...region.behaviors.contents[0].system.movementActions]).sort((a, b) => a.length - b.length))`,
+    );
+    // The stair's region offers every movement (Foundry's empty set); the ladder's only climbing.
+    expect(actions).toBe('[[],["climb"]]');
+});
+
 test('a building’s floors in this scene are native Levels above, joined by one changeLevel stair over it', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();

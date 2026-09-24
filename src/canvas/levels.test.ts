@@ -23,6 +23,15 @@ const stairs = catalogStamps([
         transition: { kind: 'stairs', direction: 'both' },
         variants: [{ state: 'stone', image: 'well.png', width: 100, height: 100 }],
     },
+    {
+        id: 'ladder',
+        name: 'Ladder',
+        category: 'Access',
+        scale: 'interior',
+        perspective: 'top-down',
+        transition: { kind: 'ladder', direction: 'up', movement: ['climb'] },
+        variants: [{ state: 'iron', image: 'ladder.png', width: 100, height: 100 }],
+    },
 ]);
 
 async function drawRoom(c: ReturnType<typeof makeHarness>['c']): Promise<void> {
@@ -204,7 +213,7 @@ describe('CartographyController levels', () => {
                 bottom: 0,
                 top: 20,
                 spans: ['lv2'],
-                behaviour: { kind: 'changeLevel' },
+                behaviour: { kind: 'changeLevel', movement: [] },
                 label: { kind: 'stairs', from: 'Ground', to: ['Upper'] },
             }),
         ]);
@@ -217,7 +226,16 @@ describe('CartographyController levels', () => {
         await c.placeStamp({ stamp: 'pack:stairs', x: 50, y: 50 });
         expect(d.regions).toEqual([]);
         await c.addLevel('above', 'Upper');
-        expect(d.regions[0]?.map((r) => [r.level, r.spans, r.behaviour])).toEqual([['lv1', ['lv2'], { kind: 'changeLevel' }]]);
+        expect(d.regions[0]?.map((r) => [r.level, r.spans, r.behaviour])).toEqual([['lv1', ['lv2'], { kind: 'changeLevel', movement: [] }]]);
+    });
+
+    it('takes a ladder only by the movement its pack names', async () => {
+        const { c, d } = makeHarness(stairs);
+        await c.addLevel('above', 'Ground');
+        await c.addLevel('above', 'Upper');
+        c.setActiveLevel('lv1');
+        await c.placeStamp({ stamp: 'pack:ladder', x: 50, y: 50 });
+        expect(d.regions[0]?.map((r) => r.behaviour)).toEqual([{ kind: 'changeLevel', movement: ['climb'] }]);
     });
 
     it('offers both ways from a stairwell, over all three bands', async () => {
@@ -228,6 +246,6 @@ describe('CartographyController levels', () => {
         c.setActiveLevel('lv1');
         await c.placeStamp({ stamp: 'pack:well', x: 50, y: 50 });
         const [well] = d.regions[d.regions.length - 1] ?? [];
-        expect(well).toMatchObject({ bottom: -10, top: 20, level: 'lv1', spans: ['lv2', 'lv3'], behaviour: { kind: 'changeLevel' } });
+        expect(well).toMatchObject({ bottom: -10, top: 20, level: 'lv1', spans: ['lv2', 'lv3'], behaviour: { kind: 'changeLevel', movement: [] } });
     });
 });

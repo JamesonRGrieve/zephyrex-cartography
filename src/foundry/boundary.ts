@@ -223,10 +223,10 @@ export interface RegionCreateData extends OnLevels {
     readonly shapes: readonly RegionShape[];
     /** A null bound is open-ended. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
-    /** `changeLevel` has an empty schema in v14 (14.359). */
     readonly behaviors: readonly (
         | { readonly type: 'teleportToken'; readonly system: TeleportSystem }
-        | { readonly type: 'changeLevel'; readonly system: Readonly<Record<string, never>> }
+        /** The movement actions that take it; none is any (14.361). */
+        | { readonly type: 'changeLevel'; readonly system: { readonly movementActions: readonly string[] } }
         | { readonly type: 'defineSurface'; readonly system: SurfaceSystem }
         /** Cost multipliers per movement action (v14 `modifyMovementCost`, 14.359); actions left out keep Foundry's 1. */
         | { readonly type: 'modifyMovementCost'; readonly system: { readonly difficulties: Readonly<Record<string, number>> } }

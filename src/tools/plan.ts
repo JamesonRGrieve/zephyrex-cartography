@@ -228,18 +228,20 @@ function transitionRegions(stamp: StampFeature, levels: readonly Level[]): Regio
         transition.direction === 'down' ? null : adjacentLevel(levels, here.id, 1),
         transition.direction === 'up' ? null : adjacentLevel(levels, here.id, -1),
     ].filter((level): level is Level => level !== null);
-    return joiningRegions(stamp, transition.kind, here, ends);
+    return joiningRegions(stamp, transition.kind, here, ends, transition.movement ?? []);
 }
 
 /**
  * A `changeLevel` region over a stamp's footprint joining its own level to
- * `ends`, spanning all their bands; none when there is nowhere to go.
+ * `ends`, spanning all their bands, taken by the movement actions in
+ * `movement` (none: any); none when there is nowhere to go.
  */
 function joiningRegions(
     stamp: StampFeature,
     kind: NonNullable<StampFeature['behaviour']['transition']>['kind'],
     here: Level,
     ends: readonly Level[],
+    movement: readonly string[],
 ): RegionDoc[] {
     if (ends.length === 0) {
         return [];
@@ -254,7 +256,7 @@ function joiningRegions(
             top: Math.max(...joined.map((level) => level.top)),
             level: here.id,
             spans: ends.map((end) => end.id),
-            behaviour: { kind: 'changeLevel' },
+            behaviour: { kind: 'changeLevel', movement },
         },
     ];
 }
@@ -267,7 +269,7 @@ function joiningRegions(
 function buildingStairs(stamp: StampFeature, levels: readonly Level[]): RegionDoc[] {
     const here = findLevel(levels, stamp.level);
     const floors = stamp.floors.map((id) => findLevel(levels, id)).filter((level): level is Level => level !== null);
-    return here ? joiningRegions(stamp, 'stairs', here, floors) : [];
+    return here ? joiningRegions(stamp, 'stairs', here, floors, []) : [];
 }
 
 /** A linked stamp's entrance: over its footprint on its own level, teleporting to the interior's exit. */

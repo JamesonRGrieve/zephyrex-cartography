@@ -383,15 +383,9 @@ The goal is **full use of Foundry v14's scene features**.
   (`common/documents/*.mjs`, `common/constants.mjs`,
   `client/data/region-behaviors/`), and from the v14 release notes, 14.349 to
   14.368 (read 2026-09-23).
-- **Checking.** The latest stable is 14.368 and the local reference source is
-  14.359. Check anything the notes date after 14.359 against a newer release
-  before building on it.
-  - The live server also runs 14.359 (checked 2026-09-23), so
-    `pull-foundry.sh` cannot supply a newer reference. A newer one has to
-    come from foundryvtt.com with the operator's account. Until then, the
-    items that need it are **blocked**: stair movement actions (14.361),
-    compressed textures (14.362), level preloading and the level-aware
-    helpers (14.364), and teleport `avoidOccupied`.
+- **Checking.** The live server and the local reference source
+  (`pull-foundry.sh`) are both 14.368, the latest stable (2026-09-24).
+  Verify every feature against that source before building on it.
 - **Closing a gap** means exposing the option everywhere it applies:
   - the engine's plan and document specs, and the Foundry translation;
   - the stamp pack schema (additive v1 fields);
@@ -469,11 +463,12 @@ These make everything after them cheaper and safer, so they come first.
   the token which level to take. Teleport stays for submaps, which cross
   scenes. `RegionDoc.behaviour` is a `teleport` / `changeLevel` union, and
   Priority 5 extends it. `tests/e2e/levels.spec.ts` proves it in Foundry.
-  - **Still open:** restricting which movement actions trigger it [14.361],
-    so stair stamps walk and ladders climb, with the pack schema saying
-    which. In 14.359 the behaviour's schema is empty. Build this against a
-    ≥14.361 reference release; the behaviour firing until the token leaves
-    the region is also from 14.361.
+  - **[done] Movement actions** [14.361]. A transition's `movement` (pack
+    schema) lists the movement actions that take it, and becomes the
+    behaviour's `movementActions`. Omitted or empty means any action, as
+    Foundry reads an empty set, so stairs stay walkable by all while a
+    ladder can say `climb`. A building's floor stairs take any.
+    `tests/e2e/levels.spec.ts` reads the live behaviour back.
 - **[done] Floors → `defineSurface`** [14.353]. It gives a region a surface
   at its bottom, top or both that restricts light, movement, sight and sound
   and causes occlusion or exposure.
@@ -1059,9 +1054,8 @@ imports).
       default pile actor, and a new one would otherwise inherit the last
       one's state.
     - Proven in `tests/e2e/containers.spec.ts`.
-  - Not yet realised: transition movement (blocked on 14.361). The engine takes it up as its roadmap priority lands.
-    Packs may author them now; they are validated and snapshotted on placed
-    stamps, so they take effect as soon as that priority ships.
+  - A transition's `movement` is the movement actions that take its
+    `changeLevel` region (none: any), realised since 14.361.
 - **Evolution:** v1 changes are **additive only**. A breaking change becomes a new
   version with its own schema file, and the parser keeps reading supported
   older versions.

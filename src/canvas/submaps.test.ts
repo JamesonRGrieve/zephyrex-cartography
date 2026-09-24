@@ -119,7 +119,7 @@ describe('CartographyController submaps', () => {
         expect(hab?.level).toBe('lv1');
         expect(c.buildingFloors('p1')).toEqual(['lv2', 'lv3']);
         const stairs = d.regions.flat().find((r) => r.label.kind === 'stairs');
-        expect(stairs).toMatchObject({ level: 'lv1', spans: ['lv2', 'lv3'], bottom: 0, top: 60, behaviour: { kind: 'changeLevel' } });
+        expect(stairs).toMatchObject({ level: 'lv1', spans: ['lv2', 'lv3'], bottom: 0, top: 60, behaviour: { kind: 'changeLevel', movement: [] } });
 
         expect(await c.removeBuildingFloors('p1')).toBe(true);
         expect(c.buildingFloors('p1')).toEqual([]);

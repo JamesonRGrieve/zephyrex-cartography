@@ -425,7 +425,7 @@ describe('regionCreateData', () => {
             top: 20,
             level: 'A',
             spans: ['B', 'C'],
-            behaviour: { kind: 'changeLevel' },
+            behaviour: { kind: 'changeLevel', movement: ['walk', 'climb'] },
         };
         expect(regionCreateData([stair], ['r0'], CONTEXT)).toEqual([
             {
@@ -434,7 +434,7 @@ describe('regionCreateData', () => {
                 color: '#4a90d9',
                 shapes: [{ type: 'polygon', points: [0, 0, 10, 0, 10, 10], hole: false }],
                 elevation: { bottom: -10, top: 20 },
-                behaviors: [{ type: 'changeLevel', system: {} }],
+                behaviors: [{ type: 'changeLevel', system: { movementActions: ['walk', 'climb'] } }],
                 locked: true,
                 visibility: 0,
                 levels: ['A', 'B', 'C'],

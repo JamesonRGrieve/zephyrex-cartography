@@ -426,8 +426,9 @@ export function regionUuid(scene: string, region: string): string {
  * - A teleport names its destinations by region UUID, and travels as its link
  *   says: where the token lands, the prompt and the scene transition. The
  *   token chooses when there is more than one way to go.
- * - `changeLevel` has no options in v14: which levels it offers comes from
- *   the region's own level membership.
+ * - `changeLevel`: which levels it offers comes from the region's own level
+ *   membership; its movement actions are the ones that take it (none: any,
+ *   `movementActions` since 14.361).
  * - A floor is a `defineSurface` at the region's bottom that restricts every
  *   sense and movement and occludes what is beneath.
  */
@@ -436,7 +437,7 @@ export function behaviourData(behaviour: RegionBehaviour | null): RegionCreateDa
         return [];
     }
     if (behaviour.kind === 'changeLevel') {
-        return [{ type: 'changeLevel', system: {} }];
+        return [{ type: 'changeLevel', system: { movementActions: behaviour.movement } }];
     }
     if (behaviour.kind === 'surface') {
         return [

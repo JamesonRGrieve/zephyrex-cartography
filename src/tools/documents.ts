@@ -218,14 +218,15 @@ interface RegionTarget {
  *   scene or another (a submap's entrance and exit);
  * - `changeLevel` is v14's way between floors of one scene: a token entering
  *   it is offered every other level the region sits on, keeping its height
- *   above the floor;
+ *   above the floor, by the movement actions in `movement` (none: any action,
+ *   14.361);
  * - `surface` is a solid floor at the region's bottom (v14 `defineSurface`):
  *   it restricts light, movement, sight and sound and occludes, so the level
  *   below cannot be seen or walked through.
  */
 export type RegionBehaviour =
     | { readonly kind: 'teleport'; readonly targets: readonly RegionTarget[]; readonly travel: SubmapTravel }
-    | { readonly kind: 'changeLevel' }
+    | { readonly kind: 'changeLevel'; readonly movement: readonly string[] }
     /** A Define Surface at the region's bottom, top or both that restricts everything; `reveal` is Foundry's Reveal Elevated Surface. */
     | { readonly kind: 'surface'; readonly placement: 'bottom' | 'top' | 'both'; readonly reveal: boolean }
     /** Foundry's Modify Movement Cost: a cost multiplier per movement action (walk, fly, ...). */
