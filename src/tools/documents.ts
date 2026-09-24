@@ -8,7 +8,7 @@
  * can re-sync or delete exactly its own documents (the lifecycle rule).
  */
 import type { Point } from '../geometry/spline';
-import type { PlacedBehaviour } from '../stamps/schema';
+import type { PlacedBehaviour, StampLight, StampTile } from '../stamps/schema';
 import type { BiomeKind } from './biome';
 import { isRecord, stringArray } from './guards';
 
@@ -115,9 +115,17 @@ export interface LightDoc {
     /** Direction the cone faces, in degrees. */
     readonly rotation?: number;
     readonly animation?: LightAnimation;
+    /** How the light renders and what it touches, as its pack declares; left out, Foundry's defaults. */
+    readonly technique?: LightTechnique;
     readonly elevation: number;
     readonly level: string | null;
 }
+
+/** A stamp light's rendering and reach, beyond its radii, colour and animation (v14 AmbientLight). */
+export type LightTechnique = Pick<
+    StampLight,
+    'negative' | 'priority' | 'coloration' | 'luminosity' | 'attenuation' | 'saturation' | 'contrast' | 'shadows' | 'walls' | 'vision'
+>;
 
 /** A native ambient sound, emitted by a stamp. */
 export interface SoundDoc {
@@ -152,6 +160,8 @@ export interface TileDoc {
     readonly level: string | null;
     /** The feature that owns this tile, written to the tile's module flag. */
     readonly featureId: string;
+    /** The tile's own behaviour as its pack declares it (opacity, occlusion, restrictions, video); left out, Foundry's defaults. */
+    readonly look?: StampTile;
 }
 
 /**

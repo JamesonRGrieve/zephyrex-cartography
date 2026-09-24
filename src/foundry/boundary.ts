@@ -49,13 +49,27 @@ export interface LightCreateData extends OnLevels {
         readonly alpha?: number;
         readonly angle?: number;
         readonly animation?: { readonly type: string; readonly speed?: number; readonly intensity?: number };
+        // The pack's rendering settings. Undefined keys are dropped on the way to Foundry, which then applies its defaults.
+        readonly negative?: boolean | undefined;
+        readonly priority?: number | undefined;
+        /** An `AdaptiveLightingShader.SHADER_TECHNIQUES` id. */
+        readonly coloration?: number | undefined;
+        readonly luminosity?: number | undefined;
+        readonly attenuation?: number | undefined;
+        readonly saturation?: number | undefined;
+        readonly contrast?: number | undefined;
+        readonly shadows?: number | undefined;
     };
+    /** Whether walls constrain the light (Foundry's default: they do). */
+    readonly walls?: boolean | undefined;
+    /** Whether the light also provides vision. */
+    readonly vision?: boolean | undefined;
 }
 
 export interface TileCreateData extends OnLevels {
     readonly name: string;
     /** The anchor is the point `x`, `y` names and the tile rotates about. */
-    readonly texture: { readonly src: string; readonly anchorX: number; readonly anchorY: number };
+    readonly texture: { readonly src: string; readonly anchorX: number; readonly anchorY: number; readonly alphaThreshold?: number | undefined };
     readonly x: number;
     readonly y: number;
     readonly width: number;
@@ -63,6 +77,13 @@ export interface TileCreateData extends OnLevels {
     readonly rotation: number;
     readonly elevation: number;
     readonly flags: Readonly<Record<string, { readonly featureId: string }>>;
+    // The pack's tile behaviour. Undefined keys are dropped on the way to Foundry, which then applies its defaults.
+    readonly alpha?: number | undefined;
+    readonly hidden?: boolean | undefined;
+    /** `modes` are `CONST.OCCLUSION_MODES` values; `alpha` is the opacity while occluded. */
+    readonly occlusion?: { readonly modes: readonly number[]; readonly alpha?: number | undefined } | undefined;
+    readonly restrictions?: { readonly light?: boolean | undefined; readonly weather?: boolean | undefined } | undefined;
+    readonly video?: { readonly loop?: boolean | undefined; readonly autoplay?: boolean | undefined; readonly volume?: number | undefined } | undefined;
 }
 
 export interface SoundCreateData extends OnLevels {

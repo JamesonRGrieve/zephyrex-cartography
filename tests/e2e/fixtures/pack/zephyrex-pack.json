@@ -241,6 +241,41 @@
                     "height": 100
                 }
             ]
+        },
+        {
+            "id": "brazier",
+            "name": "Brazier",
+            "category": "Lighting",
+            "scale": "interior",
+            "perspective": "top-down",
+            "light": {
+                "dim": 3,
+                "bright": 1,
+                "coloration": "adaptiveAttenuation",
+                "luminosity": 0.3,
+                "walls": false
+            },
+            "tile": {
+                "occlusion": {
+                    "modes": [
+                        "fade",
+                        "vision"
+                    ],
+                    "alpha": 0.25
+                },
+                "alphaThreshold": 0.5,
+                "restrictions": {
+                    "light": true
+                }
+            },
+            "variants": [
+                {
+                    "state": "burning",
+                    "image": "stamps/lamp-lit.svg",
+                    "width": 100,
+                    "height": 100
+                }
+            ]
         }
     ],
     "textureSets": []

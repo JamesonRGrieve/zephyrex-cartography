@@ -91,7 +91,15 @@ function stampTile(stamp: StampFeature, floor: Floor): TileDoc {
         elevation: floor.elevation + stamp.elevation,
         level: floor.level,
         featureId: stamp.id,
+        ...(stamp.behaviour.tile === null || stamp.behaviour.tile === undefined ? {} : { look: stamp.behaviour.tile }),
     };
+}
+
+/** A pack light's rendering and reach; nothing when it declares none. */
+function lightTechnique(light: StampLight): Partial<Pick<LightDoc, 'technique'>> {
+    const { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows, walls, vision } = light;
+    const technique = { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows, walls, vision };
+    return Object.values(technique).every((value) => value === undefined) ? {} : { technique };
 }
 
 /** A pack animation with its absent optional fields dropped rather than carried as undefined. */
@@ -127,6 +135,7 @@ function stampLight(stamp: StampFeature, floor: Floor): LightDoc | null {
         ...(light.alpha === undefined ? {} : { alpha: light.alpha }),
         ...(light.angle === undefined ? {} : { angle: light.angle, rotation: stamp.rotation }),
         ...(light.animation === undefined ? {} : { animation: animationDoc(light.animation) }),
+        ...lightTechnique(light),
         elevation: floor.elevation + stamp.elevation,
         level: floor.level,
     };

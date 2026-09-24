@@ -116,8 +116,46 @@ export function lightCreateData(light: LightDoc, grid: SceneGrid, displayName: s
             ...(light.alpha === undefined ? {} : { alpha: light.alpha }),
             ...(light.angle === undefined ? {} : { angle: light.angle }),
             ...(light.animation === undefined ? {} : { animation: light.animation }),
+            ...lightConfigTechnique(light.technique),
         },
+        walls: light.technique?.walls,
+        vision: light.technique?.vision,
         ...levelsField(light.level),
+    };
+}
+
+/** `AdaptiveLightingShader.SHADER_TECHNIQUES` ids (v14): 0–10, then 100 and 101 for the attenuation techniques. */
+const COLORATION_IDS: Readonly<Record<NonNullable<NonNullable<LightDoc['technique']>['coloration']>, number>> = {
+    legacy: 0,
+    luminance: 1,
+    internalHalo: 2,
+    externalHalo: 3,
+    colorBurn: 4,
+    internalBurn: 5,
+    externalBurn: 6,
+    lowAbsorption: 7,
+    highAbsorption: 8,
+    invertAbsorption: 9,
+    naturalLight: 10,
+    naturalAttenuation: 100,
+    adaptiveAttenuation: 101,
+};
+
+/** A light's rendering settings inside its `config`; anything left out stays undefined and takes Foundry's default. */
+function lightConfigTechnique(technique: LightDoc['technique']): Partial<LightCreateData['config']> {
+    if (technique === undefined) {
+        return {};
+    }
+    const { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows } = technique;
+    return {
+        negative,
+        priority,
+        coloration: coloration === undefined ? undefined : COLORATION_IDS[coloration],
+        luminosity,
+        attenuation,
+        saturation,
+        contrast,
+        shadows,
     };
 }
 
@@ -165,10 +203,38 @@ export function tileFrame(tile: TileSource): TileFrame {
     };
 }
 
+/** `CONST.OCCLUSION_MODES` (v14): combined as a set on the tile. */
+const OCCLUSION_MODES: Readonly<Record<NonNullable<NonNullable<TileDoc['look']>['occlusion']>['modes'][number], number>> = {
+    fade: 1,
+    surface: 2,
+    radial: 4,
+    vision: 8,
+};
+
+/**
+ * The tile's own behaviour, as its pack declares it. Anything the pack leaves
+ * out stays undefined, which never reaches Foundry (undefined keys are dropped
+ * on the way), so Foundry's defaults apply.
+ */
+function tileLookData(look: TileDoc['look']): Pick<TileCreateData, 'alpha' | 'hidden' | 'occlusion' | 'restrictions' | 'video'> {
+    if (look === undefined) {
+        return {};
+    }
+    const { occlusion } = look;
+    return {
+        alpha: look.alpha,
+        hidden: look.hidden,
+        occlusion: occlusion === undefined ? undefined : { modes: occlusion.modes.map((mode) => OCCLUSION_MODES[mode]), alpha: occlusion.alpha },
+        restrictions: look.restrictions,
+        video: look.video,
+    };
+}
+
 export function tileCreateData(tile: TileDoc): TileCreateData {
     return {
         name: tile.name,
-        texture: { src: tile.src, anchorX: TILE_ANCHOR, anchorY: TILE_ANCHOR },
+        texture: { src: tile.src, anchorX: TILE_ANCHOR, anchorY: TILE_ANCHOR, alphaThreshold: tile.look?.alphaThreshold },
+        ...tileLookData(tile.look),
         // Foundry stores tile positions as integers; round here so the read-back matches.
         x: Math.round(tile.x + tile.width * TILE_ANCHOR),
         y: Math.round(tile.y + tile.height * TILE_ANCHOR),

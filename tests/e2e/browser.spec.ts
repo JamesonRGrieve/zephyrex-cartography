@@ -8,6 +8,9 @@ import { expect, test } from './lib/foundry';
 
 const BROWSER = '#zephyrex-cartography-stamp-browser';
 
+/** Stamps in the e2e pack (tests/e2e/fixtures/pack/zephyrex-pack.json). */
+const FIXTURE_STAMPS = 8;
+
 async function openBrowser(page: Page): Promise<Locator> {
     await page.evaluate(async () => {
         await ui.controls?.activate({ control: 'tiles', tool: 'zephyrex-stamp' });
@@ -26,7 +29,7 @@ async function shown(browser: Locator): Promise<string[]> {
 
 test('the browser narrows its stamps by search, scale and view', async ({ world }) => {
     const browser = await openBrowser(world);
-    await expect.poll(async () => (await shown(browser)).length).toBe(7);
+    await expect.poll(async () => (await shown(browser)).length).toBe(FIXTURE_STAMPS);
 
     await browser.getByLabel('Search stamps').fill('cra');
     await expect.poll(async () => shown(browser)).toEqual(['crate']);
@@ -39,7 +42,7 @@ test('the browser narrows its stamps by search, scale and view', async ({ world 
     await browser.getByLabel('Perspective').selectOption('isometric');
     await expect(browser.getByText('No stamps match these filters.')).toBeVisible();
     await browser.getByLabel('Perspective').selectOption('');
-    await expect.poll(async () => (await shown(browser)).length).toBe(7);
+    await expect.poll(async () => (await shown(browser)).length).toBe(FIXTURE_STAMPS);
 });
 
 // A category lists only the tags at least two of its stamps share: both Storage stamps are "loot".
@@ -60,7 +63,7 @@ test('the browser picks a category tag, and drops it by its chip or by clearing'
     await expect(chip).toBeHidden();
 
     await browser.getByRole('button', { name: /^All/u }).click();
-    await expect.poll(async () => (await shown(browser)).length).toBe(7);
+    await expect.poll(async () => (await shown(browser)).length).toBe(FIXTURE_STAMPS);
 });
 
 test('a stamp rotated in the browser is placed rotated', async ({ world }) => {

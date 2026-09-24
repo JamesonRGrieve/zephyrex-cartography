@@ -160,6 +160,49 @@ describe('tileCreateData', () => {
     });
 });
 
+describe('stamp tile and light behaviour', () => {
+    const tile = { name: 'Roof', src: 'roof.webp', x: 0, y: 0, width: 100, height: 100, rotation: 0, elevation: 0, level: null, featureId: 'f' };
+
+    it('gives a tile its pack’s opacity, occlusion modes as Foundry’s values, restrictions and video', () => {
+        const data = tileCreateData({
+            ...tile,
+            look: {
+                alpha: 0.9,
+                hidden: true,
+                occlusion: { modes: ['fade', 'radial'], alpha: 0.25 },
+                alphaThreshold: 0.5,
+                restrictions: { light: true },
+                video: { loop: false },
+            },
+        });
+        expect(data).toMatchObject({
+            alpha: 0.9,
+            hidden: true,
+            occlusion: { modes: [1, 4], alpha: 0.25 },
+            texture: { alphaThreshold: 0.5 },
+            restrictions: { light: true },
+            video: { loop: false },
+        });
+        // A pack that declares nothing leaves every one of them to Foundry.
+        expect(JSON.parse(JSON.stringify(tileCreateData(tile)))).not.toHaveProperty('occlusion');
+    });
+
+    it('gives a light its rendering technique, with Foundry’s colouration ids, and its walls and vision', () => {
+        const light = { source: { kind: 'room' } as const, x: 0, y: 0, dim: 100, bright: 50, elevation: 0, level: null };
+        const attenuating = lightCreateData(
+            { ...light, technique: { coloration: 'adaptiveAttenuation', luminosity: 0.3, walls: false, vision: true } },
+            GRID,
+            'L',
+        );
+        expect(attenuating).toMatchObject({ config: { coloration: 101, luminosity: 0.3 }, walls: false, vision: true });
+        expect(lightCreateData({ ...light, technique: { coloration: 'naturalLight', negative: true } }, GRID, 'L').config).toMatchObject({
+            coloration: 10,
+            negative: true,
+        });
+        expect(JSON.parse(JSON.stringify(lightCreateData(light, GRID, 'L')))).not.toHaveProperty('walls');
+    });
+});
+
 describe('soundCreateData', () => {
     it('converts the radius to distance units and keeps the level', () => {
         expect(

@@ -501,24 +501,26 @@ These make everything after them cheaper and safer, so they come first.
   would block nothing gets none, and every room wall kind blocks something.
 
 ### Priority 4: tiles and lights
-- **Stamp tiles.** They should take:
+- **[done] Stamp tiles** take their pack's `tile`:
   - `alpha` and `hidden`;
-  - `occlusion`: `modes` is a bit set that combines [14.355]: NONE 0, FADE 1,
-    SURFACE 2, RADIAL 4, VISION 8. With `alpha`, it makes roofs and canopies
-    fade or reveal when a token is under them;
-  - `texture.alphaThreshold` [14.359]: the opacity below which the stamp's
-    texture does not count as solid;
+  - `occlusion`: `modes` is a set of `CONST.OCCLUSION_MODES` [14.355]: FADE
+    1, SURFACE 2, RADIAL 4, VISION 8. With `alpha`, it makes roofs and
+    canopies give way to tokens beneath them;
+  - `texture.alphaThreshold` [14.359];
   - `restrictions` (`light`, `weather`);
-  - `video` (`loop`, `autoplay`, `volume`) for animated stamps.
-- **Lights.** Add the missing AmbientLight fields:
-  - `walls`, `vision` and `hidden`;
+  - `video` (`loop`, `autoplay`, `volume`).
+  Anything the pack leaves out stays undefined and takes Foundry's default.
+- **[done] Lights** take:
+  - `walls` and `vision`;
   - in `config`: `negative` (darkness sources), `priority`, `coloration`,
-    `attenuation`, `luminosity`, `saturation`, `contrast`, `shadows` and the
-    `darkness` range.
-  - `coloration` includes the Adaptive Attenuation and Natural Attenuation
-    techniques [14.349].
-  - Already generated: dim, bright, colour, alpha, angle, rotation and
+    `attenuation`, `luminosity`, `saturation`, `contrast` and `shadows`.
+  - `coloration` maps to `AdaptiveLightingShader.SHADER_TECHNIQUES` ids. Those
+    run 0–10, then 100 (Natural Attenuation) and 101 (Adaptive Attenuation)
+    [14.349], so they are not an index into the list.
+  - These come on top of dim, bright, colour, alpha, angle, rotation and
     animation.
+  - **Still open:** `hidden` and the `darkness` range, which the pack schema
+    does not yet declare.
 - **Light switches that players click.** A switch is a stamp the engine
   treats as a door: its variants are its on and off states, and it has a
   native door wall that blocks nothing (every sense `none`, movement off).

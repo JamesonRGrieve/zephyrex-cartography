@@ -1,6 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, frameScene, test } from './lib/foundry';
 
+test('a stamp’s tile and light take its pack’s occlusion, restrictions and light technique', async ({ world }) => {
+    const placed = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.controller()?.placeStamp({ stamp: 'zc-e2e-pack:brazier', x: 500, y: 400 });
+        const tile = canvas?.scene?.tiles.contents[0];
+        const light = canvas?.scene?.lights.contents[0];
+        return {
+            tile: tile && {
+                modes: [...tile.occlusion.modes].sort((a, b) => (a ?? 0) - (b ?? 0)),
+                alpha: tile.occlusion.alpha,
+                alphaThreshold: tile.texture.alphaThreshold,
+                light: tile.restrictions.light,
+            },
+            light: light && { coloration: light.config.coloration, luminosity: light.config.luminosity, walls: light.walls },
+        };
+    });
+    // CONST.OCCLUSION_MODES: FADE 1, VISION 8. SHADER_TECHNIQUES.ADAPTIVE_ATTENUATION is id 101.
+    expect(placed.tile).toEqual({ modes: [1, 8], alpha: 0.25, alphaThreshold: 0.5, light: true });
+    expect(placed.light).toEqual({ coloration: 101, luminosity: 0.3, walls: false });
+});
+
 test('a placed stamp is a native tile centred on its point, with its light', async ({ world }) => {
     const placed = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();
