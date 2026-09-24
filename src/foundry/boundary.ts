@@ -256,9 +256,37 @@ export interface NoteCreateData extends OnLevels {
     readonly texture?: { readonly src: string };
 }
 
-export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level' | 'Note';
+/**
+ * A text Drawing (14.359 `common/documents/drawing.mjs`): `x`, `y` is the
+ * box's top-left and it turns about its centre. `shape.type` "r" is a
+ * rectangle; `fillType` is a `CONST.DRAWING_FILL_TYPES` value.
+ */
+export interface DrawingCreateData extends OnLevels {
+    readonly shape: { readonly type: 'r'; readonly width: number; readonly height: number };
+    readonly x: number;
+    readonly y: number;
+    readonly elevation: number;
+    readonly rotation: number;
+    readonly fillType: number;
+    readonly strokeWidth: number;
+    readonly text: string;
+    readonly fontSize: number;
+    readonly fontFamily: string;
+    readonly textColor: string;
+    readonly hidden: boolean;
+}
 
-type EmbeddedCreateData = WallCreateData | LightCreateData | SoundCreateData | TileCreateData | RegionCreateData | LevelCreateData | NoteCreateData;
+export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level' | 'Note' | 'Drawing';
+
+type EmbeddedCreateData =
+    | WallCreateData
+    | LightCreateData
+    | SoundCreateData
+    | TileCreateData
+    | RegionCreateData
+    | LevelCreateData
+    | NoteCreateData
+    | DrawingCreateData;
 
 /** Create data carrying the id the document will have. */
 export type IdentifiedCreateData = EmbeddedCreateData & { readonly _id: string };
@@ -365,6 +393,7 @@ export interface FoundryScene {
     readonly lights: EmbeddedCollection;
     readonly sounds: EmbeddedCollection;
     readonly notes: EmbeddedCollection;
+    readonly drawings: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
     readonly regions: RegionCollection;
     readonly levels: { readonly contents: readonly NativeLevel[]; readonly size: number };

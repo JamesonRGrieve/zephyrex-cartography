@@ -13,6 +13,7 @@ import { type AreaEffect, DARKNESS_MODES, TEXT_VISIBILITIES } from '../tools/are
 import type {
     DoorState,
     DoorType,
+    DrawingDoc,
     LightDoc,
     NoteDoc,
     RegionBehaviour,
@@ -28,6 +29,7 @@ import { regionColour } from '../tools/region-colours';
 import { type Environment, FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
 import type {
     AreaEffectBehaviour,
+    DrawingCreateData,
     LightCreateData,
     NoteCreateData,
     RegionCreateData,
@@ -162,6 +164,29 @@ export function noteCreateData(note: NoteDoc): NoteCreateData {
         global: note.global,
         ...(note.icon === null ? {} : { texture: { src: note.icon } }),
         ...levelsField(note.level),
+    };
+}
+
+/** `CONST.DRAWING_FILL_TYPES.NONE`. */
+const DRAWING_FILL_NONE = 0;
+
+/** A label's Drawing: text only (no fill, no stroke), its box placed by its top-left corner and turned about its centre. */
+export function drawingCreateData(drawing: DrawingDoc): DrawingCreateData {
+    const { width, height } = drawing;
+    return {
+        shape: { type: 'r', width, height },
+        x: Math.round(drawing.x - width / 2),
+        y: Math.round(drawing.y - height / 2),
+        elevation: drawing.elevation,
+        rotation: drawing.rotation,
+        fillType: DRAWING_FILL_NONE,
+        strokeWidth: 0,
+        text: drawing.text,
+        fontSize: drawing.fontSize,
+        fontFamily: drawing.fontFamily,
+        textColor: drawing.colour,
+        hidden: drawing.hidden,
+        ...levelsField(drawing.level),
     };
 }
 

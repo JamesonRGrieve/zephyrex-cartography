@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * The unified persisted feature model: roads/rivers (paths), biome regions
- * (closed fills), biome brush strokes (freehand swaths), rooms, stamps and
- * map pins, discriminated by `type`. `parseFeatures` validates the mixed
+ * (closed fills), biome brush strokes (freehand swaths), rooms, stamps, map
+ * pins and map labels, discriminated by `type`. `parseFeatures` validates the mixed
  * scene-flag blob.
  */
 import type { GeneratedDocs } from './documents';
+import { parseLabel, type LabelFeature } from './label';
 import { parsePath, type CartographyPath } from './path';
 import { parsePin, type PinFeature } from './pin';
 import { parseRegion, type RegionFeature } from './region';
@@ -13,7 +14,12 @@ import { parseRoom, type RoomFeature } from './room';
 import { parseStamp, type StampFeature } from './stamp';
 import { parseStroke, type StrokeFeature } from './stroke';
 
-export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature | StampFeature | PinFeature;
+export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature | StampFeature | PinFeature | LabelFeature;
+
+/** A map pin or label: one point, where it stands, that moves it whole. */
+export function isAnchored(f: Feature): f is PinFeature | LabelFeature {
+    return f.type === 'pin' || f.type === 'label';
+}
 
 export function isRegion(f: Feature): f is RegionFeature {
     return f.type === 'region';
@@ -44,7 +50,8 @@ export function parseFeatures(raw: unknown): Feature[] {
     }
     const out: Feature[] = [];
     for (const entry of raw) {
-        const feature = parseStamp(entry) ?? parsePath(entry) ?? parseRegion(entry) ?? parseStroke(entry) ?? parseRoom(entry) ?? parsePin(entry);
+        const feature =
+            parseStamp(entry) ?? parsePath(entry) ?? parseRegion(entry) ?? parseStroke(entry) ?? parseRoom(entry) ?? parsePin(entry) ?? parseLabel(entry);
         if (feature) {
             out.push(feature);
         }

@@ -20,6 +20,7 @@ import { registerDoorRuntime } from './foundry/door-runtime';
 import { registerEffectsRuntime } from './foundry/effects-runtime';
 import { registerGeneratorRuntime } from './foundry/generator-runtime';
 import { createItemPilesContainers } from './foundry/item-piles';
+import { registerLabelRuntime } from './foundry/label-runtime';
 import { registerLevelRuntime } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
 import { registerMaterialsRuntime } from './foundry/materials-runtime';
@@ -74,6 +75,8 @@ const materials = registerMaterialsRuntime(() => state?.controller ?? null, pack
 const effects = registerEffectsRuntime(() => state?.controller ?? null);
 
 const pins = registerPinRuntime(() => state?.controller ?? null);
+
+const labels = registerLabelRuntime(() => state?.controller ?? null);
 
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
@@ -222,7 +225,22 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
             openOn(st.controller, pt, (id) => st.controller.areaSettings(id) !== null, effects.edit);
             return;
         case 'pin':
-            void pinAt(st.controller, pt);
+            void placeOrOpen(
+                st.controller,
+                pt,
+                (id) => st.controller.pinSettings(id) !== null,
+                async (at) => st.controller.placePin(at),
+                pins.edit,
+            );
+            return;
+        case 'label':
+            void placeOrOpen(
+                st.controller,
+                pt,
+                (id) => st.controller.labelSettings(id) !== null,
+                async (at) => st.controller.placeLabel(at),
+                labels.edit,
+            );
             return;
         case 'erase':
             void st.controller.erase(pt);
@@ -253,11 +271,16 @@ function doorAt(controller: CartographyController, pt: Point): void {
     }
 }
 
-/** A click with the pin tool: open the pin clicked, or place a new one there and open it. */
-async function pinAt(controller: CartographyController, pt: Point): Promise<void> {
+/** A click with the pin or label tool: open the one clicked, or place a new one there and open that. */
+async function placeOrOpen(
+    controller: CartographyController,
+    pt: Point,
+    isOne: (id: string) => boolean,
+    place: (at: Point) => Promise<string>,
+    openPanel: (id: string) => void,
+): Promise<void> {
     const hit = controller.hitTest(pt);
-    const id = hit !== null && controller.pinSettings(hit) ? hit : await controller.placePin(pt);
-    pins.edit(id);
+    openPanel(hit !== null && isOne(hit) ? hit : await place(pt));
 }
 
 /** A press with a drawing brush in hand. */
@@ -512,6 +535,7 @@ const NATIVE_TOOL_LOOKS: Readonly<Record<NativeTool, ToolLook>> = {
     link: { title: I18N.tools.link, icon: 'fa-solid fa-link' },
     effects: { title: I18N.tools.effects, icon: 'fa-solid fa-wand-sparkles' },
     pin: { title: I18N.tools.pin, icon: 'fa-solid fa-map-pin' },
+    label: { title: I18N.tools.label, icon: 'fa-solid fa-font' },
 };
 
 /** Every pointer tool, by name, in toolbar order: paths, painting, then the tools native groups share. */

@@ -9,7 +9,7 @@ import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { perimeterSegments, segmentBand } from '../geometry/wall';
 import { BIOME_STYLES, isBiomeKind, type BiomeKind } from '../tools/biome';
 import { tintToward } from '../tools/colour';
-import type { Feature } from '../tools/feature';
+import { type Feature, isAnchored } from '../tools/feature';
 import type { CartographyPath, Liquid } from '../tools/path';
 import { proceduralRole, type Pattern } from '../tools/procedural';
 import { regionOutline } from '../tools/region';
@@ -177,8 +177,8 @@ function underlays(feature: Feature, resolve: TextureResolver): Filled[] {
 const NOT_DRAWN: Filled = { outline: [], fill: 0, alpha: 0, texture: null, tint: NO_TINT, feather: false };
 
 function outlineAndStyle(feature: Feature, resolve: TextureResolver): Filled {
-    // A stamp is its Tile, and a pin its Note.
-    if (feature.type === 'stamp' || feature.type === 'pin') {
+    // A stamp is its Tile, a pin its Note and a label its Drawing.
+    if (feature.type === 'stamp' || isAnchored(feature)) {
         return NOT_DRAWN;
     }
     if (feature.type === 'region') {

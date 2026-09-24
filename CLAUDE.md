@@ -205,7 +205,8 @@ plus a link flag. It never rewrites content the plugin did not create.
 that type's own control group, after Foundry's tools
 (`canvas/tool-placement.ts`).
 - **Walls:** room, door and materials. **Tiles:** stamp. **Lighting:**
-  link. **Regions:** effects. **Notes:** pin, with edit and erase. Edit and erase appear in the Walls and Tiles
+  link. **Regions:** effects. **Notes:** pin, with edit and erase.
+  **Drawings:** label, with edit and erase. Edit and erase appear in the Walls and Tiles
   groups too, so what a group draws can be reshaped there.
 - **The module's own group** keeps what has no native home: roads, rivers,
   the paint tool, edit, erase, undo/redo, levels and the generator.
@@ -731,7 +732,20 @@ These make everything after them cheaper and safer, so they come first.
   - The scene spec takes `pin` entries.
   - Foundry stamps a Note's `author` [14.353] with the user who creates it.
   - Proven in `tests/e2e/pointer.spec.ts`.
-- **Drawings** (text labels and shapes): still open.
+- **[done] Drawings: map labels.** A `label` feature (`tools/label.ts`) is
+  text on the map, realised as a native text Drawing on its level: a
+  rectangle with no fill and no line, centred on the label's point and
+  turned about it.
+  - It has text, font size (8–256), colour, font (from
+    `CONFIG.fontDefinitions`, or Foundry's default), rotation and `hidden`.
+  - Foundry wraps a drawing's text to its box, so the box is sized
+    generously from the longest line.
+  - A label with no text has no Drawing yet, since Foundry refuses one with
+    nothing to show.
+  - The **label tool** sits with Foundry's Drawings tools, beside edit and
+    erase, with a panel named with Foundry's Drawing sheet strings.
+  - The scene spec takes `label` entries.
+  - **Still open:** drawn shapes (lines, rectangles, ellipses, polygons).
 - **[done] Scene settings.** A scene spec's `scene` block sets the scene's
   own settings, only those given (`tools/scene-settings.ts`):
   - darkness, its lock, global light and token vision;

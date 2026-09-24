@@ -16,7 +16,7 @@ describe('modeForTool', () => {
     });
 
     it('maps the interaction tools to their own modes', () => {
-        const plain = ['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects', 'pin'];
+        const plain = ['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects', 'pin', 'label'];
         expect(plain.map((t) => modeForTool(t, true, CHOICES).kind)).toEqual(plain);
     });
 

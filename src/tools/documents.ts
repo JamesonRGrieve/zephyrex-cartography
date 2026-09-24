@@ -265,6 +265,26 @@ export interface NoteDoc {
     readonly global: boolean;
 }
 
+/** A native text Drawing (a map label): its box, centred on `x`, `y` and turned about its centre, holds the text. */
+export interface DrawingDoc {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    /** Degrees. */
+    readonly rotation: number;
+    readonly elevation: number;
+    readonly level: string | null;
+    readonly text: string;
+    readonly fontSize: number;
+    /** `#rrggbb`. */
+    readonly colour: string;
+    /** A font Foundry knows; "" for its default. */
+    readonly fontFamily: string;
+    /** Seen by the GM alone. */
+    readonly hidden: boolean;
+}
+
 /** The ids of every native document one feature generated, by document type. */
 export interface GeneratedDocs {
     readonly walls: readonly string[];
@@ -273,13 +293,14 @@ export interface GeneratedDocs {
     readonly regions: readonly string[];
     readonly sounds: readonly string[];
     readonly notes: readonly string[];
+    readonly drawings: readonly string[];
 }
 
-export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [] };
+export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [], drawings: [] };
 
 /** Every generated id, whatever its document type. */
 export function allDocIds(docs: GeneratedDocs): string[] {
-    return [...docs.walls, ...docs.lights, ...docs.tiles, ...docs.regions, ...docs.sounds, ...docs.notes];
+    return [...docs.walls, ...docs.lights, ...docs.tiles, ...docs.regions, ...docs.sounds, ...docs.notes, ...docs.drawings];
 }
 
 export function hasDocs(docs: GeneratedDocs): boolean {
@@ -296,8 +317,9 @@ export function parseGeneratedDocs(v: unknown): GeneratedDocs {
         lights: stringArray(v['lights']),
         tiles: stringArray(v['tiles']),
         regions: stringArray(v['regions']),
-        // Recorded since stamps emit sounds, and since pins make notes; an older record has none.
+        // Recorded since stamps emit sounds, pins make notes and labels drawings; an older record has none.
         sounds: stringArray(v['sounds']),
         notes: stringArray(v['notes']),
+        drawings: stringArray(v['drawings']),
     };
 }

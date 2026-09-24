@@ -4,6 +4,7 @@ import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
 import { DEFAULT_TRAVEL } from '../tools/submap';
 import {
     doorStateFromDs,
+    drawingCreateData,
     lightCreateData,
     noteCreateData,
     pxToDistance,
@@ -277,6 +278,41 @@ describe('noteCreateData', () => {
             pageId: null,
             global: true,
             texture: { src: 'icons/svg/tankard.svg' },
+        });
+    });
+});
+
+describe('drawingCreateData', () => {
+    it('writes a text-only rectangle Drawing placed by its top-left corner, turning about its centre', () => {
+        const drawing = {
+            x: 500,
+            y: 300,
+            width: 200,
+            height: 61,
+            rotation: -10,
+            elevation: 5,
+            level: 'lv1',
+            text: 'Hab District 4',
+            fontSize: 40,
+            colour: '#e0c080',
+            fontFamily: 'Amiri',
+            hidden: true,
+        };
+        // CONST.DRAWING_FILL_TYPES.NONE is 0.
+        expect(drawingCreateData(drawing)).toEqual({
+            shape: { type: 'r', width: 200, height: 61 },
+            x: 400,
+            y: 270,
+            elevation: 5,
+            rotation: -10,
+            fillType: 0,
+            strokeWidth: 0,
+            text: 'Hab District 4',
+            fontSize: 40,
+            fontFamily: 'Amiri',
+            textColor: '#e0c080',
+            hidden: true,
+            levels: ['lv1'],
         });
     });
 });

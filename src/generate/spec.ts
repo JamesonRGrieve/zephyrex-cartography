@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { DARKNESS_MODES, REGION_EVENTS, TEXT_EVENTS, TEXT_VISIBILITIES } from '../tools/area-effects';
 import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
+import { MAX_FONT_SIZE, MIN_FONT_SIZE, NEW_LABEL } from '../tools/label';
 import { NO_LEVEL_ART, TEXTURE_FITS } from '../tools/levels';
 import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
@@ -263,7 +264,24 @@ const pinSpec = z
     .strict()
     .describe('A map pin: a native Note.');
 
-const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec, pinSpec]);
+const labelSpec = z
+    .object({
+        type: z.literal('label'),
+        key: featureKey,
+        x: z.number().describe('Centre of the text.'),
+        y: z.number(),
+        text: text,
+        fontSize: z.number().int().min(MIN_FONT_SIZE).max(MAX_FONT_SIZE).default(NEW_LABEL.fontSize).describe('Px.'),
+        colour: hexColour.default(NEW_LABEL.colour),
+        fontFamily: z.string().default(NEW_LABEL.fontFamily).describe('A font Foundry knows (CONFIG.fontDefinitions); "" for its default.'),
+        rotation: z.number().default(NEW_LABEL.rotation).describe('Degrees.'),
+        hidden: z.boolean().default(NEW_LABEL.hidden).describe('Seen by the GM alone.'),
+        level,
+    })
+    .strict()
+    .describe('A map label: text on the map, as a native Drawing.');
+
+const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec, pinSpec, labelSpec]);
 
 const signed = z.number().min(-1).max(1);
 

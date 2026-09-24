@@ -15,10 +15,37 @@ export interface OrientedRectangle {
     readonly rotation: number;
 }
 
+/**
+ * A point of a box given as fractions of its size (0,0 its top-left, 1,1 its
+ * bottom-right, unrotated), in scene terms with the box's rotation about its
+ * centre applied.
+ */
+export function boxPoint(box: OrientedRectangle, fraction: Point): Point {
+    const rad = (box.rotation * Math.PI) / DEGREES_PER_HALF_TURN;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const lx = (fraction.x - HALF) * box.width;
+    const ly = (fraction.y - HALF) * box.height;
+    return { x: box.centre.x + lx * cos - ly * sin, y: box.centre.y + lx * sin + ly * cos };
+}
+
+/** A box's four corners, clockwise from top-left, turned about its centre. */
+export function boxCorners(box: OrientedRectangle): Point[] {
+    return [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+    ].map((fraction) => boxPoint(box, fraction));
+}
+
+const HALF = 0.5;
+const DEGREES_PER_HALF_TURN = 180;
+
 /** How far from exact a right angle or an equal side may be, relative to the sides' lengths. */
 const TOLERANCE = 1e-6;
 
-const DEGREES_PER_RADIAN = 180 / Math.PI;
+const DEGREES_PER_RADIAN = DEGREES_PER_HALF_TURN / Math.PI;
 
 function cross(o: Point, a: Point, b: Point): number {
     return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);

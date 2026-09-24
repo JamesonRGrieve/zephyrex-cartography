@@ -67,6 +67,7 @@ const NATIVE_HOME: Readonly<Record<string, string>> = {
     link: 'lighting',
     effects: 'regions',
     pin: 'notes',
+    label: 'drawings',
 };
 
 async function activate(page: Page, control: string, tool: string): Promise<void> {
@@ -79,7 +80,7 @@ async function activate(page: Page, control: string, tool: string): Promise<void
 }
 
 /** The panels tools open when picked. */
-const TOOL_PANELS = ['paint', 'paths'] as const;
+const TOOL_PANELS = ['paint', 'paths', 'pin', 'label'] as const;
 
 /** Tuck the tool panels away, as a GM would, so clicks land on the canvas; the choices made in them stand. */
 async function tuckPanels(page: Page): Promise<void> {
@@ -463,6 +464,35 @@ test('the pin tool, with the Notes tools, places a native Note that opens a jour
     await useTool(world, 'erase');
     await clickScene(world, { x: 700, y: 500 });
     await expect.poll(notes).toEqual([]);
+});
+
+test('the label tool, with the Drawings tools, places a native text Drawing centred where the GM clicks, and erase removes it', async ({ world }) => {
+    await useTool(world, 'label');
+    await holdView(world);
+    await clickScene(world, { x: 800, y: 600 });
+    const panel = world.locator(`#${MODULE_ID}-label`);
+    await expect(panel).toBeVisible();
+    // Named as Foundry's own Drawing sheet names them.
+    await panel.getByLabel('Text Label').fill('Hab District 4');
+    await panel.getByLabel('Text Label').blur();
+    await panel.getByLabel('Font Size').fill('64');
+    await panel.getByLabel('Font Size').press('Enter');
+    const drawings = async (): Promise<{ text: string; fontSize: number; centre: { x: number; y: number }; fill: number; stroke: number }[]> =>
+        world.evaluate(() =>
+            (canvas?.scene?.drawings.contents ?? []).map((drawing) => ({
+                text: drawing.text ?? '',
+                fontSize: drawing.fontSize,
+                centre: { x: drawing.x + (drawing.shape.width ?? 0) / 2, y: drawing.y + (drawing.shape.height ?? 0) / 2 },
+                fill: drawing.fillType,
+                stroke: drawing.strokeWidth,
+            })),
+        );
+    // Text only: CONST.DRAWING_FILL_TYPES.NONE, and no line.
+    await expect.poll(drawings).toEqual([{ text: 'Hab District 4', fontSize: 64, centre: { x: 800, y: 600 }, fill: 0, stroke: 0 }]);
+
+    await useTool(world, 'erase');
+    await clickScene(world, { x: 800, y: 600 });
+    await expect.poll(drawings).toEqual([]);
 });
 
 test('the stamp tool places the stamp armed in the browser where the GM clicks', async ({ world }) => {

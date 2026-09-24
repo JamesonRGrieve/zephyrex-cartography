@@ -11,6 +11,7 @@ import type { Point } from '../geometry/spline';
 import { type Affected, type AreaEffect, storedEffects } from '../tools/area-effects';
 import { parseCssHex } from '../tools/colour';
 import type { Feature } from '../tools/feature';
+import { makeLabel } from '../tools/label';
 import type { LevelArt } from '../tools/levels';
 import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath } from '../tools/path';
 import { makePin, withPinSettings } from '../tools/pin';
@@ -57,6 +58,10 @@ function scaleOf(spec: SceneSpec, options: RealizeOptions): Scale {
 
 /** The plain (non-stamp) feature a spec describes, on `level`, or null if it is malformed. */
 function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string, level: string | null, scale: Scale): Feature | null {
+    if (spec.type === 'label') {
+        const { text, fontSize, colour, fontFamily, rotation, hidden } = spec;
+        return { ...makeLabel(id, scale.point(spec), { text, fontSize, colour: colour.toLowerCase(), fontFamily, rotation, hidden }), level };
+    }
     if (spec.type === 'pin') {
         // A page with no entry is dropped, as the panel drops it.
         const settings = { text: spec.text, entry: spec.entry, page: spec.page, icon: spec.icon, global: spec.global };

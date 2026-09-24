@@ -8,6 +8,7 @@
 import { distanceToPolyline, pointInPolygon } from '../geometry/hit';
 import { distance, type Point } from '../geometry/spline';
 import { isRegion, isRoom, isStamp, isStroke, type Feature } from './feature';
+import { labelCorners } from './label';
 import { PIN_HIT_RADIUS, pinPoint } from './pin';
 import { regionOutline } from './region';
 import { stampCorners } from './stamp';
@@ -37,6 +38,12 @@ export function featureHit(feature: Feature, pt: Point): boolean {
     }
     if (feature.type === 'pin') {
         return distance(pt, pinPoint(feature)) <= PIN_HIT_RADIUS;
+    }
+    if (feature.type === 'label') {
+        return pointInPolygon(
+            pt,
+            labelCorners(feature).flatMap((p) => [p.x, p.y]),
+        );
     }
     const maxHalf = feature.halfWidths.reduce((m, w) => Math.max(m, w), 0);
     return distanceToPolyline(pt, feature.points) <= maxHalf + PATH_HIT_PADDING;

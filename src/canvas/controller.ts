@@ -21,6 +21,7 @@ import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
+import { type LabelSettings, labelSettingsOf, makeLabel, NEW_LABEL, validFontSize } from '../tools/label';
 import {
     findLevel,
     type Level,
@@ -658,6 +659,29 @@ export class CartographyController {
             return false;
         }
         await this.replaceFeature(id, withPinSettings(f, settings));
+        return true;
+    }
+
+    /** Put a map label at `at` on the level being edited; returns its feature id. */
+    async placeLabel(at: Point, settings: LabelSettings = NEW_LABEL): Promise<string> {
+        const label = makeLabel(this.makeId(), at, settings);
+        await this.add(label);
+        return label.id;
+    }
+
+    /** How a label reads, or null for anything else. */
+    labelSettings(id: string): LabelSettings | null {
+        const f = this.getFeature(id);
+        return f?.type === 'label' ? labelSettingsOf(f) : null;
+    }
+
+    /** Change how a label reads, re-syncing its Drawing; false if it is not a label or the font size is not one Foundry takes. */
+    async setLabelSettings(id: string, settings: LabelSettings): Promise<boolean> {
+        const f = this.getFeature(id);
+        if (f?.type !== 'label' || validFontSize(settings.fontSize) === null) {
+            return false;
+        }
+        await this.replaceFeature(id, { ...f, ...settings });
         return true;
     }
 
@@ -1336,7 +1360,7 @@ export class CartographyController {
     private async stageDocs(feature: Feature): Promise<void> {
         const plan = planDocuments(feature, this.planContext());
         const old = feature.docs;
-        const planned = [plan.walls, plan.lights, plan.tiles, plan.regions, plan.sounds, plan.notes].some((kind) => kind.length > 0);
+        const planned = [plan.walls, plan.lights, plan.tiles, plan.regions, plan.sounds, plan.notes, plan.drawings].some((kind) => kind.length > 0);
         if (!planned && !hasDocs(old)) {
             return;
         }

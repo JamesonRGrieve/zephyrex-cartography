@@ -11,7 +11,7 @@
  * such a tile updates its pending create instead. Pure and unit-tested; the
  * Foundry sink turns what it takes into create, update and delete operations.
  */
-import type { GeneratedDocs, LightDoc, NoteDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
+import type { DrawingDoc, GeneratedDocs, LightDoc, NoteDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
 import { NO_DOCS } from '../tools/documents';
 import type { DocumentPlan } from '../tools/plan';
 
@@ -58,6 +58,7 @@ export interface StagedWrite {
     readonly tiles: readonly Staged<TileDoc>[];
     readonly sounds: readonly Staged<SoundDoc>[];
     readonly notes: readonly Staged<NoteDoc>[];
+    readonly drawings: readonly Staged<DrawingDoc>[];
     readonly regions: readonly StagedRegions[];
     readonly tileUpdates: readonly Staged<TileDoc>[];
     readonly wallUpdates: readonly Staged<WallDoc>[];
@@ -77,10 +78,10 @@ export type DocumentKind = keyof GeneratedDocs;
 
 type Kind = DocumentKind;
 
-const KINDS: readonly Kind[] = ['walls', 'lights', 'tiles', 'regions', 'sounds', 'notes'];
+const KINDS: readonly Kind[] = ['walls', 'lights', 'tiles', 'regions', 'sounds', 'notes', 'drawings'];
 
 /** A document staged for creation, of any kind but regions (staged in groups). */
-type PendingDoc = WallDoc | LightDoc | TileDoc | SoundDoc | NoteDoc;
+type PendingDoc = WallDoc | LightDoc | TileDoc | SoundDoc | NoteDoc | DrawingDoc;
 
 export class StagedChanges {
     private deletes: Record<Kind, string[]> = emptyIds();
@@ -89,6 +90,7 @@ export class StagedChanges {
     private tiles: Staged<TileDoc>[] = [];
     private sounds: Staged<SoundDoc>[] = [];
     private notes: Staged<NoteDoc>[] = [];
+    private drawings: Staged<DrawingDoc>[] = [];
     private regions: StagedRegions[] = [];
     private tileUpdates: Staged<TileDoc>[] = [];
     private wallUpdates: Staged<WallDoc>[] = [];
@@ -111,6 +113,7 @@ export class StagedChanges {
                 this.tiles.length +
                 this.sounds.length +
                 this.notes.length +
+                this.drawings.length +
                 this.regions.length +
                 this.tileUpdates.length +
                 this.wallUpdates.length +
@@ -138,6 +141,7 @@ export class StagedChanges {
         const tiles = this.push('tiles', this.tiles, change.create.tiles);
         const sounds = this.push('sounds', this.sounds, change.create.sounds);
         const notes = this.push('notes', this.notes, change.create.notes);
+        const drawings = this.push('drawings', this.drawings, change.create.drawings);
         const regionIds = change.create.regions.map((region) => region.id ?? this.makeId('regions'));
         // A written region recreated under its own id is updated in place; it keeps its position in the group.
         const replaced = regionIds.filter((id, i) => change.create.regions[i]?.id === id && this.deletes.regions.includes(id));
@@ -151,7 +155,7 @@ export class StagedChanges {
         if (regionIds.length > replaced.length) {
             this.regions.push({ ids: regionIds, regions: change.create.regions, cancelled: replaced });
         }
-        return { ...NO_DOCS, walls, lights, tiles, sounds, notes, regions: regionIds };
+        return { ...NO_DOCS, walls, lights, tiles, sounds, notes, drawings, regions: regionIds };
     }
 
     /** Hand over everything staged, and start afresh. */
@@ -163,6 +167,7 @@ export class StagedChanges {
             tiles: this.tiles,
             sounds: this.sounds,
             notes: this.notes,
+            drawings: this.drawings,
             regions: this.regions,
             tileUpdates: this.tileUpdates,
             wallUpdates: this.wallUpdates,
@@ -175,6 +180,7 @@ export class StagedChanges {
         this.tiles = [];
         this.sounds = [];
         this.notes = [];
+        this.drawings = [];
         this.regions = [];
         this.tileUpdates = [];
         this.wallUpdates = [];
@@ -245,11 +251,12 @@ export class StagedChanges {
             tiles: this.tiles,
             sounds: this.sounds,
             notes: this.notes,
+            drawings: this.drawings,
         };
         return pending[kind];
     }
 }
 
 function emptyIds(): Record<Kind, string[]> {
-    return { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [] };
+    return { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [], drawings: [] };
 }

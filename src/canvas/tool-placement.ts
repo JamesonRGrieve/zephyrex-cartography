@@ -10,12 +10,12 @@
  */
 
 /** Foundry's control groups the module adds tools to. */
-export const NATIVE_GROUPS = ['walls', 'tiles', 'lighting', 'regions', 'notes'] as const;
+export const NATIVE_GROUPS = ['walls', 'tiles', 'lighting', 'regions', 'notes', 'drawings'] as const;
 
 export type NativeGroup = (typeof NATIVE_GROUPS)[number];
 
 /** A module tool that appears in a native group. */
-export type NativeTool = 'room' | 'door' | 'materials' | 'stamp' | 'edit' | 'erase' | 'link' | 'effects' | 'pin';
+export type NativeTool = 'room' | 'door' | 'materials' | 'stamp' | 'edit' | 'erase' | 'link' | 'effects' | 'pin' | 'label';
 
 /** Tools placed in a native group, in the order they appear after Foundry's own. */
 export const NATIVE_TOOLS: Readonly<Record<NativeGroup, readonly NativeTool[]>> = {
@@ -27,10 +27,12 @@ export const NATIVE_TOOLS: Readonly<Record<NativeGroup, readonly NativeTool[]>> 
     regions: ['effects'],
     // Map pins are Notes, and are placed, moved and erased with Foundry's note tools.
     notes: ['pin', 'edit', 'erase'],
+    // Map labels are text Drawings.
+    drawings: ['label', 'edit', 'erase'],
 };
 
 /** Tools that live only in a native group, and so are left out of the module's own group. */
-const NATIVE_ONLY: ReadonlySet<string> = new Set(['room', 'door', 'materials', 'stamp', 'link', 'effects', 'pin']);
+const NATIVE_ONLY: ReadonlySet<string> = new Set(['room', 'door', 'materials', 'stamp', 'link', 'effects', 'pin', 'label']);
 
 /**
  * A tool's name in a native group. Foundry requires tool names to be unique

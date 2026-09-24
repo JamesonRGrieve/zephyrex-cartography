@@ -1697,6 +1697,71 @@
                         ],
                         "additionalProperties": false,
                         "description": "A map pin: a native Note."
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "label"
+                            },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "x": {
+                                "type": "number",
+                                "description": "Centre of the text."
+                            },
+                            "y": {
+                                "type": "number"
+                            },
+                            "text": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "fontSize": {
+                                "default": 48,
+                                "description": "Px.",
+                                "type": "integer",
+                                "minimum": 8,
+                                "maximum": 256
+                            },
+                            "colour": {
+                                "default": "#ffffff",
+                                "type": "string",
+                                "pattern": "^#[0-9a-fA-F]{6}$"
+                            },
+                            "fontFamily": {
+                                "default": "",
+                                "description": "A font Foundry knows (CONFIG.fontDefinitions); \"\" for its default.",
+                                "type": "string"
+                            },
+                            "rotation": {
+                                "default": 0,
+                                "description": "Degrees.",
+                                "type": "number"
+                            },
+                            "hidden": {
+                                "default": false,
+                                "description": "Seen by the GM alone.",
+                                "type": "boolean"
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "x",
+                            "y",
+                            "text"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A map label: text on the map, as a native Drawing."
                     }
                 ]
             },

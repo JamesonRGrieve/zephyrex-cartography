@@ -8,6 +8,7 @@
  * data. Model, placement, variant change, footprint and parser. Pure and
  * unit-tested.
  */
+import { boxCorners, boxPoint, type OrientedRectangle } from '../geometry/rectangle';
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, clampVariantIndex, computeTilePlacement, effectiveProperties, resolveVariant } from '../stamps/catalog';
 import { type PlacedBehaviour, placedBehaviourSchema } from '../stamps/schema';
@@ -175,13 +176,12 @@ export function withStampFrame(
  * of the unrotated image) in world coordinates, with the stamp's rotation applied.
  */
 export function stampPoint(feature: StampFeature, fraction: Point): Point {
-    const c = stampCentre(feature);
-    const rad = (feature.rotation * Math.PI) / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    const lx = (fraction.x - 0.5) * feature.width;
-    const ly = (fraction.y - 0.5) * feature.height;
-    return { x: c.x + lx * cos - ly * sin, y: c.y + lx * sin + ly * cos };
+    return boxPoint(stampBox(feature), fraction);
+}
+
+/** The stamp's footprint as a box about its centre. */
+function stampBox(feature: StampFeature): OrientedRectangle {
+    return { centre: stampCentre(feature), width: feature.width, height: feature.height, rotation: feature.rotation };
 }
 
 /** A door stamp's wall: through the centre along the footprint's long side, so a door image spans its doorway. */
@@ -193,12 +193,7 @@ export function stampDoorAxis(feature: StampFeature): { readonly a: Point; reado
 
 /** The footprint's four corners, clockwise from top-left, with rotation applied about the centre. */
 export function stampCorners(feature: StampFeature): Point[] {
-    return [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 1, y: 1 },
-        { x: 0, y: 1 },
-    ].map((f) => stampPoint(feature, f));
+    return boxCorners(stampBox(feature));
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: validates a persisted behaviour snapshot; an unreadable one degrades to inert rather than dropping the stamp (which would orphan its tile)

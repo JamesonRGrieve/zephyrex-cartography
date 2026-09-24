@@ -30,6 +30,7 @@ const NOTHING: StagedWrite = {
     tiles: [],
     sounds: [],
     notes: [],
+    drawings: [],
     regions: [],
     tileUpdates: [],
     wallUpdates: [],
@@ -51,6 +52,7 @@ function scene(present: readonly string[], id: string | null = 'sc'): FoundrySce
         lights: collection,
         sounds: collection,
         notes: collection,
+        drawings: collection,
         tiles: collection,
         // Each live region holds one teleport behaviour, `b-<region id>`.
         regions: {

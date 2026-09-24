@@ -7,7 +7,7 @@
  * these and persists.
  */
 import type { Point } from '../geometry/spline';
-import { isRegion, isRoom, isStamp, isStroke, type Feature } from './feature';
+import { isAnchored, isRegion, isRoom, isStamp, isStroke, type Feature } from './feature';
 import { withPathGeometry } from './path';
 import { withRegionPoints } from './region';
 import { withRoomPoints } from './room';
@@ -19,8 +19,8 @@ export function movePoint(feature: Feature, index: number, to: Point): Feature |
         return null;
     }
     const points = feature.points.map((p, i) => (i === index ? { x: to.x, y: to.y } : p));
-    if (isStamp(feature) || feature.type === 'pin') {
-        // A stamp's or a pin's one point is where it stands: moving it moves the whole thing.
+    if (isStamp(feature) || isAnchored(feature)) {
+        // A stamp's, a pin's or a label's one point is where it stands: moving it moves the whole thing.
         return { ...feature, points };
     }
     if (isRegion(feature)) {
@@ -60,8 +60,8 @@ export function deletePoint(feature: Feature, index: number): Feature | null {
     if (index < 0 || index >= feature.points.length) {
         return null;
     }
-    // A stamp or a pin is its one point: it is erased, not thinned.
-    if (isStamp(feature) || feature.type === 'pin') {
+    // A stamp, a pin or a label is its one point: it is erased, not thinned.
+    if (isStamp(feature) || isAnchored(feature)) {
         return null;
     }
     const points = feature.points.filter((_, i) => i !== index);

@@ -11,7 +11,7 @@ import type { DocumentSink } from '../canvas/controller';
 import type { DocumentKind, StagedWrite } from '../canvas/staged-changes';
 import type { LightSource, RegionDoc } from '../tools/documents';
 import type { BatchOperation, EmbeddedCollection, EmbeddedName, FoundryScene, IdentifiedCreateData, ModifyBatch, RegionCreateData } from './boundary';
-import { lightCreateData, noteCreateData, regionCreateData, soundCreateData, tileCreateData, wallCreateData } from './translate';
+import { drawingCreateData, lightCreateData, noteCreateData, regionCreateData, soundCreateData, tileCreateData, wallCreateData } from './translate';
 
 export interface SinkOptions {
     /** A new document id; every document is created with an id chosen up front. */
@@ -32,6 +32,7 @@ const EMBEDDED: readonly [DocumentKind, EmbeddedName, (scene: FoundryScene) => E
     ['lights', 'AmbientLight', (scene) => scene.lights],
     ['sounds', 'AmbientSound', (scene) => scene.sounds],
     ['notes', 'Note', (scene) => scene.notes],
+    ['drawings', 'Drawing', (scene) => scene.drawings],
     ['tiles', 'Tile', (scene) => scene.tiles],
     ['regions', 'Region', (scene) => scene.regions],
 ];
@@ -93,6 +94,7 @@ export class FoundryDocumentSink implements DocumentSink {
             ['AmbientSound', write.sounds.map(({ id, doc }) => ({ _id: id, ...soundCreateData(doc, grid, this.options.soundName(doc.name)) }))],
             ['Tile', write.tiles.map(({ id, doc }) => ({ _id: id, ...tileCreateData(doc) }))],
             ['Note', write.notes.map(({ id, doc }) => ({ _id: id, ...noteCreateData(doc) }))],
+            ['Drawing', write.drawings.map(({ id, doc }) => ({ _id: id, ...drawingCreateData(doc) }))],
             ['Region', regions],
         ];
         return creates

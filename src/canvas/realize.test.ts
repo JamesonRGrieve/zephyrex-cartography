@@ -356,6 +356,25 @@ describe('realizeSpec', () => {
         expect(h.d.notes.flat()).toHaveLength(2);
     });
 
+    it('puts map labels where the spec says, with Foundry’s defaults for what it leaves out', async () => {
+        const h = makeHarness();
+        await realizeSpec(h.c, spec({ features: [{ type: 'label', x: 5, y: 1, text: 'Hab District 4', colour: '#E0C080', rotation: 15 }] }), {
+            origin: ORIGIN,
+            gridSize: GRID,
+        });
+        expect(h.s.last()[0]).toMatchObject({
+            type: 'label',
+            points: [{ x: 1500, y: 600 }],
+            text: 'Hab District 4',
+            fontSize: 48,
+            colour: '#e0c080',
+            fontFamily: '',
+            rotation: 15,
+            hidden: false,
+        });
+        expect(h.d.drawings.flat()).toHaveLength(1);
+    });
+
     it('links a light switch to the lamps and rooms it names by key, and the lights it names by id', async () => {
         const h = makeHarness(SWITCH_STAMPS);
         const square = [

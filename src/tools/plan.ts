@@ -14,6 +14,7 @@ import type { StampLight } from '../stamps/schema';
 import { type Affected, effectsOf } from './area-effects';
 import {
     BLOCKS_ALL,
+    type DrawingDoc,
     type LightDoc,
     type NoteDoc,
     type RegionDoc,
@@ -26,6 +27,7 @@ import {
 } from './documents';
 import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
 import type { Feature } from './feature';
+import { labelBox, labelPoint, labelSettingsOf } from './label';
 import { adjacentLevel, findLevel, levelElevation, type Level } from './levels';
 import type { CartographyPath } from './path';
 import { pinPoint, pinSettingsOf } from './pin';
@@ -44,10 +46,11 @@ export interface DocumentPlan {
     readonly regions: readonly RegionDoc[];
     readonly sounds: readonly SoundDoc[];
     readonly notes: readonly NoteDoc[];
+    readonly drawings: readonly DrawingDoc[];
 }
 
 /** A plan with no documents. */
-export const NO_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [] };
+export const NO_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [], drawings: [] };
 
 /** What a feature's plan may depend on besides the feature itself. */
 export interface PlanContext {
@@ -518,6 +521,11 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
     if (feature.type === 'pin') {
         const { elevation, level } = floorOf(feature, context);
         return { ...NO_PLAN, notes: [{ ...pinPoint(feature), elevation, level, ...pinSettingsOf(feature) }] };
+    }
+    // Foundry refuses a Drawing with nothing to show, so a label has none until it has text.
+    if (feature.type === 'label' && feature.text.trim() !== '') {
+        const { elevation, level } = floorOf(feature, context);
+        return { ...NO_PLAN, drawings: [{ ...labelPoint(feature), ...labelBox(feature), elevation, level, ...labelSettingsOf(feature) }] };
     }
     if (feature.type === 'path' && feature.walls !== null) {
         return { ...NO_PLAN, walls: pathWalls(feature, feature.walls, floorOf(feature, context)) };
