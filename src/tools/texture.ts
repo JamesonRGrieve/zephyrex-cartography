@@ -7,7 +7,8 @@
  * biome colour. Pure data plus set resolution; unit-tested. The concrete PIXI
  * tiling lives at the Foundry boundary.
  */
-import type { BiomeKind } from './biome';
+import { BIOMES, BIOME_STYLES, type BiomeKind } from './biome';
+import { cssHex } from './colour';
 import type { PathKind } from './path';
 
 /** A pack texture set as the renderer needs it: role → module-served image URL. */
@@ -63,6 +64,21 @@ export const PATH_TEXTURE: Record<PathKind, string | null> = {
     road: 'road',
     river: null,
 };
+
+/** How a biome looks in a picker: its texture from the set (null: none, so its flat colour) and its flat colour. */
+export interface BiomeSwatch {
+    readonly biome: BiomeKind;
+    readonly image: string | null;
+    readonly colour: string;
+}
+
+/** Every biome's swatch under the active set, in the biome order. */
+export function biomeSwatches(resolve: TextureResolver): BiomeSwatch[] {
+    return BIOMES.map((biome) => {
+        const role = BIOME_TEXTURE[biome];
+        return { biome, image: role === null ? null : resolve(role), colour: cssHex(BIOME_STYLES[biome].fill) };
+    });
+}
 
 /** The chosen texture set, or the first available when the choice is unset or no longer installed. */
 export function pickTextureSet(sets: readonly TextureSetRef[], chosen: string): TextureSetRef | null {

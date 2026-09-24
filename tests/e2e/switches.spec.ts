@@ -32,7 +32,7 @@ async function flip(page: Page, on: boolean): Promise<void> {
 async function lampAndLight(page: Page, plainId: string): Promise<{ lamp: string; plainHidden: boolean | undefined }> {
     return page.evaluate((id) => {
         const lamp = canvas?.scene?.tiles.contents.find((t) => t.name === 'Lamp')?.texture.src;
-        return { lamp: lamp?.split('/').at(-1) ?? '', plainHidden: canvas?.scene?.lights.get(id).hidden };
+        return { lamp: lamp?.split('/').at(-1) ?? '', plainHidden: canvas?.scene?.lights.contents.find((light) => light.id === id)?.hidden };
     }, plainId);
 }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BIOMES } from './biome';
-import { BIOME_TEXTURE, BIOME_TINT, PATH_TEXTURE, pickTextureSet, textureResolver, textureSetChoices } from './texture';
+import { BIOME_TEXTURE, BIOME_TINT, biomeSwatches, PATH_TEXTURE, pickTextureSet, textureResolver, textureSetChoices } from './texture';
 
 const sets = [
     { key: 'a:photo', name: 'Photo (CC0)', textures: { grassland: 'modules/a/grass.jpg', road: 'modules/a/road.jpg' } },
@@ -53,5 +53,13 @@ describe('texture sets', () => {
 
     it('offers each set by name as a setting choice', () => {
         expect(textureSetChoices(sets)).toEqual({ 'a:photo': 'Photo (CC0)', 'b:paint': 'Painted' });
+    });
+
+    it('gives every biome a swatch: the set’s texture where it has one, and always a flat colour', () => {
+        const swatches = biomeSwatches(textureResolver(pickTextureSet(sets, 'a:photo')));
+        expect(swatches.map((s) => s.biome)).toEqual(BIOMES);
+        expect(swatches.find((s) => s.biome === 'grassland')).toEqual({ biome: 'grassland', image: 'modules/a/grass.jpg', colour: '#5a7b3c' });
+        expect(swatches.find((s) => s.biome === 'water')).toEqual({ biome: 'water', image: null, colour: '#2f5d7c' });
+        expect(swatches.find((s) => s.biome === 'forest')?.image).toBeNull();
     });
 });

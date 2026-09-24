@@ -207,7 +207,12 @@ that type's own control group, after Foundry's tools
 - **Walls:** room, door and materials. **Tiles:** stamp. Edit and erase
   appear in both groups too, so what a group draws can be reshaped there.
 - **The module's own group** keeps what has no native home: roads, rivers,
-  biome brushes, edit, erase, undo/redo, levels and the generator.
+  the paint tool, edit, erase, undo/redo, levels and the generator.
+- **Tool panels.** A tool with choices opens its panel when picked, and the
+  panel's choices are what the tool draws next. The **paint tool** is one
+  tool for every terrain texture: its panel is a swatch grid of the biomes
+  (each shown in the active set's texture, or its flat colour) and a brush
+  size. Clicking points paints an area, dragging paints a stroke.
 - **Names.** Tools in a native group are named `zephyrex-<tool>`, so they
   never clash with Foundry's own (Walls has `doors`).
 - **Inert native layers.** The tools set none of `interaction`, `creation`
@@ -717,7 +722,8 @@ they render as a translucent tint. Every other biome is a tiled texture.
 **Adding or renaming a biome requires lockstep updates**, or the build breaks /
 tests fail: `tools/biome.ts` (`BiomeKind`, `BIOMES`, `BIOME_STYLES`) →
 `tools/texture.ts` (`BIOME_TEXTURE`, `BIOME_TINT`) → `i18n.ts`
-(`BIOME_TITLE_KEYS`) + `static/lang/en.json` → the entry (`BIOME_ICONS`).
+(`BIOME_TITLE_KEYS`) + `static/lang/en.json`. The paint panel offers every
+biome from `BIOMES` with no further change.
 `region.test.ts`, `texture.test.ts` and `i18n.test.ts` enforce it. A new biome's
 texture *role* (its name) should be added to the packs' texture sets. A set
 lacking a role renders that terrain as flat colour.

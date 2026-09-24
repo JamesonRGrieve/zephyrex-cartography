@@ -97,7 +97,7 @@ async function wallCount(page: Page): Promise<number> {
 }
 
 /** The feature under scene point `at`, as the controller sees it. */
-async function featureAt(page: Page, at: Point): Promise<{ type: string; halfWidths: readonly number[] } | null> {
+async function featureAt(page: Page, at: Point): Promise<{ type: string; halfWidths: readonly number[]; biome: string | null; radius: number | null } | null> {
     return page.evaluate((point) => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();
         const id = controller?.hitTest(point) ?? null;
@@ -105,7 +105,12 @@ async function featureAt(page: Page, at: Point): Promise<{ type: string; halfWid
         if (!feature) {
             return null;
         }
-        return { type: feature.type, halfWidths: feature.type === 'path' ? feature.halfWidths : [] };
+        return {
+            type: feature.type,
+            halfWidths: feature.type === 'path' ? feature.halfWidths : [],
+            biome: feature.type === 'region' || feature.type === 'stroke' ? feature.biome : null,
+            radius: feature.type === 'stroke' ? feature.radius : null,
+        };
     }, at);
 }
 
@@ -207,17 +212,27 @@ test('the layer takes the pointer only while one of its tools is active', async 
     expect(await ours()).toBe(false);
 });
 
-test('a biome tool draws a region by clicks and paints a stroke by dragging', async ({ world }) => {
-    await useTool(world, 'forest');
+test('the paint tool paints the texture and brush size picked in its panel: an area by clicks, a stroke by dragging', async ({ world }) => {
+    await useTool(world, 'paint');
+    const panel = world.locator(`#${MODULE_ID}-paint`);
+    await expect(panel).toBeVisible();
+    await panel.getByRole('button', { name: 'Forest' }).click();
+    await expect(panel.getByRole('button', { name: 'Forest' })).toHaveAttribute('aria-pressed', 'true');
+    await panel.getByLabel('Brush size (px)').fill('60');
+    await panel.getByLabel('Brush size (px)').press('Enter');
+    // Tuck the panel away, as a GM would, so the clicks land on the canvas.
+    await world.evaluate(async (id) => {
+        await foundry.applications.instances.get(id)?.minimize();
+    }, `${MODULE_ID}-paint`);
     await holdView(world);
     await drawShape(world, SQUARE);
-    await expect.poll(async () => (await featureAt(world, { x: 450, y: 450 }))?.type).toBe('region');
     await dragScene(world, { x: 1000, y: 300 }, [
         { x: 1100, y: 320 },
         { x: 1200, y: 300 },
         { x: 1300, y: 340 },
     ]);
-    await expect.poll(async () => (await featureAt(world, { x: 1100, y: 320 }))?.type).toBe('stroke');
+    await expect.poll(async () => featureAt(world, { x: 450, y: 450 })).toMatchObject({ type: 'region', biome: 'forest' });
+    await expect.poll(async () => featureAt(world, { x: 1100, y: 320 })).toMatchObject({ type: 'stroke', biome: 'forest', radius: 60 });
 });
 
 test('the edit tool drags a room corner, and right-click deletes one', async ({ world }) => {

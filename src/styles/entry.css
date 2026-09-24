@@ -17,6 +17,7 @@
     border: 0;
 }
 
-.zephyrex-cartography-hud-variants [aria-pressed='true'] {
+.zephyrex-cartography-hud-variants [aria-pressed='true'],
+.zc-paint-swatch[aria-pressed='true'] {
     outline: 2px solid var(--color-border-highlight, #ff6400);
 }

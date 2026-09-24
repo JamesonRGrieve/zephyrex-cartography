@@ -5,7 +5,8 @@
         },
         "Tools": {
             "Road": "Road",
-            "River": "River",
+            "River": "Rivers and liquids (water, lava, poison, acid)",
+            "Paint": "Paint terrain (click points for an area, drag for a stroke)",
             "Room": "Room",
             "Door": "Doors (click a wall to add a door, click a door to edit it)",
             "Edit": "Edit points (drag to move, Shift-drag a road or river point to set its width, right-click to delete)",
@@ -37,6 +38,25 @@
                 "Level": "features.{index}: skipped, its level could not be created.",
                 "Stamp": "features.{index}: skipped, its stamp is not in any loaded pack.",
                 "Interior": "features.{index}: placed, but its interior could not be linked."
+            }
+        },
+        "Paint": {
+            "Title": "Paint terrain",
+            "Texture": "Texture",
+            "Size": "Brush size (px)"
+        },
+        "Paths": {
+            "Title": "Roads and rivers",
+            "Width": "Width (px)",
+            "Liquid": "Liquid",
+            "Shade": "Shade",
+            "Bed": "Bed",
+            "NoBed": "No bed",
+            "Liquids": {
+                "Water": "Water",
+                "Lava": "Lava",
+                "Poison": "Poison",
+                "Acid": "Acid"
             }
         },
         "Materials": {

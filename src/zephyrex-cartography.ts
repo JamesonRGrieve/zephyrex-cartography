@@ -23,6 +23,7 @@ import { registerLevelRuntime } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
 import { registerMaterialsRuntime } from './foundry/materials-runtime';
 import { registerPackRuntime } from './foundry/pack-runtime';
+import { registerPaintRuntime } from './foundry/paint-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { activeScene, modifyBatch } from './foundry/scene-bridge';
 import { FoundrySceneStore } from './foundry/scene-store';
@@ -31,9 +32,8 @@ import { createSilhouetteSource } from './foundry/silhouette';
 import { registerSubmapRuntime } from './foundry/submap-runtime';
 import { createSwitchLinker, type SwitchLinker } from './foundry/switch-linker';
 import { distance, type Point } from './geometry/spline';
-import { BIOME_TITLE_KEYS, I18N } from './i18n';
+import { I18N } from './i18n';
 import { MODULE_ID } from './module-id';
-import { BIOMES, type BiomeKind } from './tools/biome';
 import { levelHeightFor } from './tools/levels';
 
 interface DrawState {
@@ -62,6 +62,18 @@ const materials = registerMaterialsRuntime(() => state?.controller ?? null, pack
 
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
+// A new brush size is the next stroke's; a new texture is picked up at once by a paint tool in hand.
+const paint = registerPaintRuntime(packs.textures, (settings) => {
+    if (!state) {
+        return;
+    }
+    state.controller.brushRadius = settings.radius;
+    const { mode } = state;
+    if (mode.kind === 'brush' && mode.brush.type === 'region' && mode.brush.biome !== settings.biome) {
+        enterMode(state, toolMode('paint', true));
+    }
+});
+
 registerApi(() => state?.controller ?? null);
 
 // Newly loaded packs or another texture set re-render the layer.
@@ -87,22 +99,6 @@ const PAINT_THRESHOLD = 8;
 const PRIMARY_BUTTON = 0;
 const SECONDARY_BUTTON = 2;
 
-const BIOME_ICONS: Record<BiomeKind, string> = {
-    water: 'fa-solid fa-water',
-    grassland: 'fa-solid fa-seedling',
-    forest: 'fa-solid fa-tree',
-    sand: 'fa-solid fa-sun',
-    rock: 'fa-solid fa-mountain',
-    snow: 'fa-solid fa-snowflake',
-    dirt: 'fa-solid fa-mound',
-    lava: 'fa-solid fa-volcano',
-    marsh: 'fa-solid fa-frog',
-    ice: 'fa-solid fa-icicles',
-    ash: 'fa-solid fa-smog',
-    tundra: 'fa-solid fa-wind',
-    ocean: 'fa-solid fa-anchor',
-};
-
 function localPoint(pointerEvent: PIXI.FederatedPointerEvent, container: PIXI.Container): Point {
     const p = pointerEvent.getLocalPosition(container);
     return { x: p.x, y: p.y };
@@ -126,10 +122,9 @@ function capturePointer(container: PIXI.Container, capture: boolean): void {
     container.hitArea = capture ? canvas?.dimensions?.rect ?? null : null;
 }
 
-/** The mode a scene-control tool puts the layer in; new rooms get the materials last chosen in the materials panel. */
+/** The mode a scene-control tool puts the layer in, with the texture and room materials last chosen in their panels. */
 function toolMode(toolName: string, active: boolean): Mode {
-    const picked = modeForTool(toolName, active);
-    return picked.kind === 'brush' && picked.brush.type === 'room' ? { kind: 'brush', brush: { type: 'room', ...materials.forNewRooms() } } : picked;
+    return modeForTool(toolName, active, { paint: paint.current().biome, room: materials.forNewRooms() });
 }
 
 /** Enter `mode`, dropping any in-flight gesture. */
@@ -299,6 +294,7 @@ function setupDrawLayer(): void {
     const gridSize = canvas.grid?.size ?? 0;
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.levelHeight = levelHeightFor(canvas.scene?.grid.distance ?? 0);
+    controller.brushRadius = paint.current().radius;
     controller.load();
     levels.refresh();
     // The scene may have been edited under the other terrain setting; only the active GM writes documents.
@@ -387,6 +383,9 @@ function activateTool(tool: string, active: boolean): void {
     if (mode.kind === 'stamp') {
         packs.openBrowser();
     }
+    if (tool === 'paint' && active) {
+        paint.open();
+    }
 }
 
 interface ToolLook {
@@ -405,12 +404,12 @@ const NATIVE_TOOL_LOOKS: Readonly<Record<NativeTool, ToolLook>> = {
     link: { title: I18N.tools.link, icon: 'fa-solid fa-link' },
 };
 
-/** Every pointer tool, by name, in toolbar order: paths, biomes, then the tools native groups share. */
+/** Every pointer tool, by name, in toolbar order: paths, painting, then the tools native groups share. */
 function pointerTools(): [string, ToolLook][] {
     return [
         ['road', { title: I18N.tools.road, icon: 'fa-solid fa-road' }],
         ['river', { title: I18N.tools.river, icon: 'fa-solid fa-water' }],
-        ...BIOMES.map((biome): [string, ToolLook] => [biome, { title: BIOME_TITLE_KEYS[biome], icon: BIOME_ICONS[biome] }]),
+        ['paint', { title: I18N.tools.paint, icon: 'fa-solid fa-paintbrush' }],
         ...Object.entries(NATIVE_TOOL_LOOKS),
     ];
 }

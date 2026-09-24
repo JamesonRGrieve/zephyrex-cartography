@@ -19,6 +19,7 @@ export const I18N = {
     tools: {
         road: key('Tools.Road'),
         river: key('Tools.River'),
+        paint: key('Tools.Paint'),
         room: key('Tools.Room'),
         door: key('Tools.Door'),
         edit: key('Tools.Edit'),
@@ -66,6 +67,25 @@ export const I18N = {
         foreground: key('Levels.Foreground'),
         fog: key('Levels.Fog'),
         browse: key('Levels.Browse'),
+    },
+    paint: {
+        title: key('Paint.Title'),
+        texture: key('Paint.Texture'),
+        size: key('Paint.Size'),
+    },
+    paths: {
+        title: key('Paths.Title'),
+        width: key('Paths.Width'),
+        liquid: key('Paths.Liquid'),
+        shade: key('Paths.Shade'),
+        bed: key('Paths.Bed'),
+        noBed: key('Paths.NoBed'),
+        liquids: {
+            water: key('Paths.Liquids.Water'),
+            lava: key('Paths.Liquids.Lava'),
+            poison: key('Paths.Liquids.Poison'),
+            acid: key('Paths.Liquids.Acid'),
+        },
     },
     materials: {
         title: key('Materials.Title'),
