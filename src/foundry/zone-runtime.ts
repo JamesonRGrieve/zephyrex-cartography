@@ -19,7 +19,6 @@ import { localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 320;
 
 function labels(): ZoneLabels {
     const shape = (kind: ZoneShapeKind): string => localize(`SHAPE.TYPES.${kind}.name`);
@@ -142,7 +141,6 @@ export function registerZoneRuntime(controller: () => CartographyController | nu
         id: 'zone',
         title: () => localize(I18N.zones.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             const id = zoneId;

@@ -15,7 +15,6 @@ import { materialLabel, wallKindNames } from './materials-runtime';
 import { acceptTyped, createSettingsWindow } from './view-window';
 
 const PANEL_WIDTH = 300;
-const PANEL_HEIGHT = 200;
 
 export interface PathSettings {
     /** Full width, scene px. */
@@ -38,7 +37,6 @@ export function registerPathRuntime(textureRoles: () => string[], onChange: (set
         id: 'paths',
         title: () => localize(I18N.paths.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         initial: { width: DEFAULT_HALF_WIDTH * 2, walls: null, river: LIQUID_LOOKS.water },
         onChange,
         render: (root, settings, choose) => {

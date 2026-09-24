@@ -15,7 +15,6 @@ import { format, localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 420;
-const PANEL_HEIGHT = 460;
 
 function labels(): SubmapLabels {
     const s = I18N.submap;
@@ -83,7 +82,6 @@ export function registerSubmapRuntime(controller: () => CartographyController | 
         id: 'submap',
         title: () => localize(I18N.submap.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             const id = stampId;

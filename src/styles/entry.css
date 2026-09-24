@@ -16,6 +16,11 @@
     --zc-muted: var(--color-text-secondary, #b8b2a0);
 }
 
+/* A panel opens as tall as what it shows (`height: auto`), and scrolls past what the screen holds. */
+.application.zephyrex-cartography {
+    max-height: calc(100vh - 4rem);
+}
+
 .zephyrex-cartography .zc-field {
     display: grid;
     flex: 1 1 var(--zc-field-width);
@@ -69,6 +74,19 @@
     flex: 1;
 }
 
+/*
+ * A button that shows a picture over its name (a stamp card, a variant, a
+ * paint swatch). Foundry sizes buttons to one line of text; these grow to
+ * hold what they show.
+ */
+.zephyrex-cartography button.zc-tile {
+    height: auto;
+    min-height: var(--button-size, 2em);
+    padding: 0.25rem;
+    line-height: 1.2;
+    white-space: normal;
+}
+
 /* A row of buttons. */
 .zephyrex-cartography .zc-actions {
     display: flex;
@@ -119,6 +137,7 @@
 }
 
 .zephyrex-cartography legend,
+.zephyrex-cartography h4,
 .zephyrex-cartography .zc-disclosure-summary {
     padding: 0 0.35rem;
     color: var(--zc-muted);
@@ -126,6 +145,13 @@
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+/* A heading within a panel reads as a section heading, not Foundry's display face. */
+.zephyrex-cartography h4 {
+    margin: 0.5rem 0 0;
+    border: 0;
+    font-family: inherit;
 }
 
 .zephyrex-cartography .zc-disclosure {

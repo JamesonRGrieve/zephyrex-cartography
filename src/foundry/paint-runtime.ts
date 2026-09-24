@@ -17,7 +17,6 @@ import { localize } from './localize';
 import { acceptTyped, createSettingsWindow, type SettingsWindow } from './view-window';
 
 const PANEL_WIDTH = 340;
-const PANEL_HEIGHT = 420;
 
 /** The texture a fresh session paints. */
 const DEFAULT_PAINT: BiomeKind = 'grassland';
@@ -51,7 +50,6 @@ export function registerPaintRuntime(
         id: 'paint',
         title: () => localize(I18N.paint.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         initial: { biome: DEFAULT_PAINT, radius: DEFAULT_BRUSH_RADIUS, movementCost: NORMAL_COST, mode: 'shapes', strength: DEFAULT_STRENGTH },
         onChange,
         render: (root, settings, choose) => {

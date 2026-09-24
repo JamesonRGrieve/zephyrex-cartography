@@ -14,7 +14,6 @@ import { localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 260;
 
 function labels(): PinLabels {
     return {
@@ -49,7 +48,6 @@ export function registerPinRuntime(controller: () => CartographyController | nul
         id: 'pin',
         title: () => localize(I18N.pins.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             const id = pinId;

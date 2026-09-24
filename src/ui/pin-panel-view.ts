@@ -7,7 +7,7 @@
  * under happy-dom.
  */
 import type { PinSettings } from '../tools/pin';
-import { button, choice, labelledCheckbox, labelledInput, replacePreservingFocus } from './dom';
+import { button, choice, fieldWithAction, labelledCheckbox, labelledInput, replacePreservingFocus } from './dom';
 
 /** A journal entry a pin can open, and its pages. */
 export interface JournalChoice {
@@ -79,11 +79,13 @@ export function renderPinPanel(root: HTMLElement, panel: PinPanel, labels: PinLa
                 set({ page: page === NONE ? null : page });
             },
         ),
-        labelledInput(labels.icon, 'text', settings.icon ?? '', 'pin-icon', (typed) => {
-            set({ icon: typed.trim() === '' ? null : typed.trim() });
-            return true;
-        }),
-        browse,
+        fieldWithAction(
+            labelledInput(labels.icon, 'text', settings.icon ?? '', 'pin-icon', (typed) => {
+                set({ icon: typed.trim() === '' ? null : typed.trim() });
+                return true;
+            }),
+            browse,
+        ),
         labelledCheckbox(labels.global, settings.global, 'pin-global', (everywhere) => {
             set({ global: everywhere });
         }),

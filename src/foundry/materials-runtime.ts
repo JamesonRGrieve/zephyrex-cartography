@@ -15,7 +15,6 @@ import { localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 320;
-const PANEL_HEIGHT = 210;
 
 /** A material's display label: a biome's localised name, or a pack material's name. */
 export function materialLabel(role: string): string {
@@ -48,7 +47,6 @@ export function registerMaterialsRuntime(controller: () => CartographyController
         id: 'materials',
         title: () => localize(I18N.materials.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             const id = roomId;

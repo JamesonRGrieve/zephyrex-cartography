@@ -168,7 +168,7 @@ function card(entry: CardEntry, view: BrowserView, labels: BrowserLabels, handle
     const { stamp, variant } = entry;
     const image = resolveVariant(stamp, variant);
     const item = el('li', 'tw-list-none');
-    const button = el('button', 'tw-flex tw-flex-col tw-items-center tw-w-full tw-p-1 tw-text-xs');
+    const button = el('button', 'zc-tile tw-flex tw-flex-col tw-items-center tw-w-full tw-p-1 tw-text-xs');
     button.type = 'button';
     button.draggable = true;
     button.setAttribute('aria-pressed', String(entry.selected));
@@ -224,7 +224,7 @@ function details(view: BrowserView, labels: BrowserLabels, handlers: BrowserHand
     list.setAttribute('aria-label', labels.variants);
     stamp.variants.forEach((v, index) => {
         const item = el('li', 'tw-list-none');
-        const button = pressable('tw-flex tw-items-center tw-gap-2 tw-w-full tw-text-xs', '', index === variant, `variant:${index}`, () => {
+        const button = pressable('zc-tile tw-flex tw-items-center tw-gap-2 tw-w-full tw-text-xs', '', index === variant, `variant:${index}`, () => {
             handlers.dispatch({ type: 'variant', key: stamp.key, index });
         });
         const frame = el('span', 'tw-flex tw-items-center tw-justify-center tw-w-10 tw-h-10');

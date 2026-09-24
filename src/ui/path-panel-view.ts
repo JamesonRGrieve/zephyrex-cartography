@@ -8,7 +8,7 @@
 import { cssHex, parseCssHex } from '../tools/colour';
 import { LIQUID_LOOKS, LIQUIDS, type Liquid, type PathKind, type RiverLook } from '../tools/path';
 import { isWallPreset, WALL_PRESETS, type WallPreset } from '../tools/wall-presets';
-import { choice, el, focusKey, labelledInput, replacePreservingFocus } from './dom';
+import { choice, labelledInput, replacePreservingFocus } from './dom';
 
 export interface BedChoice {
     readonly role: string;
@@ -50,19 +50,13 @@ export interface PathHandlers {
 const NONE = '';
 
 function shadeInput(label: string, shade: number, onChange: (shade: number) => void): HTMLElement {
-    const wrap = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', label);
-    const input = el('input', '');
-    input.type = 'color';
-    input.value = cssHex(shade);
-    focusKey(input, 'path-shade');
-    input.addEventListener('change', () => {
-        const picked = parseCssHex(input.value);
+    return labelledInput(label, 'color', cssHex(shade), 'path-shade', (typed) => {
+        const picked = parseCssHex(typed);
         if (picked !== null) {
             onChange(picked);
         }
+        return picked !== null;
     });
-    wrap.append(input);
-    return wrap;
 }
 
 function riverControls(panel: PathPanel, labels: PathLabels, handlers: PathHandlers): HTMLElement[] {

@@ -13,7 +13,6 @@ import { format, localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 560;
-const PANEL_HEIGHT = 420;
 
 export interface LevelRuntime {
     readonly openPanel: () => void;
@@ -82,7 +81,6 @@ export function registerLevelRuntime(controller: () => CartographyController | n
         id: 'levels',
         title: () => localize(I18N.levels.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             renderLevelPanel(root, levelPanel(active?.levels ?? [], active?.activeLevel ?? null, active?.levelCounts() ?? {}), panelLabels(), {

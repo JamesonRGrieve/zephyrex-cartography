@@ -19,7 +19,6 @@ import { format, localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 520;
-const PANEL_HEIGHT = 460;
 
 /** Spaces per indent level of a generated spec shown for editing. */
 const SPEC_INDENT = 2;
@@ -74,7 +73,6 @@ export function registerGeneratorRuntime(controller: () => CartographyController
         id: 'generator',
         title: () => localize(I18N.generator.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const panel: GeneratorPanel = { form, specText, status: outcome, busy };
             renderGeneratorPanel(root, panel, panelLabels(), {

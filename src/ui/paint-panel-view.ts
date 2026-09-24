@@ -81,7 +81,7 @@ function bakeButtons(panel: PaintPanel, labels: PaintLabels, handlers: PaintHand
 }
 
 function swatch(texture: PaintChoice, picked: boolean, onPick: () => void): HTMLButtonElement {
-    const node = pressable('zc-paint-swatch tw-flex tw-flex-col tw-items-center tw-gap-1 tw-text-xs', '', picked, `paint-${texture.biome}`, onPick);
+    const node = pressable('zc-tile zc-paint-swatch tw-flex tw-flex-col tw-items-center tw-gap-1 tw-text-xs', '', picked, `paint-${texture.biome}`, onPick);
     const chip = el('span', 'tw-block tw-h-10 tw-w-10 tw-rounded tw-bg-cover');
     chip.style.backgroundColor = texture.colour;
     if (texture.image !== null) {

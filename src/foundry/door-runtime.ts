@@ -12,7 +12,6 @@ import { localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 320;
-const PANEL_HEIGHT = 280;
 
 /** Foundry's own door sounds and animations, named as Foundry names them. */
 function foundryDoorNames(): Pick<DoorPanelLabels, 'sounds' | 'animations'> {
@@ -51,7 +50,6 @@ export function registerDoorRuntime(controller: () => CartographyController | nu
         id: 'door',
         title: () => localize(I18N.doors.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             const door = target && active ? active.roomDoor(target.room, target.segment) : null;

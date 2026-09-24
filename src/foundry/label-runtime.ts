@@ -13,7 +13,6 @@ import { localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 300;
 
 function labels(): LabelLabels {
     return {
@@ -39,7 +38,6 @@ export function registerLabelRuntime(controller: () => CartographyController | n
         id: 'label',
         title: () => localize(I18N.labels.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             const id = labelId;

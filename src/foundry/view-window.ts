@@ -12,7 +12,6 @@ export interface ViewWindowOptions {
     readonly id: string;
     readonly title: () => string;
     readonly width: number;
-    readonly height: number;
     /** Render the view into `root`, replacing what is there. */
     readonly render: (root: HTMLElement) => void;
 }
@@ -31,7 +30,8 @@ export function createViewWindow(options: ViewWindowOptions): ViewWindow {
             id: `${MODULE_ID}-${options.id}`,
             classes: [MODULE_ID],
             window: { title: options.title(), resizable: true },
-            position: { width: options.width, height: options.height },
+            // As tall as what it shows, so nothing opens hidden below the fold; the stylesheet keeps it on screen.
+            position: { width: options.width, height: 'auto' as const },
         };
 
         protected override _renderHTML(): HTMLElement {

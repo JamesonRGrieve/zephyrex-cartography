@@ -16,7 +16,6 @@ import { spawnInto } from './spawner';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 460;
-const PANEL_HEIGHT = 520;
 
 /** Each area effect's native behaviour type, whose name Foundry's own strings give. */
 const BEHAVIOUR_TYPES: Readonly<Record<AreaEffectKind, string>> = {
@@ -140,7 +139,6 @@ export function registerEffectsRuntime(controller: () => CartographyController |
         id: 'effects',
         title: () => localize(I18N.effects.title),
         width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
         render: (root) => {
             const active = controller();
             const id = areaId;

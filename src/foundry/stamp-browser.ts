@@ -32,7 +32,6 @@ export interface StampBrowser {
 }
 
 const BROWSER_WIDTH = 820;
-const BROWSER_HEIGHT = 620;
 
 export function createStampBrowser(deps: StampBrowserDeps): StampBrowser {
     let state: BrowserState = INITIAL_BROWSER;
@@ -47,7 +46,7 @@ export function createStampBrowser(deps: StampBrowserDeps): StampBrowser {
             },
         });
     };
-    const browserWindow = createViewWindow({ id: 'stamp-browser', title: deps.title, width: BROWSER_WIDTH, height: BROWSER_HEIGHT, render });
+    const browserWindow = createViewWindow({ id: 'stamp-browser', title: deps.title, width: BROWSER_WIDTH, render });
     return {
         open: browserWindow.open,
         armed: (): ArmedStamp | null => {
