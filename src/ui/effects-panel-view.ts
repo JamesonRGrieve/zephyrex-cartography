@@ -106,6 +106,8 @@ export interface RegionDisplayLabels {
     readonly measurements: string;
     /** Players are the region's observers. */
     readonly observed: string;
+    /** The region is hidden: the GM's alone, its behaviours off. */
+    readonly hidden: string;
     readonly restriction: string;
     /** The "not restricted" choice. */
     readonly unrestricted: string;
@@ -156,6 +158,9 @@ function displaySection(display: AreaDisplay, labels: RegionDisplayLabels, setDi
         }),
         labelledCheckbox(labels.observed, display.observed, 'area-observed', (observed) => {
             setDisplay({ ...display, observed });
+        }),
+        labelledCheckbox(labels.hidden, display.hidden, 'area-hidden', (hidden) => {
+            setDisplay({ ...display, hidden });
         }),
         choice(
             'zc-area-restriction',

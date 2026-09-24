@@ -246,6 +246,8 @@ export interface RegionCreateData extends OnLevels {
     readonly restriction?: { readonly enabled: boolean; readonly type: string; readonly priority: number };
     /** `CONST.DOCUMENT_OWNERSHIP_LEVELS` for every user; left out, Foundry's (the GM's alone). */
     readonly ownership?: { readonly default: number };
+    /** The GM's alone, its behaviours off until shown (14.360); left out, live. */
+    readonly hidden?: boolean;
     /** The token it moves with (14.356). */
     readonly attachment?: { readonly token: string };
 }

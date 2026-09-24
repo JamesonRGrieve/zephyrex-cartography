@@ -694,8 +694,12 @@ These make everything after them cheaper and safer, so they come first.
     - The effects panel's Region section sets it, in Foundry's Region sheet
       strings. The scene spec's regions, strokes and rooms take `display`.
       `tests/e2e/structures.spec.ts` checks the real Region.
-  - `hidden` [14.360]: GM-only, with behaviours off. Blocked: not in the
-    14.359 schema;
+  - **[done] `hidden`** [14.360]: the region is the GM's alone and its
+    behaviours do nothing until it is shown, for a trap or an ambush the GM
+    springs. An area's display carries it (default off). The effects panel's
+    Region section and the scene spec's `display` set it; Foundry has no
+    field label for it, so the panel uses the module's own.
+    `tests/e2e/structures.spec.ts` reads the real Region back;
   - **[done] `attachment.token`**: a region that moves with a token
     [14.353, renamed 14.356]. A zone's `attachedTo` names a token on the
     scene, and its region is created attached to it.

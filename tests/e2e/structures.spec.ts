@@ -134,7 +134,7 @@ test('an area’s region shows as the spec says, and is shaped by walls only on 
             levels: [{ key: 'g', name: 'Ground' }],
             features: [
                 { type: 'room', points: square(1), level: 'g', display },
-                { type: 'region', biome: 'marsh', points: square(7), display },
+                { type: 'region', biome: 'marsh', points: square(7), display: { ...display, hidden: true } },
             ],
         });
         return {
@@ -149,6 +149,8 @@ test('an area’s region shows as the spec says, and is shaped by walls only on 
                     displayMeasurements: r.displayMeasurements,
                     playersObserve: r.ownership['default'] === CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER,
                     restriction: { enabled: r.restriction.enabled, type: r.restriction.type, priority: r.restriction.priority },
+                    // `hidden` is 14.360's, which no fvtt-types release knows yet.
+                    hidden: foundry.utils.getProperty(r, 'hidden') === true,
                 })),
         };
     });
@@ -156,8 +158,9 @@ test('an area’s region shows as the spec says, and is shaped by walls only on 
     // Foundry's ALWAYS visibility is 2; the marsh shows on every level, which Foundry cannot restrict.
     const shown = { visibility: 2, highlightMode: 'coverage', displayMeasurements: true, playersObserve: true };
     expect(regions.regions).toEqual([
-        { name: 'Room', ...shown, restriction: { enabled: true, type: 'sight', priority: 2 } },
-        { name: 'Marsh', ...shown, restriction: expect.objectContaining({ enabled: false }) },
+        { name: 'Room', ...shown, restriction: { enabled: true, type: 'sight', priority: 2 }, hidden: false },
+        // Hidden: the GM's alone, its behaviours off until shown.
+        { name: 'Marsh', ...shown, restriction: expect.objectContaining({ enabled: false }), hidden: true },
     ]);
 });
 

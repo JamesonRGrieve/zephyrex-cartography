@@ -118,6 +118,7 @@
             "Region": "Region",
             "Unrestricted": "Not shaped by walls",
             "Observed": "Players observe it",
+            "Hidden": "Hidden: GM only, behaviours off",
             "Untouched": "Left as it is",
             "Spawn": {
                 "Title": "Spawn",

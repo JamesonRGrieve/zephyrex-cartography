@@ -90,6 +90,7 @@ const LABELS: EffectsLabels = {
         highlights: { shapes: 'True Shapes', coverage: 'Covered Grid Spaces' },
         measurements: 'Display Measurements',
         observed: 'Players observe it',
+        hidden: 'Hidden: GM only, behaviours off',
         restriction: 'Restricted By',
         unrestricted: 'Not shaped by walls',
         restrictions: {
@@ -165,7 +166,14 @@ export const DarkMireRoom: Story = {
             movementCost: 2,
             effects: [{ kind: 'darkness', mode: 'darken', modifier: 0.4 }, { kind: 'suppressWeather' }],
             // The darkness stops at the walls, and players see where it lies.
-            display: { visibility: 'always', highlight: 'coverage', measurements: false, observed: false, restriction: { type: 'light', priority: 0 } },
+            display: {
+                visibility: 'always',
+                highlight: 'coverage',
+                measurements: false,
+                observed: false,
+                restriction: { type: 'light', priority: 0 },
+                hidden: false,
+            },
             spawn: NO_SPAWN,
         },
     },

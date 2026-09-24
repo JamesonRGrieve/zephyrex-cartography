@@ -170,6 +170,7 @@ export const I18N = {
         region: key('Effects.Region'),
         unrestricted: key('Effects.Unrestricted'),
         observed: key('Effects.Observed'),
+        regionHidden: key('Effects.Hidden'),
         untouched: key('Effects.Untouched'),
         spawn: {
             title: key('Effects.Spawn.Title'),

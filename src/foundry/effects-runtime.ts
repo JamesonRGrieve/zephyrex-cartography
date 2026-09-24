@@ -113,6 +113,7 @@ function regionLabels(): RegionDisplayLabels {
         highlights: { shapes: region('HIGHLIGHT_MODES.shapes.label'), coverage: region('HIGHLIGHT_MODES.coverage.label') },
         measurements: region('FIELDS.displayMeasurements.label'),
         observed: localize(I18N.effects.observed),
+        hidden: localize(I18N.effects.regionHidden),
         restriction: region('FIELDS.restriction.type.label'),
         unrestricted: localize(I18N.effects.unrestricted),
         restrictions: {

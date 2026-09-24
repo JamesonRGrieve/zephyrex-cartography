@@ -590,7 +590,9 @@ const VISIBILITY_IDS: Readonly<Record<RegionVisibility, number>> = { layer: REGI
  * exactly one level (and refuses the create otherwise), so a region on every
  * level, or spanning several, is left unrestricted.
  */
-function displayData(region: RegionDoc): Pick<RegionCreateData, 'visibility' | 'highlightMode' | 'displayMeasurements' | 'restriction' | 'ownership'> {
+function displayData(
+    region: RegionDoc,
+): Pick<RegionCreateData, 'visibility' | 'highlightMode' | 'displayMeasurements' | 'restriction' | 'ownership' | 'hidden'> {
     const display = region.display;
     if (display === undefined) {
         return { visibility: REGION_VISIBILITY_LAYER };
@@ -603,5 +605,6 @@ function displayData(region: RegionDoc): Pick<RegionCreateData, 'visibility' | '
         displayMeasurements: display.measurements,
         ...(restriction !== null && onOneLevel ? { restriction: { enabled: true, ...restriction } } : {}),
         ...(display.observed ? { ownership: { default: OWNERSHIP_OBSERVER } } : {}),
+        ...(display.hidden ? { hidden: true } : {}),
     };
 }

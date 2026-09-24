@@ -120,6 +120,8 @@ describe('area effects panel', () => {
         expect(root.querySelector<HTMLInputElement>('input[data-zc-focus="area-measurements"]')?.checked).toBe(true);
         root.querySelector<HTMLInputElement>('input[data-zc-focus="area-observed"]')?.click();
         expect(root.querySelector<HTMLInputElement>('input[data-zc-focus="area-observed"]')?.checked).toBe(true);
+        root.querySelector<HTMLInputElement>('input[data-zc-focus="area-hidden"]')?.click();
+        expect(root.querySelector<HTMLInputElement>('input[data-zc-focus="area-hidden"]')?.checked).toBe(true);
         change(select(root, 'zc-area-restriction'), '');
         expect(priority()).toBeNull();
     });

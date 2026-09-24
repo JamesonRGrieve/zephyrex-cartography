@@ -137,6 +137,10 @@ const areaDisplay = z
             .nullable()
             .default(null)
             .describe('Shape the region by walls of this type, cast from its origin, so effects stop at walls. Needs a feature on one level.'),
+        hidden: z
+            .boolean()
+            .default(DEFAULT_AREA_DISPLAY.hidden)
+            .describe("Hide the region: the GM's alone, its behaviours doing nothing until it is shown (a trap or an ambush)."),
     })
     .strict()
     .default(DEFAULT_AREA_DISPLAY)

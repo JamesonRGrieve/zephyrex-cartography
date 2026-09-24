@@ -215,7 +215,9 @@ export type RestrictionType = (typeof RESTRICTION_TYPES)[number];
  * the `observer` visibility shows it to them. A restriction does not bar
  * anything: Foundry clips the region's shapes to walls of its type (and, for
  * light, darkness and sight, sources at or past its priority), cast from each
- * shape's origin like a light, so an effect stops at walls.
+ * shape's origin like a light, so an effect stops at walls. A `hidden` region
+ * (14.360) is the GM's alone and its behaviours do nothing until it is shown:
+ * a trap or an ambush the GM springs.
  */
 export interface AreaDisplay {
     readonly visibility: RegionVisibility;
@@ -223,10 +225,18 @@ export interface AreaDisplay {
     readonly measurements: boolean;
     readonly observed: boolean;
     readonly restriction: { readonly type: RestrictionType; readonly priority: number } | null;
+    readonly hidden: boolean;
 }
 
-/** A region as the engine makes one: on the Regions layer, its true shapes, no measurements, the GM's alone, unrestricted. */
-export const DEFAULT_AREA_DISPLAY: AreaDisplay = { visibility: 'layer', highlight: 'shapes', measurements: false, observed: false, restriction: null };
+/** A region as the engine makes one: on the Regions layer, its true shapes, no measurements, the GM's alone, unrestricted, live. */
+export const DEFAULT_AREA_DISPLAY: AreaDisplay = {
+    visibility: 'layer',
+    highlight: 'shapes',
+    measurements: false,
+    observed: false,
+    restriction: null,
+    hidden: false,
+};
 
 /** What an area carries: its effects, its region's display and what it spawns, each left out of the stored JSON while it has none. */
 export interface Affected extends Spawning {
@@ -241,13 +251,14 @@ export function displayOf(feature: Affected): AreaDisplay {
 
 /** Whether `display` is anything but the default. */
 export function customDisplay(display: AreaDisplay): boolean {
-    const { visibility, highlight, measurements, observed, restriction } = DEFAULT_AREA_DISPLAY;
+    const { visibility, highlight, measurements, observed, restriction, hidden } = DEFAULT_AREA_DISPLAY;
     return (
         display.visibility !== visibility ||
         display.highlight !== highlight ||
         display.measurements !== measurements ||
         display.observed !== observed ||
-        display.restriction !== restriction
+        display.restriction !== restriction ||
+        display.hidden !== hidden
     );
 }
 
@@ -288,6 +299,7 @@ export function parseAreaDisplay(v: unknown): AreaDisplay | undefined {
         measurements: v['measurements'] === true,
         observed: v['observed'] === true,
         restriction: type === undefined ? null : { type, priority: priority ?? 0 },
+        hidden: v['hidden'] === true,
     });
 }
 

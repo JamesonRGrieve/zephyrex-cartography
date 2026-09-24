@@ -601,6 +601,7 @@ describe('regionCreateData', () => {
             measurements: true,
             observed: true,
             restriction: { type: 'sight', priority: 3 },
+            hidden: true,
         } as const;
         const area: RegionDoc = { id: null, label: { kind: 'room' }, polygon: square, bottom: 0, top: 10, level: 'C', spans: [], behaviour: null, display };
         const [one, everywhere, spanning] = regionCreateData([area, { ...area, level: null }, { ...area, spans: ['D'] }], ['r1', 'r2', 'r3'], CONTEXT);
@@ -611,6 +612,7 @@ describe('regionCreateData', () => {
             restriction: { enabled: true, type: 'sight', priority: 3 },
             // Every player an observer: DOCUMENT_OWNERSHIP_LEVELS.OBSERVER.
             ownership: { default: 2 },
+            hidden: true,
         });
         expect(everywhere).not.toHaveProperty('restriction');
         expect(spanning).not.toHaveProperty('restriction');
@@ -619,6 +621,7 @@ describe('regionCreateData', () => {
         expect(plain).toMatchObject({ visibility: 0 });
         expect(plain).not.toHaveProperty('highlightMode');
         expect(plain).not.toHaveProperty('ownership');
+        expect(plain).not.toHaveProperty('hidden');
     });
 
     it('makes a floor a solid defineSurface at its bottom, on its level and the one seen from below', () => {

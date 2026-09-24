@@ -79,6 +79,7 @@ describe('area settings', () => {
             measurements: true,
             observed: false,
             restriction: { type: 'light', priority: 2 },
+            hidden: true,
         } as const;
         expect(await c.setAreaSettings('p2', { ...PLAIN, display })).toBe(true);
         expect(d.regions.flat()).toEqual([expect.objectContaining({ label: { kind: 'terrain', biome: 'marsh' }, behaviour: null, display })]);

@@ -179,8 +179,10 @@ describe('area region display', () => {
             measurements: true,
             observed: true,
             restriction: { type: 'light', priority: 2 },
+            hidden: false,
         });
-        expect(parseAreaDisplay({ visibility: 'nobody', restriction: { type: 'smell' } })).toBeUndefined();
+        expect(parseAreaDisplay({ hidden: true })).toEqual({ ...DEFAULT_AREA_DISPLAY, hidden: true });
+        expect(parseAreaDisplay({ visibility: 'nobody', restriction: { type: 'smell' }, hidden: 'yes' })).toBeUndefined();
         expect(parseAreaDisplay({ restriction: { type: 'sound', priority: -1 } })?.restriction).toEqual({ type: 'sound', priority: 0 });
         expect(parseAreaDisplay('x')).toBeUndefined();
     });
