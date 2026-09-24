@@ -15,6 +15,14 @@ export interface OrientedRectangle {
     readonly rotation: number;
 }
 
+/** `pt` in the frame of a shape placed at `at` and turned by `rotation` degrees: from `at`, turned back (x along it). */
+export function localPoint(at: Point, rotation: number, pt: Point): Point {
+    const turn = (-rotation * Math.PI) / DEGREES_PER_HALF_TURN;
+    const dx = pt.x - at.x;
+    const dy = pt.y - at.y;
+    return { x: dx * Math.cos(turn) - dy * Math.sin(turn), y: dx * Math.sin(turn) + dy * Math.cos(turn) };
+}
+
 /**
  * A point of a box given as fractions of its size (0,0 its top-left, 1,1 its
  * bottom-right, unrotated), in scene terms with the box's rotation about its

@@ -33,6 +33,7 @@ import type { CartographyPath } from './path';
 import { pinPoint, pinSettingsOf } from './pin';
 import { regionOutline, type RegionFeature } from './region';
 import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
+import { shapeBox } from './shape';
 import { customSpawn, spawnOf } from './spawn';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
@@ -519,7 +520,13 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
     // Foundry refuses a Drawing with nothing to show, so a label has none until it has text.
     if (feature.type === 'label' && feature.text.trim() !== '') {
         const { elevation, level } = floorOf(feature, context);
-        return { ...NO_PLAN, drawings: [{ ...labelPoint(feature), ...labelBox(feature), elevation, level, ...labelSettingsOf(feature) }] };
+        return { ...NO_PLAN, drawings: [{ kind: 'text', ...labelPoint(feature), ...labelBox(feature), elevation, level, ...labelSettingsOf(feature) }] };
+    }
+    if (feature.type === 'shape') {
+        const { elevation, level } = floorOf(feature, context);
+        const { strokeColour, strokeWidth, strokeAlpha, fillColour, fillAlpha, hidden } = feature;
+        const style = { strokeColour, strokeWidth, strokeAlpha, fillColour, fillAlpha, hidden };
+        return { ...NO_PLAN, drawings: [{ kind: 'shape', ...shapeBox(feature), elevation, level, style }] };
     }
     if (feature.type === 'zone') {
         return { ...NO_PLAN, regions: [zoneRegion(feature, context.levels)] };

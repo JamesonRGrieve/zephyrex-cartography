@@ -255,6 +255,60 @@ test('a spawn zone spawns its actors’ tokens inside its region, snapped and ap
     }
 });
 
+test('a spec’s drawn shapes become native Drawings, stroked and filled, and erase with their feature', async ({ world }) => {
+    const drawings = async (): Promise<{ type: string; fillType: number; strokeWidth: number; points: number[] }[]> =>
+        world.evaluate(() =>
+            (canvas?.scene?.drawings.contents ?? []).map((d) => ({
+                type: d.shape.type,
+                fillType: d.fillType,
+                strokeWidth: d.strokeWidth,
+                points: [...d.shape.points],
+            })),
+        );
+    await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            features: [
+                {
+                    type: 'shape',
+                    kind: 'polygon',
+                    points: [
+                        { x: 2, y: 2 },
+                        { x: 8, y: 2 },
+                        { x: 5, y: 7 },
+                    ],
+                    stroke: { colour: '#ff4400', width: 6 },
+                    fill: { colour: '#ffcc00', alpha: 0.4 },
+                },
+                { type: 'shape', kind: 'ellipse', x: 12, y: 5, width: 5, height: 3, rotation: 30, stroke: { colour: '#00ccff', width: 4 } },
+                {
+                    type: 'shape',
+                    kind: 'line',
+                    points: [
+                        { x: 2, y: 9 },
+                        { x: 16, y: 9 },
+                    ],
+                    stroke: { colour: '#ffffff', width: 10 },
+                },
+            ],
+        });
+    });
+    // CONST.DRAWING_FILL_TYPES: NONE 0, SOLID 1. The polygon closes on its first point; the line stays open.
+    expect(await drawings()).toEqual([
+        { type: 'p', fillType: 1, strokeWidth: 6, points: [0, 0, 600, 0, 300, 500, 0, 0] },
+        { type: 'e', fillType: 0, strokeWidth: 4, points: [] },
+        { type: 'p', fillType: 0, strokeWidth: 10, points: [0, 0, 1400, 0] },
+    ]);
+    await frameScene(world);
+    await expect(world.locator('#board')).toHaveScreenshot('drawn-shapes.png');
+
+    await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        await controller?.erase({ x: 1200, y: 500 });
+    });
+    await expect.poll(async () => (await drawings()).map((d) => d.type)).toEqual(['p', 'p']);
+});
+
 test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
     const walls = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

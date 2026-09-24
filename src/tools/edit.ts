@@ -11,6 +11,7 @@ import { isAnchored, isRegion, isRoom, isStamp, isStroke, type Feature } from '.
 import { withPathGeometry } from './path';
 import { withRegionPoints } from './region';
 import { withRoomPoints } from './room';
+import { withShapePoints } from './shape';
 import { withStrokePoints } from './stroke';
 
 /** Move the vertex at `index` to `to`, or null if the index is out of range. */
@@ -19,6 +20,10 @@ export function movePoint(feature: Feature, index: number, to: Point): Feature |
         return null;
     }
     const points = feature.points.map((p, i) => (i === index ? { x: to.x, y: to.y } : p));
+    if (feature.type === 'shape') {
+        // A box's one point is its centre; a polygon's or line's are its vertices.
+        return withShapePoints(feature, points);
+    }
     if (isStamp(feature) || isAnchored(feature)) {
         // A stamp's, a pin's or a label's one point is where it stands: moving it moves the whole thing.
         return { ...feature, points };
@@ -65,6 +70,9 @@ export function deletePoint(feature: Feature, index: number): Feature | null {
         return null;
     }
     const points = feature.points.filter((_, i) => i !== index);
+    if (feature.type === 'shape') {
+        return withShapePoints(feature, points);
+    }
     if (isRegion(feature)) {
         return withRegionPoints(feature, points);
     }

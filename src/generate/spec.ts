@@ -30,6 +30,7 @@ import { NO_LEVEL_ART, TEXTURE_FITS } from '../tools/levels';
 import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
 import { FOG_MODES } from '../tools/scene-settings';
+import { DEFAULT_SHAPE_STYLE, SHAPE_KINDS } from '../tools/shape';
 import { MAX_SPAWN_COUNT, NO_SPAWN, SPAWN_PLACEMENTS } from '../tools/spawn';
 import { MAX_SPLAT_LAYERS } from '../tools/splat';
 import { DEFAULT_WALL_PRESET, WALL_PRESETS } from '../tools/wall-presets';
@@ -404,7 +405,38 @@ const zoneSpec = z
     .strict()
     .describe("A zone: a Scene Region in one of Foundry's shapes, with a movement cost, behaviours and a display like any area.");
 
-const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec, pinSpec, labelSpec, zoneSpec]);
+const shapeSpec = z
+    .object({
+        type: z.literal('shape'),
+        key: featureKey,
+        kind: z.enum(SHAPE_KINDS),
+        points: z.array(point).optional().describe("A polygon's vertices (3 or more) or a line's (2 or more)."),
+        x: z.number().optional().describe("A rectangle's or ellipse's centre."),
+        y: z.number().optional(),
+        width: positive.optional().describe("A rectangle's or ellipse's size."),
+        height: positive.optional(),
+        rotation: z.number().default(0).describe('Degrees a rectangle or ellipse is turned about its centre.'),
+        stroke: z
+            .object({
+                colour: hexColour.default(DEFAULT_SHAPE_STYLE.strokeColour),
+                width: z.number().int().min(0).default(DEFAULT_SHAPE_STYLE.strokeWidth).describe('Px, whatever the spec’s units.'),
+                alpha: alpha.default(DEFAULT_SHAPE_STYLE.strokeAlpha),
+            })
+            .strict()
+            .default({ colour: DEFAULT_SHAPE_STYLE.strokeColour, width: DEFAULT_SHAPE_STYLE.strokeWidth, alpha: DEFAULT_SHAPE_STYLE.strokeAlpha }),
+        fill: z
+            .object({ colour: hexColour, alpha: alpha.default(DEFAULT_SHAPE_STYLE.fillAlpha) })
+            .strict()
+            .nullable()
+            .default(null)
+            .describe('A solid fill; null for none.'),
+        hidden: z.boolean().default(false).describe('Seen by the GM alone.'),
+        level,
+    })
+    .strict()
+    .describe("A drawn shape: a native Drawing, as Foundry's own Drawings tools draw them.");
+
+const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec, pinSpec, labelSpec, zoneSpec, shapeSpec]);
 
 const signed = z.number().min(-1).max(1);
 
@@ -532,6 +564,24 @@ function doorIssues(f: FeatureSpec, i: number): SpecIssue[] {
     );
 }
 
+/** A drawn shape missing what its kind stands on: a box's centre and size, a polygon's three vertices or a line's two. */
+function shapeIssues(f: FeatureSpec, i: number): SpecIssue[] {
+    if (f.type !== 'shape') {
+        return [];
+    }
+    const boxed = f.kind === 'rectangle' || f.kind === 'ellipse';
+    const least = f.kind === 'polygon' ? MIN_POLYGON_POINTS : MIN_LINE_POINTS;
+    if (boxed) {
+        return [f.x, f.y, f.width, f.height].some((v) => v === undefined)
+            ? [{ path: `features.${i}`, message: `a ${f.kind} needs x, y, width and height` }]
+            : [];
+    }
+    return (f.points ?? []).length < least ? [{ path: `features.${i}.points`, message: `a ${f.kind} needs ${least} points at least` }] : [];
+}
+
+const MIN_POLYGON_POINTS = 3;
+const MIN_LINE_POINTS = 2;
+
 /** A zone shape Foundry would refuse: a ring whose band reaches past its centre, or a cone wider than its curvature allows. */
 function zoneIssues(f: FeatureSpec, i: number): SpecIssue[] {
     return f.type === 'zone' && !validZoneShape(f.shape)
@@ -562,6 +612,7 @@ function referenceIssues(spec: SceneSpec): SpecIssue[] {
             ...(f.type === 'stamp' ? unresolved(f.controls, features.keys, (j) => `features.${i}.controls.${j}`, 'feature') : []),
             ...doorIssues(f, i),
             ...zoneIssues(f, i),
+            ...shapeIssues(f, i),
         ]),
     ];
 }

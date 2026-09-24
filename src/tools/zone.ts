@@ -9,6 +9,7 @@
  * `gridBased` has Foundry measure the shape in grid units instead. Pure and
  * unit-tested.
  */
+import { localPoint } from '../geometry/rectangle';
 import type { Point } from '../geometry/spline';
 import { type Affected, parseAreaFields } from './area-effects';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
@@ -196,18 +197,9 @@ export function reshapedZone(kind: ZoneShapeKind, from: ZoneShape): ZoneShape {
     return { kind: 'circle', radius: size };
 }
 
-/** `pt` in the zone's own frame: from its point, turned back by its rotation (x along it). */
-function local(zone: ZoneFeature, pt: Point): Point {
-    const at = zonePoint(zone);
-    const turn = (-zone.rotation * Math.PI) / (FULL_TURN / 2);
-    const dx = pt.x - at.x;
-    const dy = pt.y - at.y;
-    return { x: dx * Math.cos(turn) - dy * Math.sin(turn), y: dx * Math.sin(turn) + dy * Math.cos(turn) };
-}
-
 /** Whether `pt` falls in the zone, by its exact shape (grid-based shapes by their px shape). */
 export function zoneHit(zone: ZoneFeature, pt: Point): boolean {
-    const { x, y } = local(zone, pt);
+    const { x, y } = localPoint(zonePoint(zone), zone.rotation, pt);
     const shape = zone.shape;
     const d = Math.hypot(x, y);
     switch (shape.kind) {

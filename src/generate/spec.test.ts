@@ -103,6 +103,24 @@ describe('parseSceneSpec', () => {
         expect(issues({ kind: 'circle', radius: 0 })).toEqual(['features.0.shape.radius']);
     });
 
+    it('takes drawn shapes, and reports one missing what its kind stands on', () => {
+        const good = parseSceneSpec({ schemaVersion: 1, features: [{ type: 'shape', kind: 'line', points: square.slice(0, 2) }] });
+        expect(good.ok ? good.spec.features[0] : null).toMatchObject({
+            stroke: { colour: '#ffffff', width: 8, alpha: 1 },
+            fill: null,
+            rotation: 0,
+            hidden: false,
+        });
+        const paths = (feature: object): string[] => {
+            const result = parseSceneSpec({ schemaVersion: 1, features: [{ type: 'shape', ...feature }] });
+            return result.ok ? [] : result.issues.map((i) => i.path);
+        };
+        expect(paths({ kind: 'polygon', points: square.slice(0, 2) })).toEqual(['features.0.points']);
+        expect(paths({ kind: 'line' })).toEqual(['features.0.points']);
+        expect(paths({ kind: 'rectangle', x: 1, y: 1, width: 2 })).toEqual(['features.0']);
+        expect(paths({ kind: 'ellipse', x: 1, y: 1, width: 2, height: 1, fill: { colour: '#123456' } })).toEqual([]);
+    });
+
     it('parses JSON text, reporting text that is not JSON at the root', () => {
         expect(parseSceneSpecJson('{"schemaVersion": 1, "features": []}').ok).toBe(true);
         const broken = parseSceneSpecJson('{"schemaVersion": 1,');

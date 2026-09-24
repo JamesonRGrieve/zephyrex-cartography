@@ -11,6 +11,7 @@ import { isRegion, isRoom, isStamp, isStroke, type Feature } from './feature';
 import { labelCorners } from './label';
 import { PIN_HIT_RADIUS, pinPoint } from './pin';
 import { regionOutline } from './region';
+import { shapeHit } from './shape';
 import { stampCorners } from './stamp';
 import { zoneHit } from './zone';
 
@@ -42,6 +43,9 @@ export function featureHit(feature: Feature, pt: Point): boolean {
     }
     if (feature.type === 'zone') {
         return zoneHit(feature, pt);
+    }
+    if (feature.type === 'shape') {
+        return shapeHit(feature, pt);
     }
     if (feature.type === 'label') {
         return pointInPolygon(

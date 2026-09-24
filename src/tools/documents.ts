@@ -12,6 +12,7 @@ import type { PlacedBehaviour, StampLight, StampTile } from '../stamps/schema';
 import type { AreaDisplay, AreaEffect } from './area-effects';
 import type { BiomeKind } from './biome';
 import { isRecord, stringArray } from './guards';
+import type { ShapeBox, ShapeStyle } from './shape';
 import type { ZoneShape } from './zone';
 
 export type DoorType = 'none' | 'door' | 'secret';
@@ -275,8 +276,20 @@ export interface NoteDoc {
     readonly global: boolean;
 }
 
+/** A native Drawing: a map label's text, or a drawn shape. */
+export type DrawingDoc = TextDrawingDoc | ShapeDrawingDoc;
+
+/** A native Drawing that is a drawn shape: its box (centred on `x`, `y`), Foundry's shape type and points, and its stroke and fill. */
+export interface ShapeDrawingDoc extends ShapeBox {
+    readonly kind: 'shape';
+    readonly elevation: number;
+    readonly level: string | null;
+    readonly style: ShapeStyle;
+}
+
 /** A native text Drawing (a map label): its box, centred on `x`, `y` and turned about its centre, holds the text. */
-export interface DrawingDoc {
+export interface TextDrawingDoc {
+    readonly kind: 'text';
     readonly x: number;
     readonly y: number;
     readonly width: number;

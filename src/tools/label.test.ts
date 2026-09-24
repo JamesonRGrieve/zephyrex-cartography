@@ -26,7 +26,7 @@ describe('labels', () => {
         const label = makeLabel('l', { x: 500, y: 300 }, sump);
         expect(planDocuments(label)).toEqual({
             ...NO_PLAN,
-            drawings: [{ x: 500, y: 300, ...labelBox(sump), elevation: 0, level: null, ...sump }],
+            drawings: [{ kind: 'text', x: 500, y: 300, ...labelBox(sump), elevation: 0, level: null, ...sump }],
         });
     });
 

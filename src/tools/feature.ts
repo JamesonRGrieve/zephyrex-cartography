@@ -2,7 +2,7 @@
 /**
  * The unified persisted feature model: roads/rivers (paths), biome regions
  * (closed fills), biome brush strokes (freehand swaths), rooms, stamps, map
- * pins, map labels and zones, discriminated by `type`. `parseFeatures` validates the mixed
+ * pins, map labels, zones and drawn shapes, discriminated by `type`. `parseFeatures` validates the mixed
  * scene-flag blob.
  */
 import type { GeneratedDocs } from './documents';
@@ -11,11 +11,12 @@ import { parsePath, type CartographyPath } from './path';
 import { parsePin, type PinFeature } from './pin';
 import { parseRegion, type RegionFeature } from './region';
 import { parseRoom, type RoomFeature } from './room';
+import { parseShape, type ShapeFeature } from './shape';
 import { parseStamp, type StampFeature } from './stamp';
 import { parseStroke, type StrokeFeature } from './stroke';
 import { parseZone, type ZoneFeature } from './zone';
 
-export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature | StampFeature | PinFeature | LabelFeature | ZoneFeature;
+export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature | StampFeature | PinFeature | LabelFeature | ZoneFeature | ShapeFeature;
 
 /** A map pin, label or zone: one point, where it stands, that moves it whole. */
 export function isAnchored(f: Feature): f is PinFeature | LabelFeature | ZoneFeature {
@@ -59,7 +60,8 @@ export function parseFeatures(raw: unknown): Feature[] {
             parseRoom(entry) ??
             parsePin(entry) ??
             parseLabel(entry) ??
-            parseZone(entry);
+            parseZone(entry) ??
+            parseShape(entry);
         if (feature) {
             out.push(feature);
         }

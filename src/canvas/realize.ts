@@ -17,6 +17,7 @@ import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath } from '../tools/path';
 import { makePin, withPinSettings } from '../tools/pin';
 import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
+import { DEFAULT_SHAPE_STYLE, makeShape, type ShapeFeature, type ShapeStyle } from '../tools/shape';
 import { storedSpawn } from '../tools/spawn';
 import type { StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
@@ -70,6 +71,10 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         const settings = { text: spec.text, entry: spec.entry, page: spec.page, icon: spec.icon, global: spec.global };
         return { ...withPinSettings(makePin(id, scale.point(spec)), settings), level };
     }
+    if (spec.type === 'shape') {
+        const shape = buildShape(spec, id, scale);
+        return shape && { ...shape, level };
+    }
     if (spec.type === 'zone') {
         const zone = withZoneSettings(makeZone(id, scale.point(spec)), {
             name: spec.name,
@@ -104,6 +109,23 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         feature = doored && { ...doored, ...areaOf(spec) };
     }
     return feature && { ...feature, level };
+}
+
+/** A spec's drawn shape: a box at its centre, sized in the spec's units, or its vertices; its stroke in px as given. */
+function buildShape(spec: Extract<FeatureSpec, { type: 'shape' }>, id: string, scale: Scale): ShapeFeature | null {
+    const style: ShapeStyle = {
+        strokeColour: spec.stroke.colour.toLowerCase(),
+        strokeWidth: spec.stroke.width,
+        strokeAlpha: spec.stroke.alpha,
+        fillColour: spec.fill?.colour.toLowerCase() ?? null,
+        fillAlpha: spec.fill?.alpha ?? DEFAULT_SHAPE_STYLE.fillAlpha,
+        hidden: spec.hidden,
+    };
+    if (spec.kind === 'polygon' || spec.kind === 'line') {
+        return makeShape(id, { kind: spec.kind }, (spec.points ?? []).map(scale.point), style);
+    }
+    const geometry = { kind: spec.kind, width: scale.length(spec.width ?? 0), height: scale.length(spec.height ?? 0), rotation: spec.rotation };
+    return makeShape(id, geometry, [scale.point({ x: spec.x ?? 0, y: spec.y ?? 0 })], style);
 }
 
 /** A spec area's own fields. */

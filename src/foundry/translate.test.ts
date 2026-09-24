@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
+import { BLOCKS_ALL, type DrawingDoc, type RegionDoc } from '../tools/documents';
 import { DEFAULT_TRAVEL } from '../tools/submap';
 import type { ZoneShape } from '../tools/zone';
 import {
@@ -288,7 +288,8 @@ describe('noteCreateData', () => {
 
 describe('drawingCreateData', () => {
     it('writes a text-only rectangle Drawing placed by its top-left corner, turning about its centre', () => {
-        const drawing = {
+        const drawing: DrawingDoc = {
+            kind: 'text',
             x: 500,
             y: 300,
             width: 200,
@@ -318,6 +319,42 @@ describe('drawingCreateData', () => {
             hidden: true,
             levels: ['lv1'],
         });
+    });
+
+    it('writes a drawn shape’s box, points, stroke and solid fill, and leaves a shape without fill unfilled', () => {
+        const style = { strokeColour: '#ff0000', strokeWidth: 4, strokeAlpha: 0.8, fillColour: '#00ff00', fillAlpha: 0.3, hidden: false };
+        const polygon = {
+            kind: 'shape',
+            x: 150,
+            y: 125,
+            width: 100,
+            height: 50,
+            rotation: 0,
+            shape: 'p',
+            points: [0, 0, 100, 0, 50, 50, 0, 0],
+            elevation: 0,
+            level: null,
+            style,
+        } as const;
+        // CONST.DRAWING_FILL_TYPES.SOLID is 1.
+        expect(drawingCreateData(polygon)).toEqual({
+            shape: { type: 'p', width: 100, height: 50, points: [0, 0, 100, 0, 50, 50, 0, 0] },
+            x: 100,
+            y: 100,
+            elevation: 0,
+            rotation: 0,
+            strokeWidth: 4,
+            strokeColor: '#ff0000',
+            strokeAlpha: 0.8,
+            fillType: 1,
+            fillColor: '#00ff00',
+            fillAlpha: 0.3,
+            hidden: false,
+        });
+        const ellipse = { ...polygon, shape: 'e', points: [], rotation: 30, style: { ...style, fillColour: null } } as const;
+        expect(drawingCreateData(ellipse)).toMatchObject({ shape: { type: 'e', width: 100, height: 50 }, rotation: 30, fillType: 0 });
+        expect(drawingCreateData(ellipse)).not.toHaveProperty('fillColor');
+        expect(drawingCreateData(ellipse).shape).not.toHaveProperty('points');
     });
 });
 

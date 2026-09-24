@@ -357,6 +357,53 @@ describe('realizeSpec', () => {
         expect(marsh && 'display' in marsh ? marsh.display : undefined).toBeUndefined();
     });
 
+    it('draws shapes where the spec says, sized in its units with strokes in px, as native Drawings', async () => {
+        const h = makeHarness();
+        await realizeSpec(
+            h.c,
+            spec({
+                features: [
+                    {
+                        type: 'shape',
+                        kind: 'ellipse',
+                        x: 2,
+                        y: 3,
+                        width: 4,
+                        height: 2,
+                        rotation: 30,
+                        stroke: { colour: '#FF0000', width: 3 },
+                        fill: { colour: '#00FF00' },
+                    },
+                    {
+                        type: 'shape',
+                        kind: 'line',
+                        points: [
+                            { x: 0, y: 0 },
+                            { x: 1, y: 1 },
+                        ],
+                        hidden: true,
+                    },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        const [ellipse, line] = h.s.last();
+        expect(ellipse).toMatchObject({
+            type: 'shape',
+            geometry: { kind: 'ellipse', width: 400, height: 200, rotation: 30 },
+            points: [{ x: 1200, y: 800 }],
+            strokeColour: '#ff0000',
+            strokeWidth: 3,
+            fillColour: '#00ff00',
+            fillAlpha: 0.5,
+        });
+        expect(line).toMatchObject({ geometry: { kind: 'line' }, points: [ORIGIN, { x: 1100, y: 600 }], hidden: true, fillColour: null });
+        expect(h.d.drawings.flat()).toEqual([
+            expect.objectContaining({ kind: 'shape', shape: 'e', width: 400, height: 200 }),
+            expect.objectContaining({ kind: 'shape', shape: 'p', points: [0, 0, 100, 100] }),
+        ]);
+    });
+
     it('puts zones where the spec says, sized in its units, with their area settings', async () => {
         const h = makeHarness();
         await realizeSpec(

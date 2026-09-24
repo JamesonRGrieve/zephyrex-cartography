@@ -3169,6 +3169,143 @@
                         ],
                         "additionalProperties": false,
                         "description": "A zone: a Scene Region in one of Foundry's shapes, with a movement cost, behaviours and a display like any area."
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "shape"
+                            },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "rectangle",
+                                    "ellipse",
+                                    "polygon",
+                                    "line"
+                                ]
+                            },
+                            "points": {
+                                "description": "A polygon's vertices (3 or more) or a line's (2 or more).",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "x": {
+                                            "type": "number"
+                                        },
+                                        "y": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": [
+                                        "x",
+                                        "y"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            },
+                            "x": {
+                                "description": "A rectangle's or ellipse's centre.",
+                                "type": "number"
+                            },
+                            "y": {
+                                "type": "number"
+                            },
+                            "width": {
+                                "description": "A rectangle's or ellipse's size.",
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                            },
+                            "height": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                            },
+                            "rotation": {
+                                "default": 0,
+                                "description": "Degrees a rectangle or ellipse is turned about its centre.",
+                                "type": "number"
+                            },
+                            "stroke": {
+                                "default": {
+                                    "colour": "#ffffff",
+                                    "width": 8,
+                                    "alpha": 1
+                                },
+                                "type": "object",
+                                "properties": {
+                                    "colour": {
+                                        "default": "#ffffff",
+                                        "type": "string",
+                                        "pattern": "^#[0-9a-fA-F]{6}$"
+                                    },
+                                    "width": {
+                                        "default": 8,
+                                        "description": "Px, whatever the spec’s units.",
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                    },
+                                    "alpha": {
+                                        "default": 1,
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    }
+                                },
+                                "additionalProperties": false
+                            },
+                            "fill": {
+                                "default": null,
+                                "description": "A solid fill; null for none.",
+                                "anyOf": [
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "colour": {
+                                                "type": "string",
+                                                "pattern": "^#[0-9a-fA-F]{6}$"
+                                            },
+                                            "alpha": {
+                                                "default": 0.5,
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 1
+                                            }
+                                        },
+                                        "required": [
+                                            "colour"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "hidden": {
+                                "default": false,
+                                "description": "Seen by the GM alone.",
+                                "type": "boolean"
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "kind"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A drawn shape: a native Drawing, as Foundry's own Drawings tools draw them."
                     }
                 ]
             },

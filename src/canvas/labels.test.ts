@@ -12,7 +12,7 @@ describe('map labels', () => {
         c.setActiveLevel('lv1');
         const id = await c.placeLabel({ x: 400, y: 200 }, district);
         expect(c.labelSettings(id)).toEqual(district);
-        expect(d.drawings.flat()).toEqual([{ x: 400, y: 200, ...labelBox(district), elevation: 0, level: 'lv1', ...district }]);
+        expect(d.drawings.flat()).toEqual([{ kind: 'text', x: 400, y: 200, ...labelBox(district), elevation: 0, level: 'lv1', ...district }]);
         expect(c.getFeature(id)?.docs.drawings).toEqual(['d0']);
 
         expect(await c.setLabelSettings(id, { ...district, hidden: true })).toBe(true);

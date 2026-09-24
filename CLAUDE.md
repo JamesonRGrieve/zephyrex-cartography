@@ -826,7 +826,21 @@ These make everything after them cheaper and safer, so they come first.
   - The **label tool** sits with Foundry's Drawings tools, beside edit and
     erase, with a panel named with Foundry's Drawing sheet strings.
   - The scene spec takes `label` entries.
-  - **Still open:** drawn shapes (lines, rectangles, ellipses, polygons).
+  - **[done] Drawn shapes.** A `shape` feature (`tools/shape.ts`) is a
+    rectangle or ellipse (its centre, size and rotation) or a polygon or
+    line (its vertices), realised as a native Drawing.
+    - It has a stroke (colour, whole-px width, alpha), an optional solid
+      fill and `hidden`. A polygon closes on its first point again, a line
+      stays open, and a box is whole-pixel sized.
+    - It is picked by its exact outline (a line within half its width). A
+      polygon's or line's vertices move with edit, a box moves whole, and
+      erase removes it.
+    - Foundry's own Drawings tools already draw shapes by hand, so there is
+      no second tool. The scene spec takes `shape` entries, sized in its
+      units with strokes in px, and reports a shape missing what its kind
+      needs.
+    - `tests/e2e/structures.spec.ts` checks the native Drawings and
+      screenshots them.
 - **[done] Scene settings.** A scene spec's `scene` block sets the scene's
   own settings, only those given (`tools/scene-settings.ts`):
   - darkness, its lock, global light and token vision;

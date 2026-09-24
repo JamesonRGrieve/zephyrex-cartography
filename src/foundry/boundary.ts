@@ -290,18 +290,25 @@ export interface NoteCreateData extends OnLevels {
  * box's top-left and it turns about its centre. `shape.type` "r" is a
  * rectangle; `fillType` is a `CONST.DRAWING_FILL_TYPES` value.
  */
+/** A text Drawing (a map label) or a drawn shape; a shape leaves the text fields, and a label the stroke and fill, to Foundry. */
 export interface DrawingCreateData extends OnLevels {
-    readonly shape: { readonly type: 'r'; readonly width: number; readonly height: number };
+    /** `ShapeData`: a rectangle, ellipse or polygon (its points relative to `x`, `y`). */
+    readonly shape: { readonly type: 'r' | 'e' | 'p'; readonly width: number; readonly height: number; readonly points?: readonly number[] };
     readonly x: number;
     readonly y: number;
     readonly elevation: number;
     readonly rotation: number;
+    /** A `CONST.DRAWING_FILL_TYPES` value. */
     readonly fillType: number;
+    readonly fillColor?: string;
+    readonly fillAlpha?: number;
     readonly strokeWidth: number;
-    readonly text: string;
-    readonly fontSize: number;
-    readonly fontFamily: string;
-    readonly textColor: string;
+    readonly strokeColor?: string;
+    readonly strokeAlpha?: number;
+    readonly text?: string;
+    readonly fontSize?: number;
+    readonly fontFamily?: string;
+    readonly textColor?: string;
     readonly hidden: boolean;
 }
 
