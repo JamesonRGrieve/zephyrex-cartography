@@ -605,15 +605,20 @@ These make everything after them cheaper and safer, so they come first.
   - `adjustDarknessLevel`, `suppressWeather` and `applyActiveEffect`;
   - `displayScrollingText`, `executeMacro`, `executeScript`, `pauseGame` and
     `toggleBehavior`.
-- **Teleport options for submap entrances** [14.349, 14.353]:
-  - destination placement: relative, centre, or unsnapped;
-  - random or chosen destinations;
-  - `avoidOccupied`;
+- **[done] Teleport options for submap entrances** [14.349, 14.353]. A
+  link carries its `travel`, used both ways:
+  - where the token lands: relative, centre or anywhere (14.359's
+    `placement`: relative, center, random);
   - a custom prompt, with `{scene}`, `{token}` and `{region}` placeholders
-    [fixed in 14.365];
-  - a **scene-transition animation** (one of 14 types) for going between
-    scenes.
-  The submap panel lets the GM pick the transition and write the prompt.
+    [fixed in 14.365], for revealed and unrevealed destinations alike;
+  - a **scene transition** from `CONFIG.Canvas.sceneTransitions`, or none,
+    and its length.
+  Once linked, the submap panel sets them. The entrance is redrawn in place,
+  and a region redrawn in place now updates its live behaviours' settings.
+  The exit, which the GM may have moved, is updated in the interior, not
+  recreated.
+  - **Still open:** `avoidOccupied`, which is not in the 14.359 schema.
+    Build it against a newer reference release.
 - **Spawn regions.** `RegionDocument#spawnTokens` and
   `TokenLayer#placeTokens` [14.352, 14.356] make it possible for a scene spec
   or generator to declare spawn regions: encounters and reinforcements.

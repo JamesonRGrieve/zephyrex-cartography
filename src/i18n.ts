@@ -136,6 +136,17 @@ export const I18N = {
         noScenes: key('Submap.NoScenes'),
         hud: key('Submap.Hud'),
         defaultName: key('Submap.DefaultName'),
+        travel: key('Submap.Travel'),
+        placement: key('Submap.Placement'),
+        placements: {
+            relative: key('Submap.Placements.Relative'),
+            center: key('Submap.Placements.Center'),
+            random: key('Submap.Placements.Random'),
+        },
+        transition: key('Submap.Transition'),
+        noTransition: key('Submap.NoTransition'),
+        duration: key('Submap.Duration'),
+        prompt: key('Submap.Prompt'),
     },
     settings: {
         textureSetName: key('Settings.TextureSet.Name'),

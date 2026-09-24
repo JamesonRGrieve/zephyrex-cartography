@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StagedWrite } from '../canvas/staged-changes';
 import { BLOCKS_ALL, NO_DOCS, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { DEFAULT_TRAVEL } from '../tools/submap';
 import type { BatchOperation, FoundryScene } from './boundary';
 import { FoundryDocumentSink } from './documents';
 
@@ -49,7 +50,12 @@ function scene(present: readonly string[], id: string | null = 'sc'): FoundrySce
         lights: collection,
         sounds: collection,
         tiles: collection,
-        regions: collection,
+        // Each live region holds one teleport behaviour, `b-<region id>`.
+        regions: {
+            ...collection,
+            get: (regionId) =>
+                present.includes(regionId) ? { behaviors: { contents: [{ id: `b-${regionId}`, type: 'teleportToken', update: unused }] } } : undefined,
+        },
         levels: { contents: [], size: 0 },
         getFlag: () => null,
         setFlag: unused,
@@ -146,6 +152,22 @@ describe('FoundryDocumentSink', () => {
         expect(batch?.[0]).toMatchObject({ data: [{ _id: 'gone', behaviors: [] }] });
         expect(batch?.[1]).toMatchObject({ updates: [{ _id: 'kept', shapes: [{ type: 'polygon' }] }] });
         expect(batch?.[1]).not.toHaveProperty('updates.0.behaviors');
+    });
+
+    it('updates the settings of a kept-id region’s live behaviour in place, a teleport’s travel with it', async () => {
+        const { sink: s, batches } = sink(scene(['kept']));
+        const travel = { ...DEFAULT_TRAVEL, transition: 'fade' };
+        await s.write({
+            ...NOTHING,
+            regionUpdates: [
+                { id: 'kept', doc: { ...REGION, id: 'kept', behaviour: { kind: 'teleport', targets: [{ scene: 'hab', region: 'out' }], travel } } },
+            ],
+        });
+        expect(batches[0]?.map((op) => [op.action, op.documentName])).toEqual([
+            ['update', 'Region'],
+            ['update', 'RegionBehavior'],
+        ]);
+        expect(batches[0]?.[1]).toMatchObject({ updates: [{ _id: 'b-kept', system: { transition: { type: 'fade' } } }] });
     });
 
     it('shows and hides the plain lights a switch controls, skipping one deleted by hand', async () => {

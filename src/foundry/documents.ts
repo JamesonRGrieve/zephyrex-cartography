@@ -66,6 +66,8 @@ export class FoundryDocumentSink implements DocumentSink {
         if (regionUpdates.length > 0) {
             operations.push({ action: 'update', documentName: 'Region', parent: scene, updates: regionUpdates });
         }
+        // A region redrawn in place keeps its behaviours, whose settings (a teleport's travel) follow the plan.
+        operations.push(...behaviourUpdates(scene, replaced));
         // A light switch shows or hides plain lights; one a GM has deleted is simply gone.
         const lightUpdates = write.lightVisibility.filter(({ id }) => scene.lights.has(id)).map(({ id, hidden }) => ({ _id: id, hidden }));
         if (lightUpdates.length > 0) {
@@ -95,6 +97,18 @@ export class FoundryDocumentSink implements DocumentSink {
             .filter(([, data]) => data.length > 0)
             .map(([documentName, data]) => ({ action: 'create', documentName, parent: scene, data, keepId: true }));
     }
+}
+
+/** Settings updates for the live behaviours of regions redrawn in place, matched to the plan's by type. */
+function behaviourUpdates(scene: FoundryScene, regions: readonly RegionCreateData[]): BatchOperation[] {
+    return regions.flatMap((region) => {
+        const live = scene.regions.get(region._id);
+        const updates = region.behaviors.flatMap((planned) => {
+            const id = live?.behaviors.contents.find((behaviour) => behaviour.type === planned.type)?.id ?? null;
+            return id === null ? [] : [{ _id: id, system: planned.system }];
+        });
+        return live && updates.length > 0 ? [{ action: 'update' as const, documentName: 'RegionBehavior' as const, parent: live, updates }] : [];
+    });
 }
 
 /** Deletes of what is still on the scene: a GM may already have deleted some by hand, and deleting a missing id makes Foundry throw. */

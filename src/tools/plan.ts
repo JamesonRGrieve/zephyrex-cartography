@@ -251,7 +251,7 @@ function entranceRegion(stamp: StampFeature, levels: readonly Level[]): RegionDo
         top: band?.top ?? null,
         level: stamp.level,
         spans: [],
-        behaviour: { kind: 'teleport', targets: [{ scene: link.scene, region: link.exitRegion }] },
+        behaviour: { kind: 'teleport', targets: [{ scene: link.scene, region: link.exitRegion }], travel: link.travel },
     };
 }
 

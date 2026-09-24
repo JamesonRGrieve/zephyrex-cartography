@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, describe, expect, it } from 'vitest';
+import { DEFAULT_TRAVEL } from '../tools/submap';
 import * as stories from './submap-view.stories';
 
 const base: stories.SubmapArgs = {
@@ -9,6 +10,7 @@ const base: stories.SubmapArgs = {
         { id: 'vault', name: 'Vault' },
         { id: 'crypt', name: 'Crypt' },
     ],
+    travel: DEFAULT_TRAVEL,
     onOpen: () => undefined,
 };
 
@@ -74,8 +76,36 @@ describe('interior panel', () => {
         expect(root.querySelector('select')).toBeNull();
     });
 
+    it('offers travel options once linked: where tokens arrive, Foundry’s transitions and their length, and the prompt', () => {
+        expect(mount().querySelector('#zc-travel-placement')).toBeNull();
+        const root = mount(stories.LinkedWithATransition.args);
+        const select = (id: string): HTMLSelectElement => {
+            const found = root.querySelector<HTMLSelectElement>(`#${id}`);
+            if (!found) {
+                throw new Error(`no select ${id}`);
+            }
+            return found;
+        };
+        expect(select('zc-travel-placement').value).toBe('center');
+        expect(select('zc-travel-transition').value).toBe('swirl');
+        expect([...select('zc-travel-transition').options].map((o) => o.textContent)).toEqual(['None', 'Fade', 'Swirl', 'Water Drop']);
+        const change = (node: HTMLInputElement | HTMLSelectElement, value: string): void => {
+            node.value = value;
+            node.dispatchEvent(new Event('change'));
+        };
+        change(select('zc-travel-transition'), '');
+        expect(select('zc-travel-transition').value).toBe('');
+        const inputs = (): HTMLInputElement[] => [...root.querySelectorAll<HTMLInputElement>('fieldset input')];
+        expect(inputs().map((i) => i.value)).toEqual(['2000', 'Descend into {scene}?']);
+        const [duration] = inputs();
+        if (duration) {
+            change(duration, '100');
+        }
+        expect(inputs()[0]?.value).toBe('2000');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.NotLinked, stories.Linked, stories.NoOtherScenes]) {
+        for (const story of [stories.NotLinked, stories.Linked, stories.LinkedWithATransition, stories.NoOtherScenes]) {
             expect(mount(story.args ?? {}).querySelector('h3')).not.toBeNull();
         }
     });

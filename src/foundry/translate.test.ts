@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
+import { DEFAULT_TRAVEL } from '../tools/submap';
 import {
     doorStateFromDs,
     lightCreateData,
@@ -371,10 +372,20 @@ describe('regionCreateData', () => {
                     { scene: 'hab', region: 'a' },
                     { scene: 'hab', region: 'b' },
                 ],
+                travel: { placement: 'center', transition: 'swirl', duration: 2000, prompt: 'Enter {scene}?' },
             },
         };
         expect(regionCreateData([many], ['r3'], nameOf)[0]?.behaviors).toEqual([
-            { type: 'teleportToken', system: { destinations: ['Scene.hab.Region.a', 'Scene.hab.Region.b'], placement: 'relative', choice: true } },
+            {
+                type: 'teleportToken',
+                system: {
+                    destinations: ['Scene.hab.Region.a', 'Scene.hab.Region.b'],
+                    placement: 'center',
+                    choice: true,
+                    dialog: { revealed: 'Enter {scene}?', unrevealed: 'Enter {scene}?' },
+                    transition: { type: 'swirl', duration: 2000 },
+                },
+            },
         ]);
     });
 
@@ -387,11 +398,17 @@ describe('regionCreateData', () => {
             top: null,
             level: null,
             spans: [],
-            behaviour: { kind: 'teleport', targets: [{ scene: 'hab', region: 'out1' }] },
+            behaviour: { kind: 'teleport', targets: [{ scene: 'hab', region: 'out1' }], travel: DEFAULT_TRAVEL },
         };
         const [data] = regionCreateData([entrance], ['in1'], nameOf);
         expect(data?.elevation).toEqual({ bottom: null, top: null });
-        expect(data?.behaviors[0]?.system).toEqual({ destinations: ['Scene.hab.Region.out1'], placement: 'relative', choice: false });
+        expect(data?.behaviors[0]?.system).toEqual({
+            destinations: ['Scene.hab.Region.out1'],
+            placement: 'relative',
+            choice: false,
+            dialog: { revealed: null, unrevealed: null },
+            transition: { type: null, duration: 1500 },
+        });
         expect(regionUuid('a', 'b')).toBe('Scene.a.Region.b');
     });
 

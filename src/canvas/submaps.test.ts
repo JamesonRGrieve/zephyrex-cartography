@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_TRAVEL } from '../tools/submap';
 import { catalogStamps, makeHarness } from './test-fakes';
 
 const buildings = catalogStamps([
@@ -36,7 +37,7 @@ describe('CartographyController submaps', () => {
         const sceneId = await c.createInterior('p1', 'Hab Block interior');
         expect(sceneId).toBe('sc1');
         const link = c.submapOf('p1');
-        expect(link).toEqual({ scene: 'sc1', sceneName: 'Hab Block interior', entryRegion: 'p3', exitRegion: 'p4' });
+        expect(link).toEqual({ scene: 'sc1', sceneName: 'Hab Block interior', entryRegion: 'p3', exitRegion: 'p4', travel: DEFAULT_TRAVEL });
         const exit = w.regions[0];
         expect(exit?.scene).toBe('sc1');
         expect(exit?.region).toMatchObject({
@@ -53,6 +54,18 @@ describe('CartographyController submaps', () => {
         });
         expect(entrance?.polygon).toHaveLength(4);
         expect(c.getFeature('p1')?.docs.regions).toEqual(['p3']);
+    });
+
+    it('changes how tokens travel both ways: the entrance in place, the exit where the GM left it', async () => {
+        const { c, d, w } = await placed();
+        await c.createInterior('p1', 'Hab Block interior');
+        const travel = { placement: 'center' as const, transition: 'fade', duration: 800, prompt: 'Enter {scene}?' };
+        expect(await c.setSubmapTravel('p1', travel)).toBe(true);
+        expect(c.submapOf('p1')?.travel).toEqual(travel);
+        // The entrance keeps its id and is redrawn in place; the exit's teleport is updated in the interior.
+        expect(d.writes.at(-1)?.regionUpdates).toMatchObject([{ id: 'p3', doc: { behaviour: { travel } } }]);
+        expect(w.teleports).toMatchObject([{ scene: 'sc1', region: { id: 'p4', behaviour: { travel } } }]);
+        expect(await c.setSubmapTravel('nope', travel)).toBe(false);
     });
 
     it('links an existing scene, and relinking removes the old exit first', async () => {

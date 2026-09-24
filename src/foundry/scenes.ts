@@ -7,7 +7,7 @@
 import type { WorldScenes } from '../canvas/controller';
 import type { RegionDoc } from '../tools/documents';
 import { activeScene, worldScene } from './scene-bridge';
-import { regionCreateData, sceneSettingsData } from './translate';
+import { behaviourData, regionCreateData, sceneSettingsData } from './translate';
 
 /** Size of a new interior scene, in grid squares per side; the GM resizes it to suit. */
 const INTERIOR_SQUARES = 20;
@@ -54,6 +54,14 @@ export function createWorldScenes(options: WorldScenesOptions): WorldScenes {
             const onLevel = scene.levels.size > 1 && initial !== null ? { ...data, levels: [initial] } : data;
             await scene.createEmbeddedDocuments('Region', [onLevel], { keepId: true });
             return true;
+        },
+        updateTeleport: async (sceneId, region) => {
+            const live = region.id === null ? undefined : worldScene(sceneId)?.regions.get(region.id);
+            const [planned] = behaviourData(region.behaviour);
+            const behaviour = planned && live?.behaviors.contents.find((b) => b.type === planned.type);
+            if (planned && behaviour) {
+                await behaviour.update({ system: planned.system });
+            }
         },
         updateSettings: async (settings) => {
             await activeScene()?.update(sceneSettingsData(settings));

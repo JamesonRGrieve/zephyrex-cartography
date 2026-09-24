@@ -278,15 +278,15 @@ export function regionUuid(scene: string, region: string): string {
 
 /**
  * A region's native behaviour.
- * - A teleport names its destinations by region UUID. The token keeps its
- *   position relative to the region, and chooses when there is more than one
- *   way to go.
+ * - A teleport names its destinations by region UUID, and travels as its link
+ *   says: where the token lands, the prompt and the scene transition. The
+ *   token chooses when there is more than one way to go.
  * - `changeLevel` has no options in v14: which levels it offers comes from
  *   the region's own level membership.
  * - A floor is a `defineSurface` at the region's bottom that restricts every
  *   sense and movement and occludes what is beneath.
  */
-function behaviourData(behaviour: RegionBehaviour | null): RegionCreateData['behaviors'] {
+export function behaviourData(behaviour: RegionBehaviour | null): RegionCreateData['behaviors'] {
     if (behaviour === null) {
         return [];
     }
@@ -305,7 +305,20 @@ function behaviourData(behaviour: RegionBehaviour | null): RegionCreateData['beh
         return [{ type: 'modifyMovementCost', system: { difficulties: behaviour.difficulties } }];
     }
     const destinations = behaviour.targets.map((target) => regionUuid(target.scene, target.region));
-    return [{ type: 'teleportToken', system: { destinations, placement: 'relative', choice: destinations.length > 1 } }];
+    const { placement, transition, duration, prompt: question } = behaviour.travel;
+    return [
+        {
+            type: 'teleportToken',
+            system: {
+                destinations,
+                placement,
+                choice: destinations.length > 1,
+                // One prompt whether or not the destination is revealed.
+                dialog: { revealed: question, unrevealed: question },
+                transition: { type: transition, duration },
+            },
+        },
+    ];
 }
 
 /** The levels a region sits on: its own, and those it spans; none (every level) for a level-less region. */

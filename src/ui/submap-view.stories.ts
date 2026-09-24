@@ -5,12 +5,15 @@
  * opening the interior is logged.
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
+import type { SubmapTravel } from '../tools/documents';
+import { DEFAULT_TRAVEL } from '../tools/submap';
 import { renderSubmapPanel, type SceneChoice, type SubmapLabels } from './submap-view';
 
 export interface SubmapArgs {
     readonly stampName: string;
     readonly linkedScene: string | null;
     readonly scenes: readonly SceneChoice[];
+    readonly travel: SubmapTravel;
     readonly onOpen: () => void;
 }
 
@@ -24,7 +27,23 @@ const LABELS: SubmapLabels = {
     open: 'Open the interior',
     unlink: 'Unlink',
     noScenes: 'There are no other scenes to link.',
+    travel: {
+        heading: 'Travel',
+        placement: 'Arrive',
+        placements: { relative: 'Where they were', center: 'At the centre', random: 'Anywhere inside' },
+        transition: 'Transition',
+        noTransition: 'None',
+        duration: 'Length (ms)',
+        prompt: 'Prompt ({token}, {region}, {scene})',
+    },
 };
+
+/** Foundry's own scene transitions, as a live world lists them. */
+const TRANSITIONS: readonly (readonly [string, string])[] = [
+    ['fade', 'Fade'],
+    ['swirl', 'Swirl'],
+    ['waterDrop', 'Water Drop'],
+];
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
 export function mountSubmapPanel(args: SubmapArgs): HTMLElement {
@@ -34,8 +53,13 @@ export function mountSubmapPanel(args: SubmapArgs): HTMLElement {
     windowEl.append(root);
     let linked = args.linkedScene;
     let scenes = [...args.scenes];
+    let travel = args.travel;
     const render = (): void => {
-        renderSubmapPanel(root, { stampName: args.stampName, linkedScene: linked, scenes }, LABELS, {
+        renderSubmapPanel(root, { stampName: args.stampName, linkedScene: linked, scenes, travel, transitions: TRANSITIONS }, LABELS, {
+            setTravel: (next) => {
+                travel = next;
+                render();
+            },
             createInterior: () => {
                 linked = `${args.stampName} interior`;
                 scenes = [...scenes, { id: `new-${scenes.length}`, name: linked }];
@@ -67,6 +91,7 @@ const meta: Meta<SubmapArgs> = {
             { id: 'vault', name: 'Vault' },
             { id: 'undercroft', name: 'Undercroft (imported)' },
         ],
+        travel: DEFAULT_TRAVEL,
     },
     argTypes: { onOpen: { action: 'open' } },
 };
@@ -79,6 +104,10 @@ export const NotLinked: Story = {};
 
 export const Linked: Story = {
     args: { linkedScene: 'Vault' },
+};
+
+export const LinkedWithATransition: Story = {
+    args: { linkedScene: 'Vault', travel: { placement: 'center', transition: 'swirl', duration: 2000, prompt: 'Descend into {scene}?' } },
 };
 
 export const NoOtherScenes: Story = {

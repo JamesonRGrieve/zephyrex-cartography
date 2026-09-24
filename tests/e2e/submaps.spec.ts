@@ -49,3 +49,25 @@ test('an enterable stamp opens into a new interior scene, each side teleporting 
         )
         .toEqual({ uuid: result.entranceUuid, count: 1, moved: true, destinations: [result.exitUuid] });
 });
+
+test('a submap’s travel options reach both teleports in place: arrival, transition and prompt', async ({ world }) => {
+    const travel = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const stamp = (await controller?.placeStamp({ stamp: 'zc-e2e-pack:hab', x: 600, y: 600 })) ?? '';
+        const interior = (await controller?.createInterior(stamp, 'Hab interior')) ?? '';
+        // The teleport behaviour of the entrance, here, and of the exit, in the interior.
+        const teleports = (): (RegionBehavior | undefined)[] => [
+            canvas?.scene?.regions.contents[0]?.behaviors.contents[0],
+            game.scenes?.contents.find((scene) => scene.id === interior)?.regions.contents[0]?.behaviors.contents[0],
+        ];
+        const before = teleports().map((behaviour) => behaviour?.id);
+        await controller?.setSubmapTravel(stamp, { placement: 'center', transition: 'fade', duration: 800, prompt: 'Enter {scene}?' });
+        return { before, after: teleports().map((behaviour) => behaviour?.toObject()) };
+    });
+    const expected = { placement: 'center', transition: { type: 'fade', duration: 800 }, dialog: { revealed: 'Enter {scene}?', unrevealed: 'Enter {scene}?' } };
+    // The same behaviours, updated where they are: the GM's exit is not recreated.
+    expect(travel.after).toMatchObject([
+        { _id: travel.before[0], system: expected },
+        { _id: travel.before[1], system: expected },
+    ]);
+});

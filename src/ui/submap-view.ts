@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * The interior panel for an enterable stamp: where it leads, and the ways to
- * give it an interior: create a new scene, or link an existing one (including
- * imported ones). A pure function from a {@link SubmapPanel} to elements;
+ * The interior panel for an enterable stamp: where it leads, the ways to give
+ * it an interior (create a new scene, or link an existing one, imported ones
+ * included), and, once linked, how tokens travel through: where they land,
+ * the scene transition and its length, and the question asked first. A pure function from a {@link SubmapPanel} to elements;
  * unit-tested under happy-dom.
  */
-import { button, el, focusKey, replacePreservingFocus } from './dom';
+import { type SubmapTravel, TRAVEL_PLACEMENTS, type TravelPlacement } from '../tools/documents';
+import { validDuration } from '../tools/submap';
+import { button, choice, el, focusKey, labelledInput, replacePreservingFocus } from './dom';
 
 export interface SceneChoice {
     readonly id: string;
@@ -18,6 +21,21 @@ export interface SubmapPanel {
     readonly linkedScene: string | null;
     /** Scenes that can be linked (every scene but the current one). */
     readonly scenes: readonly SceneChoice[];
+    /** How tokens travel through the link; shown once there is one. */
+    readonly travel: SubmapTravel;
+    /** Foundry's scene transitions (`CONFIG.Canvas.sceneTransitions`), by key and name. */
+    readonly transitions: readonly (readonly [string, string])[];
+}
+
+export interface TravelLabels {
+    readonly heading: string;
+    readonly placement: string;
+    readonly placements: Readonly<Record<TravelPlacement, string>>;
+    readonly transition: string;
+    readonly noTransition: string;
+    readonly duration: string;
+    /** The prompt field, with Foundry's placeholders named in its hint. */
+    readonly prompt: string;
 }
 
 export interface SubmapLabels {
@@ -30,6 +48,7 @@ export interface SubmapLabels {
     readonly open: string;
     readonly unlink: string;
     readonly noScenes: string;
+    readonly travel: TravelLabels;
 }
 
 export interface SubmapHandlers {
@@ -37,6 +56,48 @@ export interface SubmapHandlers {
     readonly link: (sceneId: string) => void;
     readonly open: () => void;
     readonly unlink: () => void;
+    readonly setTravel: (travel: SubmapTravel) => void;
+}
+
+/** The transition select's value standing for "none" (no transition key is empty). */
+const NO_TRANSITION = '';
+
+function travelSection(panel: SubmapPanel, labels: TravelLabels, setTravel: (travel: SubmapTravel) => void): HTMLElement {
+    const { travel } = panel;
+    const section = el('fieldset', 'tw-flex tw-flex-col tw-gap-1');
+    section.append(
+        el('legend', 'tw-text-xs tw-font-bold', labels.heading),
+        choice(
+            'zc-travel-placement',
+            labels.placement,
+            TRAVEL_PLACEMENTS.map((placement) => [placement, labels.placements[placement]] as const),
+            travel.placement,
+            (placement) => {
+                setTravel({ ...travel, placement });
+            },
+        ),
+        choice(
+            'zc-travel-transition',
+            labels.transition,
+            [[NO_TRANSITION, labels.noTransition] as const, ...panel.transitions],
+            travel.transition ?? NO_TRANSITION,
+            (transition) => {
+                setTravel({ ...travel, transition: transition === NO_TRANSITION ? null : transition });
+            },
+        ),
+        labelledInput(labels.duration, 'number', String(travel.duration), 'travel-duration', (typed) => {
+            const duration = validDuration(Number(typed));
+            if (duration !== null) {
+                setTravel({ ...travel, duration });
+            }
+            return duration !== null;
+        }),
+        labelledInput(labels.prompt, 'text', travel.prompt ?? '', 'travel-prompt', (typed) => {
+            setTravel({ ...travel, prompt: typed.trim() === '' ? null : typed });
+            return true;
+        }),
+    );
+    return section;
 }
 
 const SCENE_SELECT_ID = 'zc-submap-scene';
@@ -77,5 +138,6 @@ export function renderSubmapPanel(root: HTMLElement, panel: SubmapPanel, labels:
         actions.append(button('tw-text-xs', labels.open, 'open', handlers.open), button('tw-text-xs', labels.unlink, 'unlink', handlers.unlink));
     }
     actions.append(button('tw-text-xs', labels.createInterior, 'create', handlers.createInterior));
-    replacePreservingFocus(root, [heading, statusLine, actions, linkExisting(panel, labels, handlers)]);
+    const travel = panel.linkedScene === null ? [] : [travelSection(panel, labels.travel, handlers.setTravel)];
+    replacePreservingFocus(root, [heading, statusLine, actions, ...travel, linkExisting(panel, labels, handlers)]);
 }

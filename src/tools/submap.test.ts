@@ -1,8 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { exitRegion, exitSquare, parseSubmapLink, type SubmapLink } from './submap';
+import { DEFAULT_TRAVEL, exitRegion, exitSquare, parseSubmapLink, parseTravel, type SubmapLink, validDuration } from './submap';
 
-const link: SubmapLink = { scene: 'sc1', sceneName: 'Hab interior', entryRegion: 'in1', exitRegion: 'out1' };
+const link: SubmapLink = { scene: 'sc1', sceneName: 'Hab interior', entryRegion: 'in1', exitRegion: 'out1', travel: DEFAULT_TRAVEL };
+
+describe('travel', () => {
+    it('reads a link’s travel field by field over the defaults, and a link from before travel by them', () => {
+        expect(parseTravel({ placement: 'center', transition: 'fade', duration: 800, prompt: 'Go in?' })).toEqual({
+            placement: 'center',
+            transition: 'fade',
+            duration: 800,
+            prompt: 'Go in?',
+        });
+        expect(parseTravel({ placement: 'sideways', transition: '', duration: 50, prompt: '' })).toEqual(DEFAULT_TRAVEL);
+        expect(parseTravel(undefined)).toEqual(DEFAULT_TRAVEL);
+        expect(parseSubmapLink({ scene: 'a', sceneName: 'A', entryRegion: 'i', exitRegion: 'o' })?.travel).toEqual(DEFAULT_TRAVEL);
+        expect([validDuration(500), validDuration(10000), validDuration(499), validDuration(1500.5)]).toEqual([500, 10000, null, null]);
+    });
+
+    it('gives the exit the link’s travel, so both ways go alike', () => {
+        const travel = { ...DEFAULT_TRAVEL, transition: 'fade' };
+        expect(exitRegion({ ...link, travel }, [], 'here', 'Town').behaviour).toMatchObject({ kind: 'teleport', travel });
+    });
+});
 
 describe('exitSquare', () => {
     it('is one grid square at the centre of the scene', () => {
@@ -32,7 +52,7 @@ describe('exitRegion', () => {
             top: null,
             level: null,
             spans: [],
-            behaviour: { kind: 'teleport', targets: [{ scene: 'here', region: 'in1' }] },
+            behaviour: { kind: 'teleport', targets: [{ scene: 'here', region: 'in1' }], travel: DEFAULT_TRAVEL },
         });
     });
 });

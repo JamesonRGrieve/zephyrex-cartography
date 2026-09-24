@@ -182,6 +182,12 @@ class FakeScenes implements WorldScenes {
         await Promise.resolve();
         return this.names.has(sceneId);
     }
+    /** Every teleport updated in another scene, in order. */
+    readonly teleports: { scene: string; region: RegionDoc }[] = [];
+    async updateTeleport(sceneId: string, region: RegionDoc): Promise<void> {
+        this.teleports.push({ scene: sceneId, region });
+        await Promise.resolve();
+    }
     /** Every settings change, in order. */
     readonly settings: SceneSettings[] = [];
     async updateSettings(settings: SceneSettings): Promise<void> {

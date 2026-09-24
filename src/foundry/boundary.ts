@@ -115,6 +115,10 @@ interface TeleportSystem {
     readonly destinations: readonly string[];
     readonly placement: string;
     readonly choice: boolean;
+    /** The question asked before teleporting; null for Foundry's own (14.359 `dialog`). */
+    readonly dialog: { readonly revealed: string | null; readonly unrevealed: string | null };
+    /** A `CONFIG.Canvas.sceneTransitions` key (null: none) and its length in ms. */
+    readonly transition: { readonly type: string | null; readonly duration: number };
 }
 
 /** A surface at the region's bottom, top or both, and what it restricts (v14 `defineSurface`, 14.359). */
@@ -196,6 +200,12 @@ export type BatchOperation =
           readonly parent: FoundryScene;
           readonly updates: readonly (WallCreateData & { readonly _id: string })[];
       }
+    | {
+          readonly action: 'update';
+          readonly documentName: 'RegionBehavior';
+          readonly parent: FoundryRegion;
+          readonly updates: readonly { readonly _id: string; readonly system: RegionBehaviorSystem }[];
+      }
     | { readonly action: 'update'; readonly documentName: 'Region'; readonly parent: FoundryScene; readonly updates: readonly RegionUpdateData[] }
     | {
           readonly action: 'update';
@@ -211,6 +221,28 @@ export type ModifyBatch = (operations: readonly BatchOperation[]) => Promise<unk
 export interface EmbeddedCollection {
     readonly has: (id: string) => boolean;
 }
+
+/* eslint-disable @typescript-eslint/method-signature-style -- see FoundryScene: the live document's methods must stay methods to be assignable */
+/** One of a region's behaviours, as far as updating its settings in place goes. */
+export interface FoundryRegionBehavior {
+    readonly id: string | null;
+    readonly type: string;
+    update(data: { readonly system: RegionBehaviorSystem }): Promise<unknown>;
+}
+/* eslint-enable @typescript-eslint/method-signature-style */
+
+/** A live Region, with its behaviours. */
+export interface FoundryRegion {
+    readonly behaviors: { readonly contents: readonly FoundryRegionBehavior[] };
+}
+
+/** A scene's regions: whether one exists, and the live one by id. */
+export interface RegionCollection extends EmbeddedCollection {
+    readonly get: (id: string) => FoundryRegion | undefined;
+}
+
+/** A generated behaviour's settings. */
+export type RegionBehaviorSystem = RegionCreateData['behaviors'][number]['system'];
 
 /** A native Level document, as far as the level store reads it. */
 export interface NativeLevel {
@@ -246,7 +278,7 @@ export interface FoundryScene {
     readonly lights: EmbeddedCollection;
     readonly sounds: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
-    readonly regions: EmbeddedCollection;
+    readonly regions: RegionCollection;
     readonly levels: { readonly contents: readonly NativeLevel[]; readonly size: number };
     // eslint-disable-next-line no-restricted-syntax -- boundary: a Foundry flag value is arbitrary serialised JSON; getFlag returns unknown by contract and is narrowed at the parse boundary
     getFlag(scope: string, key: string): unknown;

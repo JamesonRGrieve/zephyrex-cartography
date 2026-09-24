@@ -118,7 +118,18 @@
             "Unlink": "Unlink",
             "NoScenes": "There are no other scenes to link.",
             "Hud": "Interior",
-            "DefaultName": "{stamp} interior"
+            "DefaultName": "{stamp} interior",
+            "Travel": "Travel",
+            "Placement": "Arrive",
+            "Placements": {
+                "Relative": "Where they were",
+                "Center": "At the centre",
+                "Random": "Anywhere inside"
+            },
+            "Transition": "Transition",
+            "NoTransition": "None",
+            "Duration": "Length (ms)",
+            "Prompt": "Prompt ({token}, {region}, {scene})"
         },
         "Lights": {
             "Stamp": "{name} light",

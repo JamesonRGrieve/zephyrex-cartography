@@ -13,7 +13,7 @@ import { centroid, nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
-import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type RegionDoc, type TileDoc } from '../tools/documents';
+import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type RegionDoc, type SubmapTravel, type TileDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
@@ -52,7 +52,7 @@ import {
 import { hasSceneSettings, type SceneSettings } from '../tools/scene-settings';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
-import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
+import { DEFAULT_TRAVEL, exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
 import { sameTarget, type SwitchTarget, toggleTarget } from '../tools/switch-targets';
 import { lampVariant, switchOf } from '../tools/switches';
 import { NORMAL_COST, storedCost } from '../tools/terrain-cost';
@@ -94,6 +94,8 @@ export interface WorldScenes {
     /** Create one region in another scene, with the id it names. */
     createRegion: (sceneId: string, region: RegionDoc) => Promise<boolean>;
     deleteRegion: (sceneId: string, regionId: string) => Promise<void>;
+    /** Give a region in another scene the teleport `region` plans, leaving its shape as it is. */
+    updateTeleport: (sceneId: string, region: RegionDoc) => Promise<void>;
     /** Change the current scene's settings: only those given. */
     updateSettings: (settings: SceneSettings) => Promise<void>;
 }
@@ -261,7 +263,7 @@ export class CartographyController {
      * A previous link is undone first. False if the stamp is not enterable, or
      * either scene is missing.
      */
-    async linkSubmap(id: string, sceneId: string): Promise<boolean> {
+    async linkSubmap(id: string, sceneId: string, travel: SubmapTravel = DEFAULT_TRAVEL): Promise<boolean> {
         const stamp = this.enterable(id);
         const here = this.scenes.current();
         const frame = this.scenes.frame(sceneId);
@@ -272,7 +274,7 @@ export class CartographyController {
         if (stamp.submap) {
             await this.scenes.deleteRegion(stamp.submap.scene, stamp.submap.exitRegion);
         }
-        const link: SubmapLink = { scene: sceneId, sceneName, entryRegion: this.makeId(), exitRegion: this.makeId() };
+        const link: SubmapLink = { scene: sceneId, sceneName, entryRegion: this.makeId(), exitRegion: this.makeId(), travel };
         if (!(await this.scenes.createRegion(sceneId, exitRegion(link, exitSquare(frame), here.id, here.name)))) {
             return false;
         }
@@ -287,6 +289,23 @@ export class CartographyController {
         }
         const sceneId = await this.scenes.createScene(sceneName);
         return sceneId !== null && (await this.linkSubmap(id, sceneId)) ? sceneId : null;
+    }
+
+    /**
+     * Change how tokens travel through a stamp's interior link, both ways. The
+     * entrance re-syncs with the stamp; the exit, which the GM may have moved,
+     * is updated where it is. False for a stamp with no link.
+     */
+    async setSubmapTravel(id: string, travel: SubmapTravel): Promise<boolean> {
+        const stamp = this.enterable(id);
+        const here = this.scenes.current();
+        if (!stamp?.submap || !here) {
+            return false;
+        }
+        const link = { ...stamp.submap, travel };
+        await this.replaceFeature(id, { ...stamp, submap: link });
+        await this.scenes.updateTeleport(link.scene, exitRegion(link, [], here.id, here.name));
+        return true;
     }
 
     /** Remove a stamp's interior link and both of its regions (the interior scene itself is kept). */

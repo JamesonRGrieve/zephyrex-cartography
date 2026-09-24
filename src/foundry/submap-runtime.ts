@@ -9,12 +9,13 @@ import type { CartographyController, StampCatalog } from '../canvas/controller';
 import { I18N } from '../i18n';
 import { MODULE_ID } from '../module-id';
 import { isRecord, stringOrNull } from '../tools/guards';
+import { DEFAULT_TRAVEL } from '../tools/submap';
 import { renderSubmapPanel, type SubmapLabels } from '../ui/submap-view';
 import { format, localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 420;
-const PANEL_HEIGHT = 300;
+const PANEL_HEIGHT = 460;
 
 function labels(): SubmapLabels {
     const s = I18N.submap;
@@ -28,7 +29,29 @@ function labels(): SubmapLabels {
         open: localize(s.open),
         unlink: localize(s.unlink),
         noScenes: localize(s.noScenes),
+        travel: {
+            heading: localize(s.travel),
+            placement: localize(s.placement),
+            placements: { relative: localize(s.placements.relative), center: localize(s.placements.center), random: localize(s.placements.random) },
+            transition: localize(s.transition),
+            noTransition: localize(s.noTransition),
+            duration: localize(s.duration),
+            prompt: localize(s.prompt),
+        },
     };
+}
+
+/** Foundry's scene transitions (`CONFIG.Canvas.sceneTransitions`, 14.359), by key and their own localised name. */
+function sceneTransitions(): [string, string][] {
+    // eslint-disable-next-line no-restricted-syntax -- boundary: fvtt-types does not declare CONFIG.Canvas.sceneTransitions; it is read and narrowed here
+    const transitions: unknown = Reflect.get(CONFIG.Canvas, 'sceneTransitions');
+    if (!isRecord(transitions)) {
+        return [];
+    }
+    return Object.entries(transitions).map(([key, transition]) => {
+        const label = isRecord(transition) ? stringOrNull(transition['label']) : null;
+        return [key, localize(label ?? `SCENE.Transition.Types.${key}`)];
+    });
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: a tile's flags are arbitrary JSON; reads the owning feature id we wrote
@@ -66,7 +89,17 @@ export function registerSubmapRuntime(controller: () => CartographyController | 
                     panel.refresh();
                 })();
             };
-            renderSubmapPanel(root, { stampName: stampName(active, id), linkedScene: link?.sceneName ?? null, scenes }, labels(), {
+            const panelState = {
+                stampName: stampName(active, id),
+                linkedScene: link?.sceneName ?? null,
+                scenes,
+                travel: link?.travel ?? DEFAULT_TRAVEL,
+                transitions: sceneTransitions(),
+            };
+            renderSubmapPanel(root, panelState, labels(), {
+                setTravel: (travel) => {
+                    run(async () => active.setSubmapTravel(id, travel));
+                },
                 createInterior: () => {
                     run(async () => active.createInterior(id, format(I18N.submap.defaultName, { stamp: stampName(active, id) })));
                 },

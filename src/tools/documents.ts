@@ -177,6 +177,26 @@ type RegionLabel =
     | { readonly kind: 'floor'; readonly level: string }
     | { readonly kind: 'stamp-terrain' | 'stamp-surface'; readonly name: string };
 
+/** Where a teleported token lands in the region it arrives in (v14 `teleportToken` placement). */
+export const TRAVEL_PLACEMENTS = ['relative', 'center', 'random'] as const;
+
+export type TravelPlacement = (typeof TRAVEL_PLACEMENTS)[number];
+
+/**
+ * How a token goes through a teleport: where it lands, the scene transition
+ * it sees on the way (a `CONFIG.Canvas.sceneTransitions` key, or null for
+ * none) and how long that takes, and the question it is asked before going
+ * (null: Foundry's own). Foundry fills `{token}`, `{region}` and `{scene}` in
+ * the prompt.
+ */
+export interface SubmapTravel {
+    readonly placement: TravelPlacement;
+    readonly transition: string | null;
+    /** Milliseconds, 500–10000 as Foundry takes it. */
+    readonly duration: number;
+    readonly prompt: string | null;
+}
+
 /** Where a teleport leads: a region in any scene, by id (a submap's other side). */
 interface RegionTarget {
     readonly scene: string;
@@ -195,7 +215,7 @@ interface RegionTarget {
  *   below cannot be seen or walked through.
  */
 export type RegionBehaviour =
-    | { readonly kind: 'teleport'; readonly targets: readonly RegionTarget[] }
+    | { readonly kind: 'teleport'; readonly targets: readonly RegionTarget[]; readonly travel: SubmapTravel }
     | { readonly kind: 'changeLevel' }
     /** A Define Surface at the region's bottom, top or both that restricts everything; `reveal` is Foundry's Reveal Elevated Surface. */
     | { readonly kind: 'surface'; readonly placement: 'bottom' | 'top' | 'both'; readonly reveal: boolean }

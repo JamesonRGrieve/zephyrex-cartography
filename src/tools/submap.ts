@@ -8,7 +8,7 @@
  * teleport valid. Pure and unit-tested.
  */
 import type { Point } from '../geometry/spline';
-import type { RegionDoc } from './documents';
+import { type RegionDoc, type SubmapTravel, TRAVEL_PLACEMENTS, type TravelPlacement } from './documents';
 import { isRecord } from './guards';
 
 export interface SubmapLink {
@@ -20,6 +20,39 @@ export interface SubmapLink {
     readonly entryRegion: string;
     /** Id of the exit region in the interior scene. */
     readonly exitRegion: string;
+    /** How tokens travel between the two, both ways. */
+    readonly travel: SubmapTravel;
+}
+
+/** A new link's travel: land where the token was relative to the entrance, no transition, Foundry's prompt. */
+export const DEFAULT_TRAVEL: SubmapTravel = { placement: 'relative', transition: null, duration: 1500, prompt: null };
+
+const MIN_TRANSITION_MS = 500;
+const MAX_TRANSITION_MS = 10000;
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows a persisted travel placement or a select's value
+export function isTravelPlacement(v: unknown): v is TravelPlacement {
+    return TRAVEL_PLACEMENTS.some((placement) => placement === v);
+}
+
+/** A transition length Foundry takes, or null. */
+export function validDuration(ms: number): number | null {
+    return Number.isInteger(ms) && ms >= MIN_TRANSITION_MS && ms <= MAX_TRANSITION_MS ? ms : null;
+}
+
+/** A persisted travel, field by field over the defaults (a link from before travel options travels by them). */
+// eslint-disable-next-line no-restricted-syntax -- boundary: parses a persisted submap travel from scene-flag JSON
+export function parseTravel(v: unknown): SubmapTravel {
+    if (!isRecord(v)) {
+        return DEFAULT_TRAVEL;
+    }
+    const { placement, transition, duration, prompt: question } = v;
+    return {
+        placement: isTravelPlacement(placement) ? placement : DEFAULT_TRAVEL.placement,
+        transition: typeof transition === 'string' && transition !== '' ? transition : null,
+        duration: (typeof duration === 'number' ? validDuration(duration) : null) ?? DEFAULT_TRAVEL.duration,
+        prompt: typeof question === 'string' && question !== '' ? question : null,
+    };
 }
 
 /** The interior scene's playable rectangle and grid, where its exit region goes. */
@@ -54,7 +87,7 @@ export function exitRegion(link: SubmapLink, polygon: readonly Point[], originSc
         top: null,
         level: null,
         spans: [],
-        behaviour: { kind: 'teleport', targets: [{ scene: originScene, region: link.entryRegion }] },
+        behaviour: { kind: 'teleport', targets: [{ scene: originScene, region: link.entryRegion }], travel: link.travel },
     };
 }
 
@@ -65,6 +98,6 @@ export function parseSubmapLink(v: unknown): SubmapLink | null {
     }
     const { scene, sceneName, entryRegion, exitRegion: exit } = v;
     return typeof scene === 'string' && typeof sceneName === 'string' && typeof entryRegion === 'string' && typeof exit === 'string'
-        ? { scene, sceneName, entryRegion, exitRegion: exit }
+        ? { scene, sceneName, entryRegion, exitRegion: exit, travel: parseTravel(v['travel']) }
         : null;
 }
