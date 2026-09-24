@@ -762,8 +762,13 @@ These make everything after them cheaper and safer, so they come first.
   and a region redrawn in place now updates its live behaviours' settings.
   The exit, which the GM may have moved, is updated in the interior, not
   recreated.
-  - **Still open:** `avoidOccupied`, which is not in the 14.359 schema.
-    Build it against a newer reference release.
+  - **[done] Snap and Revealed** (14.368 `snap`, `revealed`): whether the
+    token snaps to the grid where it lands (Foundry's default, on) and
+    whether players see where the way leads (off). The Travel section sets
+    both, in Foundry's own field labels.
+  - `avoidOccupied` is not a Teleport Token option in 14.368. The behaviour
+    teleports through `RegionDocument#teleportTokens` with its default, which
+    already avoids occupied grid spaces, so there is nothing to expose.
 - **[done] Spawn regions.** Any area (painted ground, a room or a zone) can
   carry a `spawn` (`tools/spawn.ts`), for encounters and reinforcements.
   - It lists actors by UUID, each with a count (1–50), and how Foundry

@@ -32,6 +32,8 @@ const LABELS: SubmapLabels = {
         heading: 'Travel',
         placement: 'Arrive',
         placements: { relative: 'Where they were', center: 'At the centre', random: 'Anywhere inside' },
+        snap: 'Snap',
+        revealed: 'Revealed',
         transition: 'Transition',
         noTransition: 'None',
         duration: 'Length (ms)',
@@ -126,7 +128,10 @@ export const Linked: Story = {
 };
 
 export const LinkedWithATransition: Story = {
-    args: { linkedScene: 'Vault', travel: { placement: 'center', transition: 'swirl', duration: 2000, prompt: 'Descend into {scene}?' } },
+    args: {
+        linkedScene: 'Vault',
+        travel: { placement: 'center', snap: true, revealed: true, transition: 'swirl', duration: 2000, prompt: 'Descend into {scene}?' },
+    },
 };
 
 export const FloorsInThisScene: Story = {

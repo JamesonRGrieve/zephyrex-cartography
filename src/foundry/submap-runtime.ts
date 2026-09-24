@@ -33,6 +33,9 @@ function labels(): SubmapLabels {
             heading: localize(s.travel),
             placement: localize(s.placement),
             placements: { relative: localize(s.placements.relative), center: localize(s.placements.center), random: localize(s.placements.random) },
+            // Foundry's own Teleport Token field labels.
+            snap: localize('BEHAVIOR.TYPES.teleportToken.FIELDS.snap.label'),
+            revealed: localize('BEHAVIOR.TYPES.teleportToken.FIELDS.revealed.label'),
             transition: localize(s.transition),
             noTransition: localize(s.noTransition),
             duration: localize(s.duration),

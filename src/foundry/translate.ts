@@ -424,8 +424,9 @@ export function regionUuid(scene: string, region: string): string {
 /**
  * A region's native behaviour.
  * - A teleport names its destinations by region UUID, and travels as its link
- *   says: where the token lands, the prompt and the scene transition. The
- *   token chooses when there is more than one way to go.
+ *   says: where the token lands and whether it snaps there, whether players
+ *   see where it leads, the prompt and the scene transition. The token
+ *   chooses when there is more than one way to go.
  * - `changeLevel`: which levels it offers comes from the region's own level
  *   membership; its movement actions are the ones that take it (none: any,
  *   `movementActions` since 14.361).
@@ -451,14 +452,16 @@ export function behaviourData(behaviour: RegionBehaviour | null): RegionCreateDa
         return [{ type: 'modifyMovementCost', system: { difficulties: behaviour.difficulties } }];
     }
     const destinations = behaviour.targets.map((target) => regionUuid(target.scene, target.region));
-    const { placement, transition, duration, prompt: question } = behaviour.travel;
+    const { placement, snap, revealed, transition, duration, prompt: question } = behaviour.travel;
     return [
         {
             type: 'teleportToken',
             system: {
                 destinations,
                 placement,
+                snap,
                 choice: destinations.length > 1,
+                revealed,
                 // One prompt whether or not the destination is revealed.
                 dialog: { revealed: question, unrevealed: question },
                 transition: { type: transition, duration },

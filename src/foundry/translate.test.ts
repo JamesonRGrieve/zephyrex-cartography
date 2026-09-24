@@ -659,7 +659,7 @@ describe('regionCreateData', () => {
                     { scene: 'hab', region: 'a' },
                     { scene: 'hab', region: 'b' },
                 ],
-                travel: { placement: 'center', transition: 'swirl', duration: 2000, prompt: 'Enter {scene}?' },
+                travel: { placement: 'center', snap: false, revealed: true, transition: 'swirl', duration: 2000, prompt: 'Enter {scene}?' },
             },
         };
         expect(regionCreateData([many], ['r3'], CONTEXT)[0]?.behaviors).toEqual([
@@ -668,7 +668,9 @@ describe('regionCreateData', () => {
                 system: {
                     destinations: ['Scene.hab.Region.a', 'Scene.hab.Region.b'],
                     placement: 'center',
+                    snap: false,
                     choice: true,
+                    revealed: true,
                     dialog: { revealed: 'Enter {scene}?', unrevealed: 'Enter {scene}?' },
                     transition: { type: 'swirl', duration: 2000 },
                 },
@@ -692,7 +694,9 @@ describe('regionCreateData', () => {
         expect(data?.behaviors[0]?.system).toEqual({
             destinations: ['Scene.hab.Region.out1'],
             placement: 'relative',
+            snap: true,
             choice: false,
+            revealed: false,
             dialog: { revealed: null, unrevealed: null },
             transition: { type: null, duration: 1500 },
         });

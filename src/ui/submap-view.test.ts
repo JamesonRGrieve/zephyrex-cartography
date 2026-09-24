@@ -96,13 +96,28 @@ describe('interior panel', () => {
         };
         change(select('zc-travel-transition'), '');
         expect(select('zc-travel-transition').value).toBe('');
-        const inputs = (): HTMLInputElement[] => [...root.querySelectorAll<HTMLInputElement>('fieldset input')];
+        const inputs = (): HTMLInputElement[] => [...root.querySelectorAll<HTMLInputElement>('fieldset input:not([type="checkbox"])')];
         expect(inputs().map((i) => i.value)).toEqual(['2000', 'Descend into {scene}?']);
         const [duration] = inputs();
         if (duration) {
             change(duration, '100');
         }
         expect(inputs()[0]?.value).toBe('2000');
+    });
+
+    it('sets whether a token snaps where it lands, and whether players see where the way leads', () => {
+        const root = mount(stories.LinkedWithATransition.args);
+        const box = (label: string): HTMLInputElement => {
+            const found = [...root.querySelectorAll('label')].find((l) => l.textContent === label)?.querySelector('input');
+            if (!found) {
+                throw new Error(`no checkbox ${label}`);
+            }
+            return found;
+        };
+        expect([box('Snap').checked, box('Revealed').checked]).toEqual([true, true]);
+        box('Snap').click();
+        box('Revealed').click();
+        expect([box('Snap').checked, box('Revealed').checked]).toEqual([false, false]);
     });
 
     it('offers floors in this scene instead: adds as many as asked, lists them, and removes the stairs', () => {

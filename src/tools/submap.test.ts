@@ -6,13 +6,15 @@ const link: SubmapLink = { scene: 'sc1', sceneName: 'Hab interior', entryRegion:
 
 describe('travel', () => {
     it('reads a link’s travel field by field over the defaults, and a link from before travel by them', () => {
-        expect(parseTravel({ placement: 'center', transition: 'fade', duration: 800, prompt: 'Go in?' })).toEqual({
+        expect(parseTravel({ placement: 'center', snap: false, revealed: true, transition: 'fade', duration: 800, prompt: 'Go in?' })).toEqual({
             placement: 'center',
+            snap: false,
+            revealed: true,
             transition: 'fade',
             duration: 800,
             prompt: 'Go in?',
         });
-        expect(parseTravel({ placement: 'sideways', transition: '', duration: 50, prompt: '' })).toEqual(DEFAULT_TRAVEL);
+        expect(parseTravel({ placement: 'sideways', snap: 'yes', revealed: 1, transition: '', duration: 50, prompt: '' })).toEqual(DEFAULT_TRAVEL);
         expect(parseTravel(undefined)).toEqual(DEFAULT_TRAVEL);
         expect(parseSubmapLink({ scene: 'a', sceneName: 'A', entryRegion: 'i', exitRegion: 'o' })?.travel).toEqual(DEFAULT_TRAVEL);
         expect([validDuration(500), validDuration(10000), validDuration(499), validDuration(1500.5)]).toEqual([500, 10000, null, null]);

@@ -24,8 +24,11 @@ export interface SubmapLink {
     readonly travel: SubmapTravel;
 }
 
-/** A new link's travel: land where the token was relative to the entrance, no transition, Foundry's prompt. */
-export const DEFAULT_TRAVEL: SubmapTravel = { placement: 'relative', transition: null, duration: 1500, prompt: null };
+/**
+ * A new link's travel: land where the token was relative to the entrance,
+ * snapped, the way unrevealed, no transition, Foundry's prompt.
+ */
+export const DEFAULT_TRAVEL: SubmapTravel = { placement: 'relative', snap: true, revealed: false, transition: null, duration: 1500, prompt: null };
 
 const MIN_TRANSITION_MS = 500;
 const MAX_TRANSITION_MS = 10000;
@@ -46,9 +49,11 @@ export function parseTravel(v: unknown): SubmapTravel {
     if (!isRecord(v)) {
         return DEFAULT_TRAVEL;
     }
-    const { placement, transition, duration, prompt: question } = v;
+    const { placement, snap, revealed, transition, duration, prompt: question } = v;
     return {
         placement: isTravelPlacement(placement) ? placement : DEFAULT_TRAVEL.placement,
+        snap: typeof snap === 'boolean' ? snap : DEFAULT_TRAVEL.snap,
+        revealed: typeof revealed === 'boolean' ? revealed : DEFAULT_TRAVEL.revealed,
         transition: typeof transition === 'string' && transition !== '' ? transition : null,
         duration: (typeof duration === 'number' ? validDuration(duration) : null) ?? DEFAULT_TRAVEL.duration,
         prompt: typeof question === 'string' && question !== '' ? question : null,

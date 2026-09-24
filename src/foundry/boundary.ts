@@ -116,7 +116,11 @@ interface TileUpdateData extends TileCreateData {
 interface TeleportSystem {
     readonly destinations: readonly string[];
     readonly placement: string;
+    /** Snap the landing position to the grid. */
+    readonly snap: boolean;
     readonly choice: boolean;
+    /** Show players where it leads. */
+    readonly revealed: boolean;
     /** The question asked before teleporting; null for Foundry's own (14.359 `dialog`). */
     readonly dialog: { readonly revealed: string | null; readonly unrevealed: string | null };
     /** A `CONFIG.Canvas.sceneTransitions` key (null: none) and its length in ms. */

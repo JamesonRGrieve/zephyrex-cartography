@@ -59,7 +59,7 @@ describe('CartographyController submaps', () => {
     it('changes how tokens travel both ways: the entrance in place, the exit where the GM left it', async () => {
         const { c, d, w } = await placed();
         await c.createInterior('p1', 'Hab Block interior');
-        const travel = { placement: 'center' as const, transition: 'fade', duration: 800, prompt: 'Enter {scene}?' };
+        const travel = { placement: 'center' as const, snap: false, revealed: true, transition: 'fade', duration: 800, prompt: 'Enter {scene}?' };
         expect(await c.setSubmapTravel('p1', travel)).toBe(true);
         expect(c.submapOf('p1')?.travel).toEqual(travel);
         // The entrance keeps its id and is redrawn in place; the exit's teleport is updated in the interior.

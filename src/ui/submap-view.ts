@@ -2,15 +2,16 @@
 /**
  * The interior panel for an enterable stamp: where it leads, the ways to give
  * it an interior (create a new scene, or link an existing one, imported ones
- * included), and, once linked, how tokens travel through: where they land,
- * the scene transition and its length, and the question asked first. Or,
+ * included), and, once linked, how tokens travel through: where they land and
+ * whether they snap there, whether players see where it leads, the scene
+ * transition and its length, and the question asked first. Or,
  * instead, its floors in this scene: Levels above it, reached by stairs. A
  * pure function from a {@link SubmapPanel} to elements; unit-tested under
  * happy-dom.
  */
 import { type SubmapTravel, TRAVEL_PLACEMENTS, type TravelPlacement } from '../tools/documents';
 import { validDuration } from '../tools/submap';
-import { button, choice, el, focusKey, labelledInput, replacePreservingFocus } from './dom';
+import { button, choice, el, focusKey, labelledCheckbox, labelledInput, replacePreservingFocus } from './dom';
 
 export interface SceneChoice {
     readonly id: string;
@@ -44,6 +45,8 @@ interface TravelLabels {
     readonly heading: string;
     readonly placement: string;
     readonly placements: Readonly<Record<TravelPlacement, string>>;
+    readonly snap: string;
+    readonly revealed: string;
     readonly transition: string;
     readonly noTransition: string;
     readonly duration: string;
@@ -120,6 +123,12 @@ function travelSection(panel: SubmapPanel, labels: TravelLabels, setTravel: (tra
                 setTravel({ ...travel, placement });
             },
         ),
+        labelledCheckbox(labels.snap, travel.snap, 'travel-snap', (snap) => {
+            setTravel({ ...travel, snap });
+        }),
+        labelledCheckbox(labels.revealed, travel.revealed, 'travel-revealed', (revealed) => {
+            setTravel({ ...travel, revealed });
+        }),
         choice(
             'zc-travel-transition',
             labels.transition,

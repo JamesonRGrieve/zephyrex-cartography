@@ -62,10 +62,23 @@ test('a submap’s travel options reach both teleports in place: arrival, transi
             game.scenes?.contents.find((scene) => scene.id === interior)?.regions.contents[0]?.behaviors.contents[0],
         ];
         const before = teleports().map((behaviour) => behaviour?.id);
-        await controller?.setSubmapTravel(stamp, { placement: 'center', transition: 'fade', duration: 800, prompt: 'Enter {scene}?' });
+        await controller?.setSubmapTravel(stamp, {
+            placement: 'center',
+            snap: false,
+            revealed: true,
+            transition: 'fade',
+            duration: 800,
+            prompt: 'Enter {scene}?',
+        });
         return { before, after: teleports().map((behaviour) => behaviour?.toObject()) };
     });
-    const expected = { placement: 'center', transition: { type: 'fade', duration: 800 }, dialog: { revealed: 'Enter {scene}?', unrevealed: 'Enter {scene}?' } };
+    const expected = {
+        placement: 'center',
+        snap: false,
+        revealed: true,
+        transition: { type: 'fade', duration: 800 },
+        dialog: { revealed: 'Enter {scene}?', unrevealed: 'Enter {scene}?' },
+    };
     // The same behaviours, updated where they are: the GM's exit is not recreated.
     expect(travel.after).toMatchObject([
         { _id: travel.before[0], system: expected },

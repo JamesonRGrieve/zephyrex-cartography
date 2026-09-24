@@ -200,6 +200,10 @@ export type TravelPlacement = (typeof TRAVEL_PLACEMENTS)[number];
  */
 export interface SubmapTravel {
     readonly placement: TravelPlacement;
+    /** Snap the landing position to the grid (Foundry's default). */
+    readonly snap: boolean;
+    /** Show players where it leads, as Foundry's "Revealed"; hidden by default. */
+    readonly revealed: boolean;
     readonly transition: string | null;
     /** Milliseconds, 500–10000 as Foundry takes it. */
     readonly duration: number;
