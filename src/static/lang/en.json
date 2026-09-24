@@ -56,7 +56,9 @@
                 "Blend": "Blend",
                 "Unblend": "Unblend"
             },
-            "Strength": "Strength (0.05–1)"
+            "Strength": "Strength (0.05–1)",
+            "Bake": "Bake into a tile",
+            "Unbake": "Unbake to edit"
         },
         "Paths": {
             "Title": "Roads and rivers",
@@ -73,6 +75,9 @@
                 "Poison": "Poison",
                 "Acid": "Acid"
             }
+        },
+        "Splats": {
+            "Baked": "Painted blend (baked)"
         },
         "Labels": {
             "Title": "Map label",

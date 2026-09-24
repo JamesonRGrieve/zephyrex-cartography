@@ -60,6 +60,36 @@ const PENDING_TILE = 256;
 interface Drawn {
     readonly mesh: PIXI.Mesh<PIXI.Shader>;
     readonly mask: PIXI.BaseTexture;
+    readonly layer: SplatLayer;
+}
+
+/** Longest side of a baked image, in pixels: a large scene bakes at reduced resolution. */
+const MAX_BAKE_SIDE = 4096;
+
+/**
+ * `drawn`'s blend rendered over its scene rectangle as PNG bytes. It renders a
+ * copy of the mesh with no parent: a drawn mesh would carry the canvas's pan
+ * and zoom into the image.
+ */
+async function snapshotOf(drawn: Drawn): Promise<Uint8Array<ArrayBuffer> | null> {
+    const renderer = canvas?.app?.renderer;
+    if (!renderer) {
+        return null;
+    }
+    const { x, y, width, height } = drawn.layer.bounds;
+    const loose = new PIXI.Mesh(drawn.mesh.geometry, drawn.mesh.shader);
+    const texture = renderer.generateTexture(loose, {
+        region: new PIXI.Rectangle(x, y, width, height),
+        resolution: Math.min(1, MAX_BAKE_SIDE / Math.max(width, height)),
+    });
+    try {
+        const url = await renderer.extract.base64(texture, 'image/png');
+        return new Uint8Array(await (await fetch(url)).arrayBuffer());
+    } finally {
+        texture.destroy(true);
+        // The copy shares the drawn mesh's geometry and shader, which stay.
+        loose.destroy();
+    }
 }
 
 function rgb(colour: number): [number, number, number] {
@@ -140,11 +170,15 @@ export function createSplatRenderer(container: PIXI.Container, resolve: TextureR
             const mesh = new PIXI.Mesh(geometry, new PIXI.Shader(program, uniforms));
             // Beneath the painted terrain and paths, above the scene's own background.
             container.addChildAt(mesh, 0);
-            drawn.set(key, { mesh, mask });
+            drawn.set(key, { mesh, mask, layer });
         },
         update: (key) => {
             drawn.get(key)?.mask.update();
         },
         remove,
+        snapshot: async (key) => {
+            const shown = drawn.get(key);
+            return shown ? snapshotOf(shown) : null;
+        },
     };
 }

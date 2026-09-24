@@ -825,7 +825,17 @@ option**: a splat map, as in Dungeondraft and Inkarnate.
       the masks as they were into its entry (`steps`).
     - The decoder reads RGB too, its fourth channel weighting nothing.
     - A mask that cannot be read is reported as a `splat` problem.
-  - **Still open:** baking to a native Tile or Level background, and
+  - **[done] Baking into a Tile.** The paint panel's Bake button (shown
+    while blending) renders the level's blend into a PNG beside its mask.
+    - The render uses an unparented copy of the mesh over the scene rect, so
+      the canvas's pan and zoom stay out of the image. It is capped at 4096
+      px a side.
+    - The image becomes a native Tile over the scene on that level, beneath
+      other tiles (`sort` -1). The layer records the Tile's id (`baked`),
+      and the overlay stops drawing, so the map renders without the module.
+    - Blending again, Unbake, or an undo takes the blend back live and
+      deletes the Tile. A bake is not an undo step.
+  - **Still open:** baking into a Level background instead of a Tile, and
     layering more than one mask per level.
 
 ---

@@ -14,6 +14,7 @@ export interface PaintArgs {
     readonly movementCost: number;
     readonly mode: PaintMode;
     readonly strength: number;
+    readonly baked: boolean | null;
 }
 
 const LABELS: PaintLabels = {
@@ -23,6 +24,8 @@ const LABELS: PaintLabels = {
     mode: 'Brush',
     modes: { shapes: 'Areas and strokes', blend: 'Blend', unblend: 'Unblend' },
     strength: 'Strength (0.05–1)',
+    bake: 'Bake into a tile',
+    unbake: 'Unbake to edit',
 };
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
@@ -31,7 +34,7 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
     windowEl.className = 'zephyrex-cartography zc-story-window';
     const root = document.createElement('div');
     windowEl.append(root);
-    let state = { biome: args.biome, radius: args.radius, movementCost: args.movementCost, mode: args.mode, strength: args.strength };
+    let state = { biome: args.biome, radius: args.radius, movementCost: args.movementCost, mode: args.mode, strength: args.strength, baked: args.baked };
     const choose = (next: Partial<typeof state>): void => {
         state = { ...state, ...next };
         render();
@@ -57,6 +60,9 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
                 choose({ mode });
             },
             setStrength: accept(parseStrength, (strength) => ({ strength })),
+            toggleBake: () => {
+                choose({ baked: state.baked === null ? null : !state.baked });
+            },
         });
     }
     render();
@@ -82,7 +88,7 @@ const meta: Meta<PaintArgs> = {
     title: 'Terrain/Paint Panel',
     excludeStories: ['mountPaintPanel'],
     render: mountPaintPanel,
-    args: { choices: TEXTURED, biome: 'grassland', radius: 25, movementCost: 1, mode: 'shapes', strength: DEFAULT_STRENGTH },
+    args: { choices: TEXTURED, biome: 'grassland', radius: 25, movementCost: 1, mode: 'shapes', strength: DEFAULT_STRENGTH, baked: null },
 };
 
 export default meta;
@@ -100,7 +106,11 @@ export const DifficultMarsh: Story = {
 };
 
 export const BlendingSand: Story = {
-    args: { biome: 'sand', mode: 'blend', radius: 60, strength: 0.5 },
+    args: { biome: 'sand', mode: 'blend', radius: 60, strength: 0.5, baked: false },
+};
+
+export const BakedBlend: Story = {
+    args: { biome: 'sand', mode: 'blend', baked: true },
 };
 
 export const NoTextureSet: Story = {

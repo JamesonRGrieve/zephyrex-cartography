@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { blankMask, channelFor, maskLength, maskPoint, newSplatLayer, paintDab, parseSplatLayers, parseStrength, type SplatLayer } from './splat';
+import {
+    bakedImagePath,
+    blankMask,
+    channelFor,
+    maskLength,
+    maskPoint,
+    newSplatLayer,
+    paintDab,
+    parseSplatLayers,
+    parseStrength,
+    type SplatLayer,
+} from './splat';
 
 const SCENE = { x: 100, y: 100, width: 2000, height: 1000 };
 
@@ -87,7 +98,21 @@ describe('parseSplatLayers', () => {
         expect(parseSplatLayers([{ path: 'p', bounds: { x: 0, y: 0, width: 0, height: 5 }, width: 1, height: 1, roles: [] }, 'junk', { path: 3 }])).toEqual([]);
         expect(parseSplatLayers(null)).toEqual([]);
         expect(parseSplatLayers([{ path: 'p', bounds: { width: 5, height: 5 }, width: 2, height: 2, roles: [], level: 7 }])).toEqual([
-            { level: null, path: 'p', bounds: { x: 0, y: 0, width: 5, height: 5 }, width: 2, height: 2, roles: [null, null, null, null] },
+            { level: null, path: 'p', bounds: { x: 0, y: 0, width: 5, height: 5 }, width: 2, height: 2, roles: [null, null, null, null], baked: null },
         ]);
+    });
+
+    it('keeps the Tile a layer is baked into, and reads an older layer as not baked', () => {
+        const baked = JSON.parse(JSON.stringify([{ ...layer(), baked: 'tile1' }]));
+        expect(parseSplatLayers(baked)[0]?.baked).toBe('tile1');
+        expect(parseSplatLayers([{ ...layer(), baked: undefined }])[0]?.baked).toBeNull();
+        expect(parseSplatLayers([{ ...layer(), baked: '' }])[0]?.baked).toBeNull();
+    });
+});
+
+describe('bakedImagePath', () => {
+    it('saves the baked image beside the mask', () => {
+        expect(bakedImagePath(layer())).toBe('worlds/w/zephyrex-cartography/splat-lv1-baked.png');
+        expect(bakedImagePath({ ...layer(), path: 'masks/odd' })).toBe('masks/odd-baked.png');
     });
 });

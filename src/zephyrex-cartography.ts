@@ -81,17 +81,27 @@ const labels = registerLabelRuntime(() => state?.controller ?? null);
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
 // A new brush size is the next stroke's; a new texture is picked up at once by a paint tool in hand.
-const paint = registerPaintRuntime(packs.textures, (settings) => {
-    if (!state) {
-        return;
-    }
-    state.controller.brushRadius = settings.radius;
-    state.controller.movementCost = settings.movementCost;
-    const { mode } = state;
-    if (mode.kind === 'brush' && mode.brush.type === 'region' && mode.brush.biome !== settings.biome) {
-        enterMode(state, toolMode('paint', true));
-    }
-});
+const paint = registerPaintRuntime(
+    packs.textures,
+    (settings) => {
+        if (!state) {
+            return;
+        }
+        state.controller.brushRadius = settings.radius;
+        state.controller.movementCost = settings.movementCost;
+        const { mode } = state;
+        if (mode.kind === 'brush' && mode.brush.type === 'region' && mode.brush.biome !== settings.biome) {
+            enterMode(state, toolMode('paint', true));
+        }
+    },
+    {
+        baked: () => state?.controller.splatBaked() ?? null,
+        toggle: async () => {
+            const controller = state?.controller;
+            await (controller?.splatBaked() === true ? controller.unbakeSplat() : controller?.bakeSplat());
+        },
+    },
+);
 
 /** Put the road and river panel's width and river look in the controller's hand for the next path. */
 function applyPathSettings(controller: CartographyController, settings: PathSettings): void {

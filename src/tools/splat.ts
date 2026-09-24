@@ -34,6 +34,11 @@ export interface SplatLayer {
     readonly width: number;
     readonly height: number;
     readonly roles: SplatRoles;
+    /**
+     * The native Tile the blend is baked into, by id, so it renders without
+     * the module; null while it is not. A baked blend's overlay is not drawn.
+     */
+    readonly baked: string | null;
 }
 
 /**
@@ -68,7 +73,12 @@ const NO_ROLES: SplatRoles = [null, null, null, null];
 export function newSplatLayer(level: string | null, path: string, bounds: SceneRect, gridSize: number): SplatLayer {
     const scale = gridSize > 0 ? MASK_PX_PER_SQUARE / gridSize : 1;
     const side = (span: number): number => Math.max(1, Math.min(MAX_MASK_SIDE, Math.ceil(span * scale)));
-    return { level, path, bounds, width: side(bounds.width), height: side(bounds.height), roles: NO_ROLES };
+    return { level, path, bounds, width: side(bounds.width), height: side(bounds.height), roles: NO_ROLES, baked: null };
+}
+
+/** Where a layer's baked image is saved: beside its mask. */
+export function bakedImagePath(layer: SplatLayer): string {
+    return layer.path.endsWith('.png') ? `${layer.path.slice(0, -'.png'.length)}-baked.png` : `${layer.path}-baked.png`;
 }
 
 /** An all-zero mask for `layer`: nothing painted. */
@@ -186,6 +196,7 @@ export function parseSplatLayers(v: unknown): SplatLayer[] {
         }
         const roles = entry['roles'];
         const level = entry['level'];
+        const baked = entry['baked'];
         return [
             {
                 level: typeof level === 'string' ? level : null,
@@ -194,6 +205,8 @@ export function parseSplatLayers(v: unknown): SplatLayer[] {
                 width,
                 height,
                 roles: [parseRole(roles[0]), parseRole(roles[1]), parseRole(roles[2]), parseRole(roles[3])],
+                // A layer saved before baking existed is not baked.
+                baked: typeof baked === 'string' && baked !== '' ? baked : null,
             },
         ];
     });

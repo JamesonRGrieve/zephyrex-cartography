@@ -233,3 +233,35 @@ test('a spec’s splat map blends the textures its mask weights over the whole s
     await frameScene(world);
     await expect(world.locator('#board')).toHaveScreenshot('spec-splat.png');
 });
+
+test('a blend bakes into a native Tile over the scene, drawn without the module’s overlay, and unbakes back', async ({ world }) => {
+    const baked = await world.evaluate(async () => {
+        const api = game.modules?.get('zephyrex-cartography').api;
+        await api?.buildSpec({
+            schemaVersion: 1,
+            splats: [{ mask: 'modules/zc-e2e-pack/masks/sand-rock.png', roles: ['sand', 'rock', null, null] }],
+            features: [],
+        });
+        const controller = api?.controller();
+        const ok = await controller?.bakeSplat();
+        const tiles = (canvas?.scene?.tiles.contents ?? []).map((tile) => ({
+            src: tile.texture.src ?? '',
+            width: tile.width,
+            height: tile.height,
+            sort: tile.sort,
+        }));
+        return { ok, tiles, baked: controller?.splatBaked(), scene: { width: canvas?.dimensions?.sceneWidth, height: canvas?.dimensions?.sceneHeight } };
+    });
+    expect(baked.ok).toBe(true);
+    expect(baked.baked).toBe(true);
+    expect(baked.tiles).toEqual([{ src: expect.stringMatching(/splat-.+-all-baked\.png$/u), width: baked.scene.width, height: baked.scene.height, sort: -1 }]);
+    await frameScene(world);
+    // The Tile looks as the overlay did.
+    await expect(world.locator('#board')).toHaveScreenshot('baked-splat.png');
+
+    const unbaked = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        return { ok: await controller?.unbakeSplat(), tiles: canvas?.scene?.tiles.size, baked: controller?.splatBaked() };
+    });
+    expect(unbaked).toEqual({ ok: true, tiles: 0, baked: false });
+});

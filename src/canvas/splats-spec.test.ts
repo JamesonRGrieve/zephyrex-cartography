@@ -47,6 +47,7 @@ describe('splat maps from a scene spec', () => {
             width: 2,
             height: 1,
             roles: ['sand', 'rock', null, null],
+            baked: null,
         });
         // The mask is saved to the level's own file; the original is left as it was.
         expect([...(h.sp.masks.get('splats/lv1.png') ?? [])]).toEqual([...MASK.pixels]);

@@ -7,12 +7,7 @@
 import type { LevelStore } from '../canvas/controller';
 import { type Level, type LevelArt, levelHeightFor, NO_LEVEL_ART, sortLevels, TEXTURE_FITS } from '../tools/levels';
 import type { FoundryScene, LevelUpdateData, NativeLevel } from './boundary';
-
-// eslint-disable-next-line no-restricted-syntax -- boundary: parses Foundry's createEmbeddedDocuments result to read the created Level's id
-function firstId(created: unknown): string | null {
-    const [doc] = Array.isArray(created) ? created : [];
-    return typeof doc === 'object' && doc !== null && 'id' in doc && typeof doc.id === 'string' ? doc.id : null;
-}
+import { firstCreatedId } from './created-id';
 
 /**
  * A native Level as a band. Open-ended bounds are closed so every band has a
@@ -73,7 +68,7 @@ export function createLevelStore(getScene: () => FoundryScene | null): LevelStor
         create: async (level) => {
             const scene = getScene();
             return scene
-                ? firstId(await scene.createEmbeddedDocuments('Level', [{ name: level.name, elevation: { bottom: level.bottom, top: level.top } }]))
+                ? firstCreatedId(await scene.createEmbeddedDocuments('Level', [{ name: level.name, elevation: { bottom: level.bottom, top: level.top } }]))
                 : null;
         },
         update: async (id, patch) => {

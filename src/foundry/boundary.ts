@@ -274,6 +274,18 @@ export interface DrawingCreateData extends OnLevels {
     readonly hidden: boolean;
 }
 
+/** A splat map baked into a Tile: centre-anchored over its scene area, beneath other tiles by `sort`. */
+export interface BakedTileCreateData extends OnLevels {
+    readonly name: string;
+    readonly texture: { readonly src: string; readonly anchorX: number; readonly anchorY: number };
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly elevation: number;
+    readonly sort: number;
+}
+
 export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level' | 'Note' | 'Drawing';
 
 type EmbeddedCreateData =
@@ -284,7 +296,8 @@ type EmbeddedCreateData =
     | RegionCreateData
     | LevelCreateData
     | NoteCreateData
-    | DrawingCreateData;
+    | DrawingCreateData
+    | BakedTileCreateData;
 
 /** Create data carrying the id the document will have. */
 export type IdentifiedCreateData = EmbeddedCreateData & { readonly _id: string };

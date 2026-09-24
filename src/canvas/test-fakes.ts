@@ -326,9 +326,29 @@ class FakeSplats implements SplatStore {
     pathFor(level: string | null): string {
         return `splats/${level ?? 'all'}.png`;
     }
+    /** Baked images saved, by path. */
+    readonly written = new Map<string, Uint8Array<ArrayBuffer>>();
+    async writeImage(path: string, png: Uint8Array<ArrayBuffer>): Promise<void> {
+        this.written.set(path, png);
+        await Promise.resolve();
+    }
+    /** Baked Tiles standing, by id: the image each shows. */
+    readonly tiles = new Map<string, string>();
+    private tileCount = 0;
+    async createTile(_layer: SplatLayer, src: string): Promise<string> {
+        const id = `bake${this.tileCount}`;
+        this.tileCount += 1;
+        this.tiles.set(id, src);
+        await Promise.resolve();
+        return id;
+    }
+    async removeTile(id: string): Promise<void> {
+        this.tiles.delete(id);
+        await Promise.resolve();
+    }
 }
 
-/** Records what splat maps are drawn: key → the roles shown, and each partial update. */
+/** Records what splat maps are drawn: key → the roles shown, and each partial update; a drawn map snapshots to its key's bytes. */
 class FakeSplatRenderer implements SplatRenderer {
     readonly shown = new Map<string, SplatLayer['roles']>();
     readonly updates: { key: string; rect: MaskRect }[] = [];
@@ -340,6 +360,10 @@ class FakeSplatRenderer implements SplatRenderer {
     }
     remove(key: string): void {
         this.shown.delete(key);
+    }
+    async snapshot(key: string): Promise<Uint8Array<ArrayBuffer> | null> {
+        await Promise.resolve();
+        return this.shown.has(key) ? new TextEncoder().encode(`png:${key}`) : null;
     }
 }
 

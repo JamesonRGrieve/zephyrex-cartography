@@ -11,6 +11,7 @@ function mount(story: { readonly args?: Partial<stories.PaintArgs> }): HTMLEleme
         movementCost: story.args?.movementCost ?? base?.movementCost ?? 1,
         mode: story.args?.mode ?? base?.mode ?? 'shapes',
         strength: story.args?.strength ?? base?.strength ?? 0.3,
+        baked: story.args?.baked === undefined ? base?.baked ?? null : story.args.baked,
     });
     document.body.replaceChildren(el);
     return el;
@@ -100,9 +101,23 @@ describe('paint panel', () => {
         expect([...root.querySelectorAll<HTMLInputElement>('input[type="number"]')].at(-1)?.value).toBe('0.3');
     });
 
+    it('offers to bake the blend while blending, and to take a baked one back, but nothing to bake before there is a blend', () => {
+        const bake = (root: HTMLElement): HTMLButtonElement | null => root.querySelector<HTMLButtonElement>('button[data-zc-focus="paint-bake"]');
+        expect(bake(mount(stories.Grassland))).toBeNull();
+        const blending = mount(stories.BlendingSand);
+        expect(bake(blending)?.textContent).toBe('Bake into a tile');
+        bake(blending)?.click();
+        expect(bake(blending)?.textContent).toBe('Unbake to edit');
+        expect(bake(mount(stories.BakedBlend))?.textContent).toBe('Unbake to edit');
+        expect(bake(mount({ args: { mode: 'blend', baked: null } }))?.disabled).toBe(true);
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.BlendingSand, stories.NoTextureSet]) {
+        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.NoTextureSet]) {
             expect(mount(story).querySelectorAll('button')).toHaveLength(6);
+        }
+        for (const story of [stories.BlendingSand, stories.BakedBlend]) {
+            expect(mount(story).querySelectorAll('button')).toHaveLength(7);
         }
     });
 });

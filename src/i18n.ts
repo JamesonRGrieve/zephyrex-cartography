@@ -109,6 +109,8 @@ export const I18N = {
             unblend: key('Paint.Modes.Unblend'),
         },
         strength: key('Paint.Strength'),
+        bake: key('Paint.Bake'),
+        unbake: key('Paint.Unbake'),
     },
     paths: {
         title: key('Paths.Title'),
@@ -125,6 +127,9 @@ export const I18N = {
             poison: key('Paths.Liquids.Poison'),
             acid: key('Paths.Liquids.Acid'),
         },
+    },
+    splats: {
+        baked: key('Splats.Baked'),
     },
     labels: {
         title: key('Labels.Title'),

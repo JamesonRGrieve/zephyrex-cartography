@@ -3,14 +3,15 @@
  * The paint tool's panel: whether it lays areas and strokes or blends
  * texture into the level's splat map, the texture from a swatch grid, the
  * brush size, and then what crossing painted ground costs (difficult
- * terrain) or how much one blend dab lays down. A swatch shows the texture from
+ * terrain) or how much one blend dab lays down, with a button to bake the
+ * blend into a native Tile (or take it back). A swatch shows the texture from
  * the active set, or the terrain's flat colour where the set has none (water
  * is always a tint). A pure function from the panel state to elements;
  * unit-tested under happy-dom.
  */
 import type { BiomeKind } from '../tools/biome';
 import { PAINT_MODES, type PaintMode } from '../tools/splat';
-import { choice, el, labelledInput, pressable, replacePreservingFocus } from './dom';
+import { button, choice, el, labelledInput, pressable, replacePreservingFocus } from './dom';
 
 export interface PaintChoice {
     readonly biome: BiomeKind;
@@ -32,6 +33,8 @@ export interface PaintPanel {
     readonly mode: PaintMode;
     /** 0.05–1: how much one blend dab lays down. */
     readonly strength: number;
+    /** Whether the level's blend is baked into a Tile; null when the level has no blend yet. */
+    readonly baked: boolean | null;
 }
 
 export interface PaintLabels {
@@ -41,6 +44,8 @@ export interface PaintLabels {
     readonly mode: string;
     readonly modes: Readonly<Record<PaintMode, string>>;
     readonly strength: string;
+    readonly bake: string;
+    readonly unbake: string;
 }
 
 export interface PaintHandlers {
@@ -52,6 +57,8 @@ export interface PaintHandlers {
     readonly setMode: (mode: PaintMode) => void;
     /** Apply a typed blend strength; false rejects it (the input reverts). */
     readonly setStrength: (typed: string) => boolean;
+    /** Bake the level's blend into a Tile, or take it back when it is baked. */
+    readonly toggleBake: () => void;
 }
 
 function swatch(texture: PaintChoice, picked: boolean, onPick: () => void): HTMLButtonElement {
@@ -77,6 +84,8 @@ export function renderPaintPanel(root: HTMLElement, panel: PaintPanel, labels: P
         ),
     );
     const blending = panel.mode !== 'shapes';
+    const bake = button('tw-text-xs', panel.baked === true ? labels.unbake : labels.bake, 'paint-bake', handlers.toggleBake);
+    bake.disabled = panel.baked === null;
     replacePreservingFocus(root, [
         choice(
             'zc-paint-mode',
@@ -91,5 +100,7 @@ export function renderPaintPanel(root: HTMLElement, panel: PaintPanel, labels: P
         blending
             ? labelledInput(labels.strength, 'number', String(panel.strength), 'paint-strength', handlers.setStrength)
             : labelledInput(labels.movementCost, 'number', String(panel.movementCost), 'paint-cost', handlers.setMovementCost),
+        // Baking is the blend's: it shows while blending.
+        ...(blending ? [bake] : []),
     ]);
 }

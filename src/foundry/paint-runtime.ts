@@ -33,9 +33,19 @@ export interface PaintSettings {
     readonly strength: number;
 }
 
+/** Baking the level's blend: whether it is baked (null: no blend yet), and baking or unbaking it. */
+export interface PaintBaking {
+    readonly baked: () => boolean | null;
+    readonly toggle: () => Promise<void>;
+}
+
 /** `onChange` runs after every choice, to put it in the tool's hand. */
-export function registerPaintRuntime(textures: () => TextureResolver, onChange: (settings: PaintSettings) => void): SettingsWindow<PaintSettings> {
-    return createSettingsWindow<PaintSettings>({
+export function registerPaintRuntime(
+    textures: () => TextureResolver,
+    onChange: (settings: PaintSettings) => void,
+    baking: PaintBaking,
+): SettingsWindow<PaintSettings> {
+    const panel = createSettingsWindow<PaintSettings>({
         id: 'paint',
         title: () => localize(I18N.paint.title),
         width: PANEL_WIDTH,
@@ -47,7 +57,7 @@ export function registerPaintRuntime(textures: () => TextureResolver, onChange: 
             const p = I18N.paint;
             renderPaintPanel(
                 root,
-                { choices, ...settings },
+                { choices, ...settings, baked: baking.baked() },
                 {
                     texture: localize(p.texture),
                     size: localize(p.size),
@@ -55,6 +65,8 @@ export function registerPaintRuntime(textures: () => TextureResolver, onChange: 
                     mode: localize(p.mode),
                     modes: { shapes: localize(p.modes.shapes), blend: localize(p.modes.blend), unblend: localize(p.modes.unblend) },
                     strength: localize(p.strength),
+                    bake: localize(p.bake),
+                    unbake: localize(p.unbake),
                 },
                 {
                     pick: (biome) => {
@@ -72,8 +84,15 @@ export function registerPaintRuntime(textures: () => TextureResolver, onChange: 
                     setStrength: acceptTyped(parseStrength, (strength) => {
                         choose({ ...settings, strength });
                     }),
+                    toggleBake: () => {
+                        void (async (): Promise<void> => {
+                            await baking.toggle();
+                            panel.refresh();
+                        })();
+                    },
                 },
             );
         },
     });
+    return panel;
 }
