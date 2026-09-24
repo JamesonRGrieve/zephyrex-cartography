@@ -6,12 +6,23 @@
  */
 import type { CartographyController } from '../canvas/controller';
 import { I18N } from '../i18n';
+import type { DoorAnimationType } from '../tools/documents';
 import { renderDoorPanel, type DoorPanelLabels } from '../ui/door-panel-view';
 import { localize } from './localize';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 320;
-const PANEL_HEIGHT = 200;
+const PANEL_HEIGHT = 280;
+
+/** Foundry's own door sounds and animations, named as Foundry names them. */
+function foundryDoorNames(): Pick<DoorPanelLabels, 'sounds' | 'animations'> {
+    const sounds = Object.fromEntries(Object.entries(CONFIG.Wall.doorSounds).map(([sound, config]) => [sound, localize(config.label)]));
+    const named = (type: DoorAnimationType): string => localize(CONFIG.Wall.animationTypes[type].label);
+    return {
+        sounds,
+        animations: { ascend: named('ascend'), descend: named('descend'), slide: named('slide'), swing: named('swing'), swivel: named('swivel') },
+    };
+}
 
 function labels(): DoorPanelLabels {
     const d = I18N.doors;
@@ -20,6 +31,10 @@ function labels(): DoorPanelLabels {
         state: localize(d.state),
         types: { door: localize(d.types.door), secret: localize(d.types.secret) },
         states: { closed: localize(d.states.closed), open: localize(d.states.open), locked: localize(d.states.locked) },
+        sound: localize(d.sound),
+        animation: localize(d.animation),
+        foundryDefault: localize(d.foundryDefault),
+        ...foundryDoorNames(),
         remove: localize(d.remove),
     };
 }

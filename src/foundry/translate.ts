@@ -83,8 +83,18 @@ export function wallCreateData(wall: WallDoc, grid: SceneGrid): WallCreateData {
         move: wall.blocks.movement ? MOVE_NORMAL : MOVE_NONE,
         ...(wall.direction === undefined ? {} : { dir: DIRECTIONS[wall.direction] }),
         ...(wall.threshold === undefined ? {} : { threshold: thresholdData(wall.threshold, grid) }),
+        ...doorLookData(wall),
         ...levelsField(wall.level),
     };
+}
+
+/** A door's sound and animation, each left to Foundry's default when unset; nothing for a plain wall. */
+function doorLookData(wall: WallDoc): Pick<WallCreateData, 'doorSound' | 'animation'> {
+    if (wall.door === 'none' || wall.look === undefined) {
+        return {};
+    }
+    const { sound, animation } = wall.look;
+    return { ...(sound === null ? {} : { doorSound: sound }), ...(animation === null ? {} : { animation: { ...animation } }) };
 }
 
 /** Scene px to scene distance units (a light's radius is measured in the scene's distance units). */

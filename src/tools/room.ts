@@ -10,7 +10,7 @@
 import { distance, type Point } from '../geometry/spline';
 import { centroid, perimeterSegments, type Segment } from '../geometry/wall';
 import type { BiomeKind } from './biome';
-import { NO_DOCS, parseGeneratedDocs, type DoorState, type GeneratedDocs } from './documents';
+import { DOOR_ANIMATIONS, type DoorAnimationType, type DoorLook, type DoorState, type GeneratedDocs, NO_DOCS, parseGeneratedDocs } from './documents';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, stringArray } from './guards';
 import { type FloorMaterial, isFloorMaterial, parseWallMaterial, type WallMaterial } from './materials';
@@ -31,13 +31,22 @@ export interface RoomDoor {
     readonly segment: number;
     readonly type: RoomDoorType;
     readonly state: DoorState;
+    /** A `CONFIG.Wall.doorSounds` key, or null for Foundry's default. */
+    readonly sound: string | null;
+    /** How it animates open, or null for Foundry's default. */
+    readonly animation: DoorAnimationType | null;
 }
 
 /** A door's settings, without the segment it sits on. */
 export type DoorSettings = Omit<RoomDoor, 'segment'>;
 
-/** What a new door is: an ordinary, closed door. */
-export const NEW_DOOR: DoorSettings = { type: 'door', state: 'closed' };
+/** What a new door is: an ordinary, closed door, sounding and moving as Foundry's defaults. */
+export const NEW_DOOR: DoorSettings = { type: 'door', state: 'closed', sound: null, animation: null };
+
+/** A room door's look on its wall. */
+export function roomDoorLook(door: RoomDoor): DoorLook {
+    return { sound: door.sound, animation: door.animation === null ? null : { type: door.animation } };
+}
 
 /** A room; its `points` are the grid-snapped boundary (>= 3), its documents the perimeter walls and centre light. */
 export interface RoomFeature extends FeatureCommon {
@@ -123,11 +132,13 @@ function parseDoor(v: unknown): RoomDoor | null {
     if (!isRecord(v) || typeof v['segment'] !== 'number' || !Number.isInteger(v['segment']) || v['segment'] < 0) {
         return null;
     }
-    const { segment, type, state } = v;
+    const { segment, type, state, sound, animation } = v;
     return {
         segment,
         type: DOOR_TYPES.find((t) => t === type) ?? NEW_DOOR.type,
         state: DOOR_STATES.find((s) => s === state) ?? NEW_DOOR.state,
+        sound: typeof sound === 'string' && sound !== '' ? sound : null,
+        animation: DOOR_ANIMATIONS.find((a) => a === animation) ?? null,
     };
 }
 

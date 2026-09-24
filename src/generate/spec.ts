@@ -13,7 +13,7 @@
  */
 import { z } from 'zod';
 import { BIOMES } from '../tools/biome';
-import type { DoorState } from '../tools/documents';
+import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
 import type { PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
 
@@ -64,6 +64,8 @@ const doorSpec = z
         segment: z.number().int().min(0).describe('Perimeter segment index: segment i runs from point i to point i + 1 (the last closes the loop).'),
         type: z.enum(DOOR_TYPES).default('door'),
         state: z.enum(DOOR_STATES).default('closed'),
+        sound: text.nullable().default(null).describe('A Foundry door sound key (CONFIG.Wall.doorSounds), e.g. "woodCreaky"; null: Foundry\'s default.'),
+        animation: z.enum(DOOR_ANIMATIONS).nullable().default(null).describe("How the door animates open; null: Foundry's default."),
     })
     .strict();
 

@@ -64,7 +64,12 @@
             "scale": "interior",
             "perspective": "top-down",
             "door": {
-                "type": "door"
+                "type": "door",
+                "animation": {
+                    "type": "slide",
+                    "duration": 500
+                },
+                "sound": "slidingMetal"
             },
             "variants": [
                 {

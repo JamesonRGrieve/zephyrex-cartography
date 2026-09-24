@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Stories for the room door panel; each keeps its own door, so the controls work in Storybook. */
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import type { DoorSettings } from '../tools/room';
+import { type DoorSettings, NEW_DOOR } from '../tools/room';
 import { renderDoorPanel, type DoorPanelLabels } from './door-panel-view';
 
 export interface DoorPanelArgs {
@@ -14,6 +14,12 @@ const LABELS: DoorPanelLabels = {
     state: 'Door state',
     types: { door: 'Door', secret: 'Secret door' },
     states: { closed: 'Closed', open: 'Open', locked: 'Locked' },
+    sound: 'Door sound',
+    // A few of Foundry's own door sounds, as Foundry names them.
+    sounds: { woodBasic: 'Wood (Basic)', woodCreaky: 'Wood (Creaky)', metal: 'Metal', slidingMetal: 'Sliding Metal' },
+    animation: 'Door animation',
+    animations: { ascend: 'Ascend', descend: 'Descend', slide: 'Slide', swing: 'Swing', swivel: 'Swivel' },
+    foundryDefault: 'Foundry default',
     remove: 'Remove door',
 };
 
@@ -41,7 +47,7 @@ const meta: Meta<DoorPanelArgs> = {
     title: 'Rooms/Door Panel',
     excludeStories: ['mountDoorPanel'],
     render: mountDoorPanel,
-    args: { door: { type: 'door', state: 'closed' } },
+    args: { door: NEW_DOOR },
     argTypes: { onRemove: { action: 'remove' } },
 };
 
@@ -52,5 +58,9 @@ type Story = StoryObj<DoorPanelArgs>;
 export const ClosedDoor: Story = {};
 
 export const LockedSecretDoor: Story = {
-    args: { door: { type: 'secret', state: 'locked' } },
+    args: { door: { ...NEW_DOOR, type: 'secret', state: 'locked' } },
+};
+
+export const SlidingMetalDoor: Story = {
+    args: { door: { ...NEW_DOOR, sound: 'slidingMetal', animation: 'slide' } },
 };

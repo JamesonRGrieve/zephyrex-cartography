@@ -45,6 +45,19 @@ describe('wallCreateData', () => {
         expect(data).toMatchObject({ door: 2, ds: 2, sight: 0, light: 0, sound: 20, move: 20 });
     });
 
+    it('gives a door its sound and animation, leaves unset ones to Foundry, and a plain wall neither', () => {
+        const door = { ...BLOCKS_WALL, door: 'door' as const };
+        expect(wallCreateData({ ...door, look: { sound: 'slidingMetal', animation: { type: 'slide', duration: 500 } } }, GRID)).toMatchObject({
+            doorSound: 'slidingMetal',
+            animation: { type: 'slide', duration: 500 },
+        });
+        const defaults = wallCreateData({ ...door, look: { sound: null, animation: null } }, GRID);
+        expect(defaults).not.toHaveProperty('doorSound');
+        expect(defaults).not.toHaveProperty('animation');
+        const plain = wallCreateData({ ...BLOCKS_WALL, look: { sound: 'metal', animation: { type: 'swing' } } }, GRID);
+        expect(plain).not.toHaveProperty('doorSound');
+    });
+
     it('translates every sense level, one-way walls and thresholds in scene distance units', () => {
         const data = wallCreateData(
             {

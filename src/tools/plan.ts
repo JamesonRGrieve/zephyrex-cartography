@@ -27,7 +27,7 @@ import type { Feature } from './feature';
 import { adjacentLevel, findLevel, levelElevation, type Level } from './levels';
 import type { CartographyPath } from './path';
 import { regionOutline, type RegionFeature } from './region';
-import { roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
+import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
 
@@ -178,7 +178,8 @@ function stampDoorWall(stamp: StampFeature, floor: Floor): WallDoc | null {
         return null;
     }
     const axis = stampDoorAxis(stamp);
-    return { a: axis.a, b: axis.b, door: door.type, doorState: stampDoorState(stamp), blocks: BLOCKS_ALL, level: floor.level };
+    const look = { sound: door.sound ?? null, animation: door.animation ?? null };
+    return { a: axis.a, b: axis.b, door: door.type, doorState: stampDoorState(stamp), look, blocks: BLOCKS_ALL, level: floor.level };
 }
 
 /**
@@ -299,7 +300,8 @@ function roomFloor(room: RoomFeature, levels: readonly Level[]): RegionDoc | nul
 
 /** A stretch of room wall, as a door if `door` is set; tagged with the perimeter segment it comes from. */
 function roomWallDoc(part: Segment, door: RoomDoor | null, segment: number, level: string | null): WallDoc {
-    return { a: part.a, b: part.b, door: door?.type ?? 'none', doorState: door?.state ?? 'closed', blocks: BLOCKS_ALL, level, segment };
+    const wall: WallDoc = { a: part.a, b: part.b, door: door?.type ?? 'none', doorState: door?.state ?? 'closed', blocks: BLOCKS_ALL, level, segment };
+    return door === null ? wall : { ...wall, look: roomDoorLook(door) };
 }
 
 /**

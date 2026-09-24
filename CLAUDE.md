@@ -484,12 +484,14 @@ These make everything after them cheaper and safer, so they come first.
 - **One-way walls:** `dir` (BOTH, LEFT, RIGHT).
 - **Proximity thresholds:** `threshold` (light, sight, sound distances, and
   `attenuation`).
-- **Door sounds:** `doorSound`.
-- **Door animation:** `animation`, with its direction, double, duration,
-  flip, strength and texture. The type is one of `CONFIG.Wall.animationTypes`:
-  ascend, descend, slide, swing or swivel. Door stamps declare theirs in the
-  pack schema (a blast door slides, a hatch ascends), and room doors pick one.
-  Door types and states are already complete.
+- **[done] Door sounds and animation.** A door wall carries a `look`: a
+  `CONFIG.Wall.doorSounds` key and an animation, each null for Foundry's
+  default. These become the Wall's `doorSound` and `animation`.
+  - Door stamps declare theirs in the pack schema, with the animation's
+    type, direction, double, duration, flip and strength.
+  - Room doors pick a sound and an animation type in the door panel, from
+    Foundry's own lists, and the scene spec's room doors take both.
+  - Still open: the animation `texture`. Door types and states are complete.
 - **No accidental blank walls.** Foundry groups walls that block nothing as
   "Blank Walls" [14.361]. The engine only emits one when a feature asks for
   it.

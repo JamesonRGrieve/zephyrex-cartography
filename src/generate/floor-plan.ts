@@ -7,6 +7,7 @@
  * outer wall. The result is a scene spec in grid squares, from (0, 0).
  */
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
+import { NEW_DOOR } from '../tools/room';
 import { pick, randomInt, seededRandom, type Random } from './random';
 import { SCENE_SPEC_SCHEMA_VERSION, type RoomSpec, type SceneSpec } from './spec';
 
@@ -188,7 +189,7 @@ function roomSpec(room: Rect, slots: readonly DoorSlot[], o: FloorPlanOptions): 
     const doors = doorStarts
         .map((d) => points.findIndex((p) => p.x === d.x && p.y === d.y))
         .filter((segment) => segment >= 0)
-        .map((segment) => ({ segment, type: 'door' as const, state: 'closed' as const }));
+        .map((segment) => ({ segment, ...NEW_DOOR }));
     return { type: 'room', points, floor: o.floor, wall: o.wall, doors };
 }
 

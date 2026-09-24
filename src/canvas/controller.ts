@@ -519,7 +519,8 @@ export class CartographyController {
         if (segment === undefined || !door || door.state === state) {
             return false;
         }
-        const next = withRoomDoor(room, segment, { type: door.type, state });
+        const { segment: _segment, ...settings } = door;
+        const next = withRoomDoor(room, segment, { ...settings, state });
         this.features = this.features.map((f) => (f.id === room.id ? next : f));
         await this.store.save(this.features);
         return true;

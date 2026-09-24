@@ -52,11 +52,35 @@ export interface WallThreshold {
     readonly attenuation?: boolean;
 }
 
+/** How a Foundry door animates open (`CONFIG.Wall.animationTypes`). */
+export const DOOR_ANIMATIONS = ['ascend', 'descend', 'slide', 'swing', 'swivel'] as const;
+
+export type DoorAnimationType = (typeof DOOR_ANIMATIONS)[number];
+
+/** A door's animation; options left out (or undefined, as a pack parses them) take Foundry's defaults. */
+export interface DoorAnimation {
+    readonly type: DoorAnimationType;
+    readonly direction?: 1 | -1 | undefined;
+    readonly double?: boolean | undefined;
+    /** Milliseconds. */
+    readonly duration?: number | undefined;
+    readonly flip?: boolean | undefined;
+    readonly strength?: number | undefined;
+}
+
+/** How a door sounds and moves: a `CONFIG.Wall.doorSounds` key and an animation, each null for Foundry's default. */
+export interface DoorLook {
+    readonly sound: string | null;
+    readonly animation: DoorAnimation | null;
+}
+
 export interface WallDoc {
     readonly a: Point;
     readonly b: Point;
     readonly door: DoorType;
     readonly doorState: DoorState;
+    /** For a door, how it sounds and animates; absent on plain walls. */
+    readonly look?: DoorLook;
     readonly blocks: SenseBlock;
     /** A one-way wall; omitted restricts from both sides. */
     readonly direction?: WallDirection;

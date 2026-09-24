@@ -350,6 +350,38 @@
                                                 "open",
                                                 "locked"
                                             ]
+                                        },
+                                        "sound": {
+                                            "default": null,
+                                            "description": "A Foundry door sound key (CONFIG.Wall.doorSounds), e.g. \"woodCreaky\"; null: Foundry's default.",
+                                            "anyOf": [
+                                                {
+                                                    "type": "string",
+                                                    "minLength": 1
+                                                },
+                                                {
+                                                    "type": "null"
+                                                }
+                                            ]
+                                        },
+                                        "animation": {
+                                            "default": null,
+                                            "description": "How the door animates open; null: Foundry's default.",
+                                            "anyOf": [
+                                                {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "ascend",
+                                                        "descend",
+                                                        "slide",
+                                                        "swing",
+                                                        "swivel"
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "null"
+                                                }
+                                            ]
                                         }
                                     },
                                     "required": [

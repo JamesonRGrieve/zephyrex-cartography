@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, describe, expect, it } from 'vitest';
+import { NEW_DOOR } from '../tools/room';
 import * as stories from './door-panel-view.stories';
 
 function mount(args: Partial<stories.DoorPanelArgs> = {}): HTMLElement {
-    const el = stories.mountDoorPanel({ door: { type: 'door', state: 'closed' }, onRemove: () => undefined, ...args });
+    const el = stories.mountDoorPanel({ door: NEW_DOOR, onRemove: () => undefined, ...args });
     document.body.replaceChildren(el);
     return el;
 }
@@ -22,7 +23,7 @@ describe('door panel', () => {
     });
 
     it('shows the door type and state as labelled choices', () => {
-        const root = mount({ door: { type: 'secret', state: 'locked' } });
+        const root = mount({ door: { ...NEW_DOOR, type: 'secret', state: 'locked' } });
         expect(select(root, 'zc-door-type').value).toBe('secret');
         expect(select(root, 'zc-door-state').value).toBe('locked');
         expect(root.querySelector('label[for="zc-door-type"]')?.textContent).toBe('Door type');
@@ -43,6 +44,24 @@ describe('door panel', () => {
         expect(select(root, 'zc-door-state').value).toBe('open');
     });
 
+    it('picks a Foundry door sound and animation, and puts either back to Foundry’s default', () => {
+        const root = mount();
+        expect([select(root, 'zc-door-sound').value, select(root, 'zc-door-animation').value]).toEqual(['', '']);
+        expect([...select(root, 'zc-door-sound').options].map((o) => o.textContent)).toEqual(expect.arrayContaining(['Foundry default', 'Wood (Creaky)']));
+        const sound = select(root, 'zc-door-sound');
+        sound.value = 'woodCreaky';
+        sound.dispatchEvent(new Event('change'));
+        const animation = select(root, 'zc-door-animation');
+        animation.value = 'swivel';
+        animation.dispatchEvent(new Event('change'));
+        expect([select(root, 'zc-door-sound').value, select(root, 'zc-door-animation').value]).toEqual(['woodCreaky', 'swivel']);
+        const reset = select(root, 'zc-door-animation');
+        reset.value = '';
+        reset.dispatchEvent(new Event('change'));
+        expect(select(root, 'zc-door-animation').value).toBe('');
+        expect(select(root, 'zc-door-sound').value).toBe('woodCreaky');
+    });
+
     it('removes the door', () => {
         let removed = 0;
         const root = mount({
@@ -55,7 +74,7 @@ describe('door panel', () => {
     });
 
     it('renders every story', () => {
-        for (const story of [stories.ClosedDoor, stories.LockedSecretDoor]) {
+        for (const story of [stories.ClosedDoor, stories.LockedSecretDoor, stories.SlidingMetalDoor]) {
             expect(mount(story.args ?? {}).querySelector('select')).not.toBeNull();
         }
     });

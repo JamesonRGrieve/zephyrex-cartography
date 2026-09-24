@@ -23,6 +23,17 @@ export interface WallCreateData extends OnLevels {
     readonly dir?: number;
     /** Proximity and distance sense thresholds in scene distance units; null is unbounded. */
     readonly threshold?: { readonly light: number | null; readonly sight: number | null; readonly sound: number | null; readonly attenuation: boolean };
+    /** A door's `CONFIG.Wall.doorSounds` key. */
+    readonly doorSound?: string;
+    /** A door's animation; left-out (or undefined) options take Foundry's defaults. */
+    readonly animation?: {
+        readonly type: string;
+        readonly direction?: 1 | -1 | undefined;
+        readonly double?: boolean | undefined;
+        readonly duration?: number | undefined;
+        readonly flip?: boolean | undefined;
+        readonly strength?: number | undefined;
+    };
 }
 
 export interface LightCreateData extends OnLevels {

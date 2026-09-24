@@ -62,10 +62,10 @@ describe('materials', () => {
 describe('doors + roomWalls', () => {
     it('carries each segment and the door on it into the generated walls', () => {
         const r = makeRoom('r', 'dirt', pts); // 4 points → 4 perimeter segments
-        const withDoor = r ? withRoomDoor(r, 1, { type: 'secret', state: 'locked' }) : null;
+        const withDoor = r ? withRoomDoor(r, 1, { ...NEW_DOOR, type: 'secret', state: 'locked' }) : null;
         const walls = withDoor ? roomWalls(withDoor) : [];
         expect(walls).toHaveLength(4);
-        expect(walls[1]?.door).toEqual({ segment: 1, type: 'secret', state: 'locked' });
+        expect(walls[1]?.door).toEqual({ segment: 1, ...NEW_DOOR, type: 'secret', state: 'locked' });
         expect(walls[0]?.door).toBeNull();
         expect(walls.map((w) => w.segment)).toEqual([0, 1, 2, 3]);
     });
@@ -74,8 +74,8 @@ describe('doors + roomWalls', () => {
         const r = makeRoom('r', 'dirt', pts);
         const two = r ? withRoomDoor(withRoomDoor(r, 2, NEW_DOOR), 0, NEW_DOOR) : null;
         expect(two?.doors.map((d) => d.segment)).toEqual([0, 2]);
-        const opened = two ? withRoomDoor(two, 2, { type: 'door', state: 'open' }) : null;
-        expect(opened ? doorOn(opened, 2) : null).toEqual({ segment: 2, type: 'door', state: 'open' });
+        const opened = two ? withRoomDoor(two, 2, { ...NEW_DOOR, state: 'open' }) : null;
+        expect(opened ? doorOn(opened, 2) : null).toEqual({ segment: 2, ...NEW_DOOR, state: 'open' });
         const cleared = opened ? withRoomDoor(opened, 0, null) : null;
         expect(cleared?.doors.map((d) => d.segment)).toEqual([2]);
         expect(cleared ? doorOn(cleared, 0) : 'x').toBeNull();
@@ -128,12 +128,19 @@ describe('parseRoom', () => {
             id: 'a',
             floor: 'dirt',
             points: pts,
-            doors: [0, { segment: 2, type: 'secret', state: 'open' }, { segment: 3, type: 'portal', state: 'ajar' }, { segment: -1 }, 'x'],
+            doors: [
+                0,
+                { segment: 2, type: 'secret', state: 'open', sound: 'woodCreaky', animation: 'swivel' },
+                { segment: 3, type: 'portal', state: 'ajar', sound: '', animation: 'teleport' },
+                { segment: -1 },
+                'x',
+            ],
         })?.doors;
         expect(doors).toEqual([
-            { segment: 0, type: 'door', state: 'closed' },
-            { segment: 2, type: 'secret', state: 'open' },
-            { segment: 3, type: 'door', state: 'closed' },
+            { segment: 0, ...NEW_DOOR },
+            { segment: 2, type: 'secret', state: 'open', sound: 'woodCreaky', animation: 'swivel' },
+            // An unknown type, state or animation, and a blank sound, fall back to Foundry's defaults.
+            { segment: 3, ...NEW_DOOR },
         ]);
     });
 

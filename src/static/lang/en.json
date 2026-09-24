@@ -67,6 +67,9 @@
             "Title": "Door",
             "Type": "Door type",
             "State": "Door state",
+            "Sound": "Door sound",
+            "Animation": "Door animation",
+            "FoundryDefault": "Foundry default",
             "Remove": "Remove door",
             "Types": {
                 "Door": "Door",

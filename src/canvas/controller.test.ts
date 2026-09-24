@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { NEW_DOOR } from '../tools/room';
 import { makeHarness as make } from './test-fakes';
 
 describe('CartographyController', () => {
@@ -144,10 +145,14 @@ describe('CartographyController', () => {
         c.addPoint({ x: 100, y: 0 });
         c.addPoint({ x: 100, y: 100 });
         await c.commit();
-        expect(await c.setRoomDoor('p1', 1, { type: 'secret', state: 'locked' })).toBe(true);
-        expect(c.roomDoor('p1', 1)).toEqual({ segment: 1, type: 'secret', state: 'locked' });
-        expect(d.walls[d.walls.length - 1]?.[1]).toMatchObject({ door: 'secret', doorState: 'locked' });
-        expect(await c.setRoomDoor('p1', 7, { type: 'door', state: 'closed' })).toBe(false);
+        expect(await c.setRoomDoor('p1', 1, { ...NEW_DOOR, type: 'secret', state: 'locked', sound: 'woodCreaky', animation: 'slide' })).toBe(true);
+        expect(c.roomDoor('p1', 1)).toEqual({ segment: 1, type: 'secret', state: 'locked', sound: 'woodCreaky', animation: 'slide' });
+        expect(d.walls[d.walls.length - 1]?.[1]).toMatchObject({
+            door: 'secret',
+            doorState: 'locked',
+            look: { sound: 'woodCreaky', animation: { type: 'slide' } },
+        });
+        expect(await c.setRoomDoor('p1', 7, NEW_DOOR)).toBe(false);
         expect(await c.setRoomDoor('nope', 0, null)).toBe(false);
         expect(c.roomDoor('nope', 0)).toBeNull();
     });

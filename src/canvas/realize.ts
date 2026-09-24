@@ -60,7 +60,8 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         feature = makePath(id, spec.kind, points, spec.halfWidth === undefined ? DEFAULT_HALF_WIDTH : scale.length(spec.halfWidth), spec.walls);
     } else {
         const room = makeRoom(id, spec.floor ?? DEFAULT_FLOOR, points, spec.wall);
-        feature = room && spec.doors.reduce((r, d) => withRoomDoor(r, d.segment, { type: d.type, state: d.state }), room);
+        feature =
+            room && spec.doors.reduce((r, d) => withRoomDoor(r, d.segment, { type: d.type, state: d.state, sound: d.sound, animation: d.animation }), room);
     }
     return feature && { ...feature, level };
 }

@@ -18,7 +18,7 @@ describe('parseSceneSpec', () => {
                 schemaVersion: 1,
                 units: 'grid',
                 levels: [],
-                features: [{ type: 'room', points: square, wall: null, doors: [{ segment: 1, type: 'door', state: 'closed' }] }],
+                features: [{ type: 'room', points: square, wall: null, doors: [{ segment: 1, type: 'door', state: 'closed', sound: null, animation: null }] }],
             },
         });
     });
