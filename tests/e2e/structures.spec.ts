@@ -385,10 +385,10 @@ test('a blend bakes into a native Tile over the scene, drawn without the moduleâ
             height: tile.height,
             sort: tile.sort,
         }));
-        return { ok, tiles, baked: controller?.splatBaked(), scene: { width: canvas?.dimensions?.sceneWidth, height: canvas?.dimensions?.sceneHeight } };
+        return { ok, tiles, baked: controller?.splatState(), scene: { width: canvas?.dimensions?.sceneWidth, height: canvas?.dimensions?.sceneHeight } };
     });
     expect(baked.ok).toBe(true);
-    expect(baked.baked).toBe(true);
+    expect(baked.baked).toBe('tile');
     expect(baked.tiles).toEqual([{ src: expect.stringMatching(/splat-.+-all-baked\.png$/u), width: baked.scene.width, height: baked.scene.height, sort: -1 }]);
     await frameScene(world);
     // The Tile looks as the overlay did.
@@ -396,7 +396,34 @@ test('a blend bakes into a native Tile over the scene, drawn without the moduleâ
 
     const unbaked = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();
-        return { ok: await controller?.unbakeSplat(), tiles: canvas?.scene?.tiles.size, baked: controller?.splatBaked() };
+        return { ok: await controller?.unbakeSplat(), tiles: canvas?.scene?.tiles.size, baked: controller?.splatState() };
     });
-    expect(unbaked).toEqual({ ok: true, tiles: 0, baked: false });
+    expect(unbaked).toEqual({ ok: true, tiles: 0, baked: 'live' });
+});
+
+test('a blend on a level bakes into the native Levelâ€™s background, and unbaking puts the levelâ€™s own image back', async ({ world }) => {
+    const background = async (): Promise<string | null> =>
+        world.evaluate(() => canvas?.scene?.levels.contents.find((level) => level.name === 'Ground')?.background.src ?? null);
+    const baked = await world.evaluate(async () => {
+        const api = game.modules?.get('zephyrex-cartography').api;
+        const outcome = await api?.buildSpec({
+            schemaVersion: 1,
+            levels: [{ key: 'g', name: 'Ground', background: 'modules/zc-e2e-pack/masks/sand-rock.png' }],
+            splats: [{ level: 'g', mask: 'modules/zc-e2e-pack/masks/sand-rock.png', roles: ['sand', 'rock', null, null] }],
+            features: [],
+        });
+        const controller = api?.controller();
+        const ground = outcome?.ok === true ? outcome.report.levels['g'] : undefined;
+        if (ground !== undefined) {
+            controller?.setActiveLevel(ground);
+        }
+        return { ok: await controller?.bakeSplat('background'), state: controller?.splatState(), tiles: canvas?.scene?.tiles.size };
+    });
+    // Baked into the background, no Tile.
+    expect(baked).toEqual({ ok: true, state: 'background', tiles: 0 });
+    await expect.poll(background).toMatch(/splat-.+-baked\.png$/u);
+
+    const unbaked = await world.evaluate(async () => game.modules?.get('zephyrex-cartography').api.controller()?.unbakeSplat());
+    expect(unbaked).toBe(true);
+    await expect.poll(background).toBe('modules/zc-e2e-pack/masks/sand-rock.png');
 });

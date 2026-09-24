@@ -111,6 +111,7 @@ export const I18N = {
         },
         strength: key('Paint.Strength'),
         bake: key('Paint.Bake'),
+        bakeBackground: key('Paint.BakeBackground'),
         unbake: key('Paint.Unbake'),
     },
     paths: {

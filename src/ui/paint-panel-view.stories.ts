@@ -3,7 +3,7 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import type { BiomeKind } from '../tools/biome';
 import { parseSizePx } from '../tools/size-input';
-import { DEFAULT_STRENGTH, type PaintMode, parseStrength } from '../tools/splat';
+import { DEFAULT_STRENGTH, type PaintMode, parseStrength, type SplatState } from '../tools/splat';
 import { parseCostInput } from '../tools/terrain-cost';
 import { renderPaintPanel, type PaintChoice, type PaintLabels } from './paint-panel-view';
 
@@ -14,7 +14,8 @@ export interface PaintArgs {
     readonly movementCost: number;
     readonly mode: PaintMode;
     readonly strength: number;
-    readonly baked: boolean | null;
+    readonly splat: SplatState;
+    readonly backgroundBakeable: boolean;
 }
 
 const LABELS: PaintLabels = {
@@ -24,7 +25,7 @@ const LABELS: PaintLabels = {
     mode: 'Brush',
     modes: { shapes: 'Areas and strokes', blend: 'Blend', unblend: 'Unblend' },
     strength: 'Strength (0.05–1)',
-    bake: 'Bake into a tile',
+    bake: { tile: 'Bake into a tile', background: "Bake into the level's background" },
     unbake: 'Unbake to edit',
 };
 
@@ -34,7 +35,7 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
     windowEl.className = 'zephyrex-cartography zc-story-window';
     const root = document.createElement('div');
     windowEl.append(root);
-    let state = { biome: args.biome, radius: args.radius, movementCost: args.movementCost, mode: args.mode, strength: args.strength, baked: args.baked };
+    let state = { biome: args.biome, radius: args.radius, movementCost: args.movementCost, mode: args.mode, strength: args.strength, splat: args.splat };
     const choose = (next: Partial<typeof state>): void => {
         state = { ...state, ...next };
         render();
@@ -50,7 +51,7 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
             return value !== null;
         };
     function render(): void {
-        renderPaintPanel(root, { choices: args.choices, ...state }, LABELS, {
+        renderPaintPanel(root, { choices: args.choices, backgroundBakeable: args.backgroundBakeable, ...state }, LABELS, {
             pick: (biome) => {
                 choose({ biome });
             },
@@ -60,8 +61,11 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
                 choose({ mode });
             },
             setStrength: accept(parseStrength, (strength) => ({ strength })),
-            toggleBake: () => {
-                choose({ baked: state.baked === null ? null : !state.baked });
+            bake: (into) => {
+                choose({ splat: into });
+            },
+            unbake: () => {
+                choose({ splat: 'live' });
             },
         });
     }
@@ -88,7 +92,16 @@ const meta: Meta<PaintArgs> = {
     title: 'Terrain/Paint Panel',
     excludeStories: ['mountPaintPanel'],
     render: mountPaintPanel,
-    args: { choices: TEXTURED, biome: 'grassland', radius: 25, movementCost: 1, mode: 'shapes', strength: DEFAULT_STRENGTH, baked: null },
+    args: {
+        choices: TEXTURED,
+        biome: 'grassland',
+        radius: 25,
+        movementCost: 1,
+        mode: 'shapes',
+        strength: DEFAULT_STRENGTH,
+        splat: 'none',
+        backgroundBakeable: true,
+    },
 };
 
 export default meta;
@@ -106,11 +119,16 @@ export const DifficultMarsh: Story = {
 };
 
 export const BlendingSand: Story = {
-    args: { biome: 'sand', mode: 'blend', radius: 60, strength: 0.5, baked: false },
+    args: { biome: 'sand', mode: 'blend', radius: 60, strength: 0.5, splat: 'live' },
 };
 
 export const BakedBlend: Story = {
-    args: { biome: 'sand', mode: 'blend', baked: true },
+    args: { biome: 'sand', mode: 'blend', splat: 'background' },
+};
+
+/** A blend on every level has no one level's background to go into. */
+export const BlendOnEveryLevel: Story = {
+    args: { biome: 'sand', mode: 'blend', splat: 'live', backgroundBakeable: false },
 };
 
 export const NoTextureSet: Story = {

@@ -57,6 +57,7 @@ import {
 import { hasSceneSettings, type SceneSettings } from '../tools/scene-settings';
 import { storedSpawn } from '../tools/spawn';
 import {
+    type BakeTarget,
     bakedImagePath,
     blankMask,
     channelFor,
@@ -65,8 +66,11 @@ import {
     maskPoint,
     newSplatLayer,
     paintDab,
+    type SplatBake,
     type SplatLayer,
     type SplatRoles,
+    type SplatState,
+    splatState,
 } from '../tools/splat';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
@@ -1402,10 +1406,10 @@ export class CartographyController {
             }, Promise.resolve());
             return;
         }
-        // The blend comes back live, so a Tile it had been baked into since goes.
-        const baked = this.splats.get(entry.key)?.layer.baked ?? null;
-        if (baked !== null) {
-            await this.splatStore.removeTile(baked);
+        // The blend comes back live, so what it had been baked into since goes.
+        const now = this.splats.get(entry.key)?.layer;
+        if (now) {
+            await this.discardBake(now);
         }
         this.splats.set(entry.key, { layer: entry.layer, mask: entry.mask.slice() });
         this.redrawSplats();
@@ -1628,34 +1632,40 @@ export class CartographyController {
         return this.splats.get(splatKey(this.active))?.layer ?? null;
     }
 
-    /** Whether the blend of the level being edited is baked into a Tile; null when it has no blend. */
-    splatBaked(): boolean | null {
-        const layer = this.splatLayer();
-        return layer ? layer.baked !== null : null;
+    /** Whether the blend of the level being edited is live, baked (and into what), or not there. */
+    splatState(): SplatState {
+        return splatState(this.splatLayer());
     }
 
-    /** Take the blend of the level being edited back from its Tile to the live overlay; false when it is not baked. */
+    /** Take the blend of the level being edited back from its bake to the live overlay; false when it is not baked. */
     async unbakeSplat(): Promise<boolean> {
         const key = splatKey(this.active);
-        if (this.splatBaked() !== true) {
+        const splat = this.splats.get(key);
+        if (!splat?.layer.baked) {
             return false;
         }
-        this.unbaked(key);
+        await this.discardBake(splat.layer);
+        const live = { ...splat, layer: { ...splat.layer, baked: null } };
+        this.splats.set(key, live);
+        this.splatRenderer.set(key, live.layer, live.mask);
         await this.splatStore.save([...this.splats.values()].map((s) => s.layer));
         return true;
     }
 
     /**
-     * Bake the blend of the level being edited into a native Tile, beneath
-     * the level's other tiles, so it renders without the module; its overlay
-     * stops drawing. Blending again unbakes it. False with no blend to bake,
+     * Bake the blend of the level being edited so it renders without the
+     * module; its overlay stops drawing. Into a native Tile beneath the
+     * level's other tiles, or into the level's own background image, which
+     * is put back on unbaking (a blend on every level has no one background
+     * to go into). Blending again unbakes it. False with no blend to bake,
      * one already baked, or an image that could not be rendered.
      */
-    async bakeSplat(): Promise<boolean> {
+    async bakeSplat(into: BakeTarget = 'tile'): Promise<boolean> {
         const key = splatKey(this.active);
         const splat = this.splats.get(key);
-        // Nothing to bake, or baked already.
-        if (splat?.layer.baked !== null) {
+        const level = splat?.layer.level == null ? null : findLevel(this.levelList, splat.layer.level);
+        // Nothing to bake, baked already, or no level's background to bake into.
+        if (splat?.layer.baked !== null || (into === 'background' && !level)) {
             return false;
         }
         const png = await this.splatRenderer.snapshot(key);
@@ -1664,14 +1674,40 @@ export class CartographyController {
         }
         const src = bakedImagePath(splat.layer);
         await this.splatStore.writeImage(src, png);
-        const tile = await this.splatStore.createTile(splat.layer, src);
-        if (tile === null) {
+        const baked = level && into === 'background' ? await this.bakeIntoBackground(level, src) : await this.bakeIntoTile(splat.layer, src);
+        if (baked === null) {
             return false;
         }
-        this.splats.set(key, { ...splat, layer: { ...splat.layer, baked: tile } });
+        this.splats.set(key, { ...splat, layer: { ...splat.layer, baked } });
         this.redrawSplats();
         await this.splatStore.save([...this.splats.values()].map((s) => s.layer));
         return true;
+    }
+
+    private async bakeIntoTile(layer: SplatLayer, src: string): Promise<SplatBake | null> {
+        const tile = await this.splatStore.createTile(layer, src);
+        return tile === null ? null : { into: 'tile', tile };
+    }
+
+    private async bakeIntoBackground(level: Level, src: string): Promise<SplatBake | null> {
+        const previous = level.art.background;
+        return (await this.setLevelArt(level.id, { ...level.art, background: src })) ? { into: 'background', previous } : null;
+    }
+
+    /**
+     * Undo where `layer` is baked: delete its Tile, or put its level's
+     * background back, unless the GM has since set another one there.
+     */
+    private async discardBake(layer: SplatLayer): Promise<void> {
+        const bake = layer.baked;
+        if (bake?.into === 'tile') {
+            await this.splatStore.removeTile(bake.tile);
+            return;
+        }
+        const level = layer.level === null ? null : findLevel(this.levelList, layer.level);
+        if (bake?.into === 'background' && level?.art.background === bakedImagePath(layer)) {
+            await this.setLevelArt(level.id, { ...level.art, background: bake.previous });
+        }
     }
 
     /**
@@ -1739,8 +1775,8 @@ export class CartographyController {
                 ? { kind: 'blend', key, layer: { ...before.layer, baked: null }, mask: before.mask.slice() }
                 : { kind: 'blend', key, layer, mask: blankMask(layer) },
         );
-        if (before && before.layer.baked !== null) {
-            await this.splatStore.removeTile(before.layer.baked);
+        if (before) {
+            await this.discardBake(before.layer);
         }
         this.splats.set(key, { layer, mask: read.pixels });
         this.redrawSplats();
@@ -1761,7 +1797,7 @@ export class CartographyController {
         if (splat.layer.baked === null) {
             return splat;
         }
-        void this.splatStore.removeTile(splat.layer.baked);
+        void this.discardBake(splat.layer);
         const live = { ...splat, layer: { ...splat.layer, baked: null } };
         this.splats.set(key, live);
         this.splatRenderer.set(key, live.layer, live.mask);

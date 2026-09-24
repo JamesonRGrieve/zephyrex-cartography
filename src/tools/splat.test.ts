@@ -10,7 +10,9 @@ import {
     paintDab,
     parseSplatLayers,
     parseStrength,
+    type SplatBake,
     type SplatLayer,
+    splatState,
 } from './splat';
 
 const SCENE = { x: 100, y: 100, width: 2000, height: 1000 };
@@ -102,11 +104,23 @@ describe('parseSplatLayers', () => {
         ]);
     });
 
-    it('keeps the Tile a layer is baked into, and reads an older layer as not baked', () => {
-        const baked = JSON.parse(JSON.stringify([{ ...layer(), baked: 'tile1' }]));
-        expect(parseSplatLayers(baked)[0]?.baked).toBe('tile1');
-        expect(parseSplatLayers([{ ...layer(), baked: undefined }])[0]?.baked).toBeNull();
-        expect(parseSplatLayers([{ ...layer(), baked: '' }])[0]?.baked).toBeNull();
+    it('keeps where a layer is baked, reads an older layer’s Tile id as a Tile, and one before baking as not baked', () => {
+        const baked = (bake: object | string | undefined): SplatBake | null | undefined =>
+            parseSplatLayers(JSON.parse(JSON.stringify([{ ...layer(), baked: bake }])))[0]?.baked;
+        expect(baked({ into: 'tile', tile: 'tile1' })).toEqual({ into: 'tile', tile: 'tile1' });
+        expect(baked({ into: 'background', previous: 'maps/g.webp' })).toEqual({ into: 'background', previous: 'maps/g.webp' });
+        expect(baked({ into: 'background' })).toEqual({ into: 'background', previous: null });
+        expect(baked('tile1')).toEqual({ into: 'tile', tile: 'tile1' });
+        expect(baked(undefined)).toBeNull();
+        expect(baked('')).toBeNull();
+        expect(baked({ into: 'tile', tile: '' })).toBeNull();
+        expect(baked({ into: 'ceiling' })).toBeNull();
+    });
+
+    it('says whether a level’s blend is there, live or baked, and into what', () => {
+        expect(splatState(null)).toBe('none');
+        expect(splatState(layer())).toBe('live');
+        expect(splatState({ ...layer(), baked: { into: 'background', previous: null } })).toBe('background');
     });
 });
 

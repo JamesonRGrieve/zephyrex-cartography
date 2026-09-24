@@ -11,7 +11,8 @@ function mount(story: { readonly args?: Partial<stories.PaintArgs> }): HTMLEleme
         movementCost: story.args?.movementCost ?? base?.movementCost ?? 1,
         mode: story.args?.mode ?? base?.mode ?? 'shapes',
         strength: story.args?.strength ?? base?.strength ?? 0.3,
-        baked: story.args?.baked === undefined ? base?.baked ?? null : story.args.baked,
+        splat: story.args?.splat ?? base?.splat ?? 'none',
+        backgroundBakeable: story.args?.backgroundBakeable ?? base?.backgroundBakeable ?? true,
     });
     document.body.replaceChildren(el);
     return el;
@@ -101,23 +102,31 @@ describe('paint panel', () => {
         expect([...root.querySelectorAll<HTMLInputElement>('input[type="number"]')].at(-1)?.value).toBe('0.3');
     });
 
-    it('offers to bake the blend while blending, and to take a baked one back, but nothing to bake before there is a blend', () => {
-        const bake = (root: HTMLElement): HTMLButtonElement | null => root.querySelector<HTMLButtonElement>('button[data-zc-focus="paint-bake"]');
-        expect(bake(mount(stories.Grassland))).toBeNull();
+    it('offers to bake the blend into a tile or its level’s background while blending, and to take a baked one back', () => {
+        const button = (root: HTMLElement, key: string): HTMLButtonElement | null => root.querySelector<HTMLButtonElement>(`button[data-zc-focus="${key}"]`);
+        expect(button(mount(stories.Grassland), 'paint-bake-tile')).toBeNull();
         const blending = mount(stories.BlendingSand);
-        expect(bake(blending)?.textContent).toBe('Bake into a tile');
-        bake(blending)?.click();
-        expect(bake(blending)?.textContent).toBe('Unbake to edit');
-        expect(bake(mount(stories.BakedBlend))?.textContent).toBe('Unbake to edit');
-        expect(bake(mount({ args: { mode: 'blend', baked: null } }))?.disabled).toBe(true);
+        expect(button(blending, 'paint-bake-tile')?.textContent).toBe('Bake into a tile');
+        expect(button(blending, 'paint-bake-background')?.disabled).toBe(false);
+        button(blending, 'paint-bake-background')?.click();
+        expect(button(blending, 'paint-unbake')?.textContent).toBe('Unbake to edit');
+        expect(button(blending, 'paint-bake-tile')).toBeNull();
+        button(blending, 'paint-unbake')?.click();
+        expect(button(blending, 'paint-bake-tile')).not.toBeNull();
+        expect(button(mount(stories.BakedBlend), 'paint-unbake')).not.toBeNull();
+        // Nothing to bake before there is a blend; no one background for a blend on every level.
+        expect(button(mount({ args: { mode: 'blend', splat: 'none' } }), 'paint-bake-tile')?.disabled).toBe(true);
+        const everywhere = mount(stories.BlendOnEveryLevel);
+        expect([button(everywhere, 'paint-bake-tile')?.disabled, button(everywhere, 'paint-bake-background')?.disabled]).toEqual([false, true]);
     });
 
     it('renders every story', () => {
         for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.NoTextureSet]) {
             expect(mount(story).querySelectorAll('button')).toHaveLength(6);
         }
-        for (const story of [stories.BlendingSand, stories.BakedBlend]) {
-            expect(mount(story).querySelectorAll('button')).toHaveLength(7);
+        expect(mount(stories.BakedBlend).querySelectorAll('button')).toHaveLength(7);
+        for (const story of [stories.BlendingSand, stories.BlendOnEveryLevel]) {
+            expect(mount(story).querySelectorAll('button')).toHaveLength(8);
         }
     });
 });

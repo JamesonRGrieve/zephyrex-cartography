@@ -8,7 +8,7 @@
 import { BIOME_TITLE_KEYS, I18N } from '../i18n';
 import type { BiomeKind } from '../tools/biome';
 import { parseSizePx } from '../tools/size-input';
-import { DEFAULT_STRENGTH, type PaintMode, parseStrength } from '../tools/splat';
+import { type BakeTarget, DEFAULT_STRENGTH, type PaintMode, parseStrength, type SplatState } from '../tools/splat';
 import { DEFAULT_BRUSH_RADIUS } from '../tools/stroke';
 import { NORMAL_COST, parseCostInput } from '../tools/terrain-cost';
 import { biomeSwatches, type TextureResolver } from '../tools/texture';
@@ -33,10 +33,12 @@ export interface PaintSettings {
     readonly strength: number;
 }
 
-/** Baking the level's blend: whether it is baked (null: no blend yet), and baking or unbaking it. */
+/** Baking the level's blend: where it stands, whether it has a level's background to go into, and baking or unbaking it. */
 export interface PaintBaking {
-    readonly baked: () => boolean | null;
-    readonly toggle: () => Promise<void>;
+    readonly state: () => SplatState;
+    readonly backgroundBakeable: () => boolean;
+    readonly bake: (into: BakeTarget) => Promise<unknown>;
+    readonly unbake: () => Promise<unknown>;
 }
 
 /** `onChange` runs after every choice, to put it in the tool's hand. */
@@ -57,7 +59,7 @@ export function registerPaintRuntime(
             const p = I18N.paint;
             renderPaintPanel(
                 root,
-                { choices, ...settings, baked: baking.baked() },
+                { choices, ...settings, splat: baking.state(), backgroundBakeable: baking.backgroundBakeable() },
                 {
                     texture: localize(p.texture),
                     size: localize(p.size),
@@ -65,7 +67,7 @@ export function registerPaintRuntime(
                     mode: localize(p.mode),
                     modes: { shapes: localize(p.modes.shapes), blend: localize(p.modes.blend), unblend: localize(p.modes.unblend) },
                     strength: localize(p.strength),
-                    bake: localize(p.bake),
+                    bake: { tile: localize(p.bake), background: localize(p.bakeBackground) },
                     unbake: localize(p.unbake),
                 },
                 {
@@ -84,9 +86,15 @@ export function registerPaintRuntime(
                     setStrength: acceptTyped(parseStrength, (strength) => {
                         choose({ ...settings, strength });
                     }),
-                    toggleBake: () => {
+                    bake: (into) => {
                         void (async (): Promise<void> => {
-                            await baking.toggle();
+                            await baking.bake(into);
+                            panel.refresh();
+                        })();
+                    },
+                    unbake: () => {
+                        void (async (): Promise<void> => {
+                            await baking.unbake();
                             panel.refresh();
                         })();
                     },

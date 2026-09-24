@@ -98,11 +98,10 @@ const paint = registerPaintRuntime(
         }
     },
     {
-        baked: () => state?.controller.splatBaked() ?? null,
-        toggle: async () => {
-            const controller = state?.controller;
-            await (controller?.splatBaked() === true ? controller.unbakeSplat() : controller?.bakeSplat());
-        },
+        state: () => state?.controller.splatState() ?? 'none',
+        backgroundBakeable: () => state?.controller.splatLayer()?.level != null,
+        bake: async (into) => state?.controller.bakeSplat(into),
+        unbake: async () => state?.controller.unbakeSplat(),
     },
 );
 

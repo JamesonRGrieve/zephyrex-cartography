@@ -59,6 +59,7 @@
             },
             "Strength": "Strength (0.05–1)",
             "Bake": "Bake into a tile",
+            "BakeBackground": "Bake into the level's background",
             "Unbake": "Unbake to edit"
         },
         "Paths": {

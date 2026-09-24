@@ -910,8 +910,19 @@ option**: a splat map, as in Dungeondraft and Inkarnate.
       and the overlay stops drawing, so the map renders without the module.
     - Blending again, Unbake, or an undo takes the blend back live and
       deletes the Tile. A bake is not an undo step.
-  - **Still open:** baking into a Level background instead of a Tile, and
-    layering more than one mask per level.
+  - **[done] Baking into the Level's background.** The paint panel offers
+    both targets while blending: "Bake into a tile" and "Bake into the
+    level's background".
+    - The background bake sets the native Level's `background` to the
+      baked image, and the layer records the image it replaced (`baked:
+      { into: 'background', previous }`).
+    - Unbaking, blending again or an undo puts that image back, unless the
+      GM has since set another there.
+    - A blend on every level has no one background, so it bakes only into
+      a Tile.
+    - A layer saved with a bare Tile id reads as a Tile bake.
+    - Both are proven in `tests/e2e/structures.spec.ts`.
+  - **Still open:** layering more than one mask per level.
 
 ---
 

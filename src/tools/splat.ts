@@ -35,10 +35,45 @@ export interface SplatLayer {
     readonly height: number;
     readonly roles: SplatRoles;
     /**
-     * The native Tile the blend is baked into, by id, so it renders without
-     * the module; null while it is not. A baked blend's overlay is not drawn.
+     * Where the blend is baked, so it renders without the module; null while
+     * it is not. A baked blend's overlay is not drawn.
      */
-    readonly baked: string | null;
+    readonly baked: SplatBake | null;
+}
+
+/** What a blend can be baked into: a native Tile over the scene, or its level's own background image. */
+export const BAKE_TARGETS = ['tile', 'background'] as const;
+
+export type BakeTarget = (typeof BAKE_TARGETS)[number];
+
+/**
+ * A baked blend: the Tile it is baked into, by id, or its level's
+ * background, with the image the background had before, to put back on
+ * unbaking.
+ */
+export type SplatBake = { readonly into: 'tile'; readonly tile: string } | { readonly into: 'background'; readonly previous: string | null };
+
+/** Whether a level's blend is there to paint (live), baked into a Tile or its background, or not there at all (none). */
+export type SplatState = 'none' | 'live' | BakeTarget;
+
+/** A layer's state, as the paint panel shows it. */
+export function splatState(layer: SplatLayer | null): SplatState {
+    return layer === null ? 'none' : layer.baked?.into ?? 'live';
+}
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows a persisted bake from the scene flag
+function parseBake(v: unknown): SplatBake | null {
+    // A layer saved before background bakes existed recorded its Tile's id alone.
+    if (typeof v === 'string') {
+        return v === '' ? null : { into: 'tile', tile: v };
+    }
+    if (!isRecord(v)) {
+        return null;
+    }
+    if (v['into'] === 'tile') {
+        return typeof v['tile'] === 'string' && v['tile'] !== '' ? { into: 'tile', tile: v['tile'] } : null;
+    }
+    return v['into'] === 'background' ? { into: 'background', previous: typeof v['previous'] === 'string' ? v['previous'] : null } : null;
 }
 
 /**
@@ -196,7 +231,6 @@ export function parseSplatLayers(v: unknown): SplatLayer[] {
         }
         const roles = entry['roles'];
         const level = entry['level'];
-        const baked = entry['baked'];
         return [
             {
                 level: typeof level === 'string' ? level : null,
@@ -206,7 +240,7 @@ export function parseSplatLayers(v: unknown): SplatLayer[] {
                 height,
                 roles: [parseRole(roles[0]), parseRole(roles[1]), parseRole(roles[2]), parseRole(roles[3])],
                 // A layer saved before baking existed is not baked.
-                baked: typeof baked === 'string' && baked !== '' ? baked : null,
+                baked: parseBake(entry['baked']),
             },
         ];
     });
