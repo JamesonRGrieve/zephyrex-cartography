@@ -194,6 +194,11 @@ export interface RegionCreateData extends OnLevels {
     readonly locked: boolean;
     /** A `CONST.REGION_VISIBILITY` value. */
     readonly visibility: number;
+    /** Highlight its true shapes or the grid spaces it covers; left out, Foundry's default (shapes). */
+    readonly highlightMode?: 'shapes' | 'coverage';
+    readonly displayMeasurements?: boolean;
+    /** Its shapes clipped to walls of `type` (a `CONST.EDGE_RESTRICTION_TYPES` value) and sources past `priority`; left out, unrestricted. */
+    readonly restriction?: { readonly enabled: boolean; readonly type: string; readonly priority: number };
 }
 
 /** A region redrawn in place: everything but its behaviours, which are embedded documents of their own. */

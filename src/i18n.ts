@@ -150,6 +150,8 @@ export const I18N = {
         add: key('Effects.Add'),
         remove: key('Effects.Remove'),
         activeEffects: key('Effects.ActiveEffects'),
+        region: key('Effects.Region'),
+        unrestricted: key('Effects.Unrestricted'),
     },
     materials: {
         title: key('Materials.Title'),

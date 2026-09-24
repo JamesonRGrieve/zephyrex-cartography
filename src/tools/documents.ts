@@ -9,7 +9,7 @@
  */
 import type { Point } from '../geometry/spline';
 import type { PlacedBehaviour, StampLight, StampTile } from '../stamps/schema';
-import type { AreaEffect } from './area-effects';
+import type { AreaDisplay, AreaEffect } from './area-effects';
 import type { BiomeKind } from './biome';
 import { isRecord, stringArray } from './guards';
 
@@ -245,6 +245,8 @@ export interface RegionDoc {
     readonly behaviour: RegionBehaviour | null;
     /** The area effects the GM put on the feature, as further behaviours after `behaviour`; absent for none. */
     readonly effects?: readonly AreaEffect[];
+    /** How the region shows and whether walls shape it, as the GM set it on the area; absent for the engine's default. */
+    readonly display?: AreaDisplay;
 }
 
 /** A native map Note (a pin): its text, the journal page it opens, and its icon. */

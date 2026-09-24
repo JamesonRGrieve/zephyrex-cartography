@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * The area effects panel, opened on a painted area, a stroke or a room: what
- * crossing it costs on foot, then its region behaviours, each with the fields
+ * crossing it costs on foot, how its region shows and whether walls shape
+ * it, then its region behaviours, each with the fields
  * Foundry's own behaviour sheet gives it, and a picker to add another. Named
  * with Foundry's own strings where it has them. A pure function from the
  * panel state to elements; unit-tested under happy-dom.
@@ -9,17 +10,25 @@
 import {
     AREA_EFFECT_KINDS,
     DARKNESS_MODES,
+    HIGHLIGHT_MODES,
     newAreaEffect,
     parseModifier,
+    parsePriority,
     parseUuidLines,
     REGION_EVENTS,
+    REGION_VISIBILITIES,
+    RESTRICTION_TYPES,
     TEXT_EVENTS,
     TEXT_VISIBILITIES,
     withEvent,
+    type AreaDisplay,
     type AreaEffect,
     type AreaEffectKind,
     type DarknessMode,
+    type HighlightMode,
     type RegionEvent,
+    type RegionVisibility,
+    type RestrictionType,
     type TextVisibility,
 } from '../tools/area-effects';
 import type { AreaSettings } from '../tools/areas';
@@ -57,6 +66,23 @@ export interface EffectsLabels {
     readonly script: string;
     /** The Active Effects to apply, one UUID per line. */
     readonly activeEffects: string;
+    readonly region: RegionDisplayLabels;
+}
+
+/** The region's display fields, named as Foundry's Region sheet names them. */
+export interface RegionDisplayLabels {
+    /** The section's legend. */
+    readonly title: string;
+    readonly visibility: string;
+    readonly visibilities: Readonly<Record<RegionVisibility, string>>;
+    readonly highlight: string;
+    readonly highlights: Readonly<Record<HighlightMode, string>>;
+    readonly measurements: string;
+    readonly restriction: string;
+    /** The "not restricted" choice. */
+    readonly unrestricted: string;
+    readonly restrictions: Readonly<Record<RestrictionType, string>>;
+    readonly priority: string;
 }
 
 export interface EffectsHandlers {
@@ -64,6 +90,61 @@ export interface EffectsHandlers {
     readonly setMovementCost: (typed: string) => boolean;
     readonly setEffects: (effects: readonly AreaEffect[]) => void;
     readonly setAdding: (kind: AreaEffectKind) => void;
+    readonly setDisplay: (display: AreaDisplay) => void;
+}
+
+/** Select value standing for "not restricted" (no restriction type is empty). */
+const UNRESTRICTED = '';
+
+/** How the area's region shows, and whether walls shape it; its priority only while it is restricted. */
+function displaySection(display: AreaDisplay, labels: RegionDisplayLabels, setDisplay: (display: AreaDisplay) => void): HTMLElement {
+    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    const restriction = display.restriction;
+    section.append(
+        el('legend', 'tw-text-xs tw-font-bold', labels.title),
+        choice(
+            'zc-area-visibility',
+            labels.visibility,
+            REGION_VISIBILITIES.map((visibility) => [visibility, labels.visibilities[visibility]] as const),
+            display.visibility,
+            (visibility) => {
+                setDisplay({ ...display, visibility });
+            },
+        ),
+        choice(
+            'zc-area-highlight',
+            labels.highlight,
+            HIGHLIGHT_MODES.map((highlight) => [highlight, labels.highlights[highlight]] as const),
+            display.highlight,
+            (highlight) => {
+                setDisplay({ ...display, highlight });
+            },
+        ),
+        labelledCheckbox(labels.measurements, display.measurements, 'area-measurements', (measurements) => {
+            setDisplay({ ...display, measurements });
+        }),
+        choice(
+            'zc-area-restriction',
+            labels.restriction,
+            [[UNRESTRICTED, labels.unrestricted] as const, ...RESTRICTION_TYPES.map((type) => [type, labels.restrictions[type]] as const)],
+            restriction?.type ?? UNRESTRICTED,
+            (type) => {
+                setDisplay({ ...display, restriction: type === UNRESTRICTED ? null : { type, priority: restriction?.priority ?? 0 } });
+            },
+        ),
+        ...(restriction
+            ? [
+                  labelledInput(labels.priority, 'number', String(restriction.priority), 'area-priority', (typed) => {
+                      const priority = parsePriority(typed);
+                      if (priority !== null) {
+                          setDisplay({ ...display, restriction: { ...restriction, priority } });
+                      }
+                      return priority !== null;
+                  }),
+              ]
+            : []),
+    );
+    return section;
 }
 
 /** The subscribed events, one checkbox each, in Foundry's order. */
@@ -224,5 +305,10 @@ export function renderEffectsPanel(root: HTMLElement, panel: EffectsPanel, label
             handlers.setEffects([...effects, newAreaEffect(panel.adding)]);
         }),
     );
-    replacePreservingFocus(root, [labelledInput(labels.movementCost, 'number', String(movementCost), 'movement-cost', handlers.setMovementCost), list, adder]);
+    replacePreservingFocus(root, [
+        labelledInput(labels.movementCost, 'number', String(movementCost), 'movement-cost', handlers.setMovementCost),
+        displaySection(panel.settings.display, labels.region, handlers.setDisplay),
+        list,
+        adder,
+    ]);
 }

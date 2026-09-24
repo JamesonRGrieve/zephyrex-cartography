@@ -9,7 +9,7 @@ import type { TileFrame } from '../canvas/controller';
 import { rectangleOf } from '../geometry/rectangle';
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
-import { type AreaEffect, DARKNESS_MODES, TEXT_VISIBILITIES } from '../tools/area-effects';
+import { type AreaEffect, DARKNESS_MODES, type RegionVisibility, TEXT_VISIBILITIES } from '../tools/area-effects';
 import type {
     DoorState,
     DoorType,
@@ -468,9 +468,32 @@ export function regionCreateData(regions: readonly RegionDoc[], ids: readonly st
         elevation: { bottom: region.bottom, top: region.top },
         behaviors: [...behaviourData(region.behaviour), ...(region.effects ?? []).map(effectBehaviour)],
         // A region drawn from a feature is edited through the feature, so it is locked and
-        // shown on the Regions layer. An interior exit is the GM's to place, so it stays free.
+        // shown on the Regions layer unless the GM chose otherwise. An interior exit is the GM's to place, so it stays free.
         locked: region.label.kind !== 'exit',
-        visibility: REGION_VISIBILITY_LAYER,
+        ...displayData(region),
         ...regionLevels(region),
     }));
+}
+
+/** `CONST.REGION_VISIBILITY` values. */
+const VISIBILITY_IDS: Readonly<Record<RegionVisibility, number>> = { layer: REGION_VISIBILITY_LAYER, gamemaster: 1, always: 2, observer: 3 };
+
+/**
+ * How a region shows, and its restriction. Foundry restricts only a region on
+ * exactly one level (and refuses the create otherwise), so a region on every
+ * level, or spanning several, is left unrestricted.
+ */
+function displayData(region: RegionDoc): Pick<RegionCreateData, 'visibility' | 'highlightMode' | 'displayMeasurements' | 'restriction'> {
+    const display = region.display;
+    if (display === undefined) {
+        return { visibility: REGION_VISIBILITY_LAYER };
+    }
+    const { restriction } = display;
+    const onOneLevel = region.level !== null && region.spans.length === 0;
+    return {
+        visibility: VISIBILITY_IDS[display.visibility],
+        highlightMode: display.highlight,
+        displayMeasurements: display.measurements,
+        ...(restriction !== null && onOneLevel ? { restriction: { enabled: true, ...restriction } } : {}),
+    };
 }

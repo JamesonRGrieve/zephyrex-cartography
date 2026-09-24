@@ -97,7 +97,9 @@
             "Adding": "New behaviour",
             "Add": "Add behaviour",
             "Remove": "Remove",
-            "ActiveEffects": "Active Effect UUIDs, one per line"
+            "ActiveEffects": "Active Effect UUIDs, one per line",
+            "Region": "Region",
+            "Unrestricted": "Not shaped by walls"
         },
         "Materials": {
             "Title": "Room materials",

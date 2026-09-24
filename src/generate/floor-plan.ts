@@ -6,6 +6,7 @@
  * square wide, so every room can be reached. An optional entrance opens one
  * outer wall. The result is a scene spec in grid squares, from (0, 0).
  */
+import { DEFAULT_AREA_DISPLAY } from '../tools/area-effects';
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { NEW_DOOR } from '../tools/room';
 import { NORMAL_COST } from '../tools/terrain-cost';
@@ -196,7 +197,18 @@ function roomSpec(room: Rect, slots: readonly DoorSlot[], o: FloorPlanOptions): 
         .map((d) => points.findIndex((p) => p.x === d.x && p.y === d.y))
         .filter((segment) => segment >= 0)
         .map((segment) => ({ segment, ...NEW_DOOR }));
-    return { type: 'room', points, floor: o.floor, wall: o.wall, wallKind: o.wallKind, ceiling: o.ceiling, movementCost: NORMAL_COST, effects: [], doors };
+    return {
+        type: 'room',
+        points,
+        floor: o.floor,
+        wall: o.wall,
+        wallKind: o.wallKind,
+        ceiling: o.ceiling,
+        movementCost: NORMAL_COST,
+        effects: [],
+        display: DEFAULT_AREA_DISPLAY,
+        doors,
+    };
 }
 
 /** Generate a floor plan; the same options always give the same plan. */

@@ -5,11 +5,11 @@
  * + defensive parser + the smoothed fill outline. Pure and unit-tested.
  */
 import { closedSpline, type Point } from '../geometry/spline';
-import { parseAreaEffects, type Affected } from './area-effects';
+import { parseAreaFields, type Affected } from './area-effects';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord } from './guards';
-import { parseMovementCost, type Costed } from './terrain-cost';
+import type { Costed } from './terrain-cost';
 
 /** Default half-count of samples per region-boundary span. */
 const REGION_SAMPLES = 10;
@@ -57,5 +57,5 @@ export function parseRegion(v: unknown): RegionFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const region = makeRegion(v['id'], v['biome'], points);
-    return region && { ...region, movementCost: parseMovementCost(v['movementCost']), effects: parseAreaEffects(v['effects']), ...parseFeatureCommon(v) };
+    return region && { ...region, ...parseAreaFields(v), ...parseFeatureCommon(v) };
 }

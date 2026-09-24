@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FLOOR_PLAN, generateFloorPlan } from '../generate/floor-plan';
 import { parseSceneSpec, type SceneSpec } from '../generate/spec';
+import { DEFAULT_AREA_DISPLAY } from '../tools/area-effects';
 import { areaSettingsOf, isArea } from '../tools/areas';
 import type { WallDoc } from '../tools/documents';
 import { NO_LEVEL_ART } from '../tools/levels';
@@ -318,6 +319,7 @@ describe('realizeSpec', () => {
         expect(room && isArea(room) ? areaSettingsOf(room) : null).toEqual({
             movementCost: 2,
             effects: [{ kind: 'darkness', mode: 'override', modifier: 0.7 }],
+            display: DEFAULT_AREA_DISPLAY,
         });
         expect(marsh && isArea(marsh) ? areaSettingsOf(marsh).effects : null).toEqual([
             { kind: 'text', text: 'Squelch', colour: '#ffffff', visibility: 'anyone', once: false, events: ['tokenTurnEnd'] },
@@ -325,6 +327,32 @@ describe('realizeSpec', () => {
         // Ordinary ground with no effects stores neither.
         expect(sand).not.toHaveProperty('effects', []);
         expect(sand && 'effects' in sand ? sand.effects : undefined).toBeUndefined();
+    });
+
+    it('gives an area its region’s display, filling what is left out with the engine’s own and storing none for the default', async () => {
+        const h = makeHarness();
+        const square = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 2 },
+        ];
+        await realizeSpec(
+            h.c,
+            spec({
+                features: [
+                    { type: 'room', points: square, display: { visibility: 'always', restriction: { type: 'sight' } } },
+                    { type: 'region', biome: 'marsh', points: square, display: {} },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        const [room, marsh] = h.s.last();
+        expect(room && isArea(room) ? areaSettingsOf(room).display : null).toEqual({
+            ...DEFAULT_AREA_DISPLAY,
+            visibility: 'always',
+            restriction: { type: 'sight', priority: 0 },
+        });
+        expect(marsh && 'display' in marsh ? marsh.display : undefined).toBeUndefined();
     });
 
     it('puts map pins where the spec says, opening their journal page, and a lamp switch can be keyed beside them', async () => {

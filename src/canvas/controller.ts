@@ -11,7 +11,7 @@ import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { centroid, nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
-import { storedEffects } from '../tools/area-effects';
+import { storedDisplay, storedEffects } from '../tools/area-effects';
 import { type AreaSettings, areaSettingsOf, isArea } from '../tools/areas';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
@@ -1186,7 +1186,12 @@ export class CartographyController {
         if (!f || !isArea(f) || validCost(settings.movementCost) === null) {
             return false;
         }
-        await this.replaceFeature(id, { ...f, movementCost: storedCost(settings.movementCost), effects: storedEffects(settings.effects) });
+        await this.replaceFeature(id, {
+            ...f,
+            movementCost: storedCost(settings.movementCost),
+            effects: storedEffects(settings.effects),
+            display: storedDisplay(settings.display),
+        });
         return true;
     }
 

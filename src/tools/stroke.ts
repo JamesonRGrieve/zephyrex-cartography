@@ -6,11 +6,11 @@
  * parser + edit constructor. Pure and unit-tested.
  */
 import type { Point } from '../geometry/spline';
-import { parseAreaEffects, type Affected } from './area-effects';
+import { parseAreaFields, type Affected } from './area-effects';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr } from './guards';
-import { parseMovementCost, type Costed } from './terrain-cost';
+import type { Costed } from './terrain-cost';
 
 /** Default brush radius (scene px) for a freshly painted terrain stroke. */
 export const DEFAULT_BRUSH_RADIUS = 25;
@@ -49,5 +49,5 @@ export function parseStroke(v: unknown): StrokeFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const stroke = makeStroke(v['id'], v['biome'], points, numberOr(v['radius'], DEFAULT_BRUSH_RADIUS));
-    return stroke && { ...stroke, movementCost: parseMovementCost(v['movementCost']), effects: parseAreaEffects(v['effects']), ...parseFeatureCommon(v) };
+    return stroke && { ...stroke, ...parseAreaFields(v), ...parseFeatureCommon(v) };
 }

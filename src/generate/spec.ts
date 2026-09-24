@@ -12,7 +12,16 @@
  * this file. Changes to v1 are additive only.
  */
 import { z } from 'zod';
-import { DARKNESS_MODES, REGION_EVENTS, TEXT_EVENTS, TEXT_VISIBILITIES } from '../tools/area-effects';
+import {
+    DARKNESS_MODES,
+    DEFAULT_AREA_DISPLAY,
+    HIGHLIGHT_MODES,
+    REGION_EVENTS,
+    REGION_VISIBILITIES,
+    RESTRICTION_TYPES,
+    TEXT_EVENTS,
+    TEXT_VISIBILITIES,
+} from '../tools/area-effects';
 import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
 import { MAX_FONT_SIZE, MIN_FONT_SIZE, NEW_LABEL } from '../tools/label';
@@ -80,6 +89,22 @@ const areaEffectSpec = z
 
 const areaEffects = z.array(areaEffectSpec).default([]).describe("Region behaviours on the area's Scene Region.");
 
+const areaDisplay = z
+    .object({
+        visibility: z.enum(REGION_VISIBILITIES).default(DEFAULT_AREA_DISPLAY.visibility).describe("Who sees the region, as Foundry's Region visibility."),
+        highlight: z.enum(HIGHLIGHT_MODES).default(DEFAULT_AREA_DISPLAY.highlight).describe('Highlight its true shapes, or the grid spaces it covers.'),
+        measurements: z.boolean().default(DEFAULT_AREA_DISPLAY.measurements).describe('Show its measurements.'),
+        restriction: z
+            .object({ type: z.enum(RESTRICTION_TYPES), priority: z.number().int().min(0).default(0) })
+            .strict()
+            .nullable()
+            .default(null)
+            .describe('Shape the region by walls of this type, cast from its origin, so effects stop at walls. Needs a feature on one level.'),
+    })
+    .strict()
+    .default(DEFAULT_AREA_DISPLAY)
+    .describe("How the area's Scene Region shows, and whether walls shape it.");
+
 const regionSpec = z
     .object({
         type: z.literal('region'),
@@ -88,6 +113,7 @@ const regionSpec = z
         points: z.array(point).min(3).describe('Boundary control points.'),
         movementCost,
         effects: areaEffects,
+        display: areaDisplay,
         level,
     })
     .strict()
@@ -102,6 +128,7 @@ const strokeSpec = z
         radius: positive.optional().describe('Half-width of the swath (default: the brush default).'),
         movementCost,
         effects: areaEffects,
+        display: areaDisplay,
         level,
     })
     .strict()
@@ -160,6 +187,7 @@ const roomSpec = z
         ceiling: z.boolean().default(true).describe('Whether a level above gets a ceiling over the room (false for an open courtyard).'),
         movementCost,
         effects: areaEffects,
+        display: areaDisplay,
         doors: z.array(doorSpec).default([]),
         level,
     })

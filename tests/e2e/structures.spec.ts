@@ -120,6 +120,46 @@ test('difficult painted ground becomes a Modify Movement Cost region, with terra
     ]);
 });
 
+test('an area’s region shows as the spec says, and is shaped by walls only on exactly one level', async ({ world }) => {
+    const regions = await world.evaluate(async () => {
+        const square = (x: number): { x: number; y: number }[] => [
+            { x, y: 1 },
+            { x: x + 4, y: 1 },
+            { x: x + 4, y: 5 },
+            { x, y: 5 },
+        ];
+        const display = { visibility: 'always', highlight: 'coverage', measurements: true, restriction: { type: 'sight', priority: 2 } };
+        const outcome = await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            levels: [{ key: 'g', name: 'Ground' }],
+            features: [
+                { type: 'room', points: square(1), level: 'g', display },
+                { type: 'region', biome: 'marsh', points: square(7), display },
+            ],
+        });
+        return {
+            problems: outcome?.ok === true ? outcome.report.problems : null,
+            // The room's floor over the scene's own first level is left out.
+            regions: (canvas?.scene?.regions.contents ?? [])
+                .filter((r) => r.name === 'Room' || r.name === 'Marsh')
+                .map((r) => ({
+                    name: r.name,
+                    visibility: r.visibility,
+                    highlightMode: r.highlightMode,
+                    displayMeasurements: r.displayMeasurements,
+                    restriction: { enabled: r.restriction.enabled, type: r.restriction.type, priority: r.restriction.priority },
+                })),
+        };
+    });
+    expect(regions.problems).toEqual([]);
+    // Foundry's ALWAYS visibility is 2; the marsh shows on every level, which Foundry cannot restrict.
+    const shown = { visibility: 2, highlightMode: 'coverage', displayMeasurements: true };
+    expect(regions.regions).toEqual([
+        { name: 'Room', ...shown, restriction: { enabled: true, type: 'sight', priority: 2 } },
+        { name: 'Marsh', ...shown, restriction: expect.objectContaining({ enabled: false }) },
+    ]);
+});
+
 test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
     const walls = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

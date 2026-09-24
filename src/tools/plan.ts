@@ -11,7 +11,7 @@ import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { catmullRom, distanceToSegment, type Point } from '../geometry/spline';
 import { cutSegment, perimeterSegments, type Segment, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
-import { type Affected, effectsOf } from './area-effects';
+import { type Affected, customDisplay, displayOf, effectsOf } from './area-effects';
 import {
     BLOCKS_ALL,
     type DrawingDoc,
@@ -569,6 +569,7 @@ function areaRegion(feature: Feature & Costed & Affected, label: RegionDoc['labe
     const band = findLevel(levels, feature.level);
     const cost = movementCostOf(feature);
     const effects = effectsOf(feature);
+    const display = displayOf(feature);
     return {
         id: null,
         label,
@@ -579,10 +580,11 @@ function areaRegion(feature: Feature & Costed & Affected, label: RegionDoc['labe
         spans: [],
         behaviour: cost === NORMAL_COST ? null : { kind: 'terrain', difficulties: { walk: cost } },
         ...(effects.length > 0 ? { effects } : {}),
+        ...(customDisplay(display) ? { display } : {}),
     };
 }
 
-/** Whether an area needs its own Scene Region whatever the world's terrain setting: difficult ground, or effects on it. */
+/** Whether an area needs its own Scene Region whatever the world's terrain setting: difficult ground, effects on it, or a display of its own. */
 function needsArea(feature: Costed & Affected): boolean {
-    return movementCostOf(feature) !== NORMAL_COST || effectsOf(feature).length > 0;
+    return movementCostOf(feature) !== NORMAL_COST || effectsOf(feature).length > 0 || customDisplay(displayOf(feature));
 }

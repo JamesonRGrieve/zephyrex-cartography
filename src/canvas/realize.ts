@@ -8,7 +8,7 @@
  */
 import type { FeatureSpec, SceneSpec } from '../generate/spec';
 import type { Point } from '../geometry/spline';
-import { type Affected, type AreaEffect, storedEffects } from '../tools/area-effects';
+import { type Affected, type AreaDisplay, type AreaEffect, storedDisplay, storedEffects } from '../tools/area-effects';
 import { parseCssHex } from '../tools/colour';
 import type { Feature } from '../tools/feature';
 import { makeLabel } from '../tools/label';
@@ -94,9 +94,9 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
     return feature && { ...feature, level };
 }
 
-/** What a spec area costs to cross and the effects on it, as a feature stores them. */
-function areaOf(spec: { readonly movementCost: number; readonly effects: readonly AreaEffect[] }): Costed & Affected {
-    return { movementCost: storedCost(spec.movementCost), effects: storedEffects(spec.effects) };
+/** What a spec area costs to cross, the effects on it and its region's display, as a feature stores them. */
+function areaOf(spec: { readonly movementCost: number; readonly effects: readonly AreaEffect[]; readonly display: AreaDisplay }): Costed & Affected {
+    return { movementCost: storedCost(spec.movementCost), effects: storedEffects(spec.effects), display: storedDisplay(spec.display) };
 }
 
 function placement(spec: Extract<FeatureSpec, { type: 'stamp' }>, scale: Scale): StampPlacement {

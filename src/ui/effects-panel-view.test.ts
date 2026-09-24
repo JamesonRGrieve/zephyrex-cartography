@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, describe, expect, it } from 'vitest';
+import { DEFAULT_AREA_DISPLAY } from '../tools/area-effects';
 import * as stories from './effects-panel-view.stories';
 
 function mount(story: { readonly args?: Partial<stories.EffectsPanelArgs> }): HTMLElement {
-    const el = stories.mountEffectsPanel({ settings: story.args?.settings ?? stories.default.args?.settings ?? { movementCost: 1, effects: [] } });
+    const el = stories.mountEffectsPanel({
+        settings: story.args?.settings ?? stories.default.args?.settings ?? { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY },
+    });
     document.body.replaceChildren(el);
     return el;
 }
@@ -29,8 +32,11 @@ function select(root: HTMLElement, id: string): HTMLSelectElement {
     return found;
 }
 
+/** Each behaviour's legend, after the region display's own. */
 function legends(root: HTMLElement): string[] {
-    return [...root.querySelectorAll('fieldset > legend.tw-font-bold')].map((legend) => legend.textContent);
+    const [region, ...behaviours] = [...root.querySelectorAll('fieldset > legend.tw-font-bold')].map((legend) => legend.textContent);
+    expect(region).toBe('Region');
+    return behaviours;
 }
 
 describe('area effects panel', () => {
@@ -85,6 +91,34 @@ describe('area effects panel', () => {
         expect(input(root, 'Script').value).toContain('draught');
         change(input(root, 'Effects (one UUID per line)'), ' a \n\n b ');
         expect(input(root, 'Effects (one UUID per line)').value).toBe('a\nb');
+    });
+
+    it('sets who sees the region, how it is highlighted, its measurements, and the walls that shape it, with a priority only while shaped', () => {
+        const root = mount(stories.OrdinaryGround);
+        expect(select(root, 'zc-area-visibility').value).toBe('layer');
+        expect(select(root, 'zc-area-restriction').value).toBe('');
+        expect(root.querySelector('input[data-zc-focus="area-priority"]')).toBeNull();
+        change(select(root, 'zc-area-visibility'), 'observer');
+        change(select(root, 'zc-area-highlight'), 'coverage');
+        change(select(root, 'zc-area-restriction'), 'sight');
+        expect(select(root, 'zc-area-visibility').value).toBe('observer');
+        expect(select(root, 'zc-area-highlight').value).toBe('coverage');
+        const priority = (): HTMLInputElement | null => root.querySelector<HTMLInputElement>('input[data-zc-focus="area-priority"]');
+        expect(priority()?.value).toBe('0');
+        const at = priority();
+        if (at) {
+            change(at, '3');
+        }
+        expect(priority()?.value).toBe('3');
+        const bad = priority();
+        if (bad) {
+            change(bad, '-1');
+        }
+        expect(priority()?.value).toBe('3');
+        root.querySelector<HTMLInputElement>('input[data-zc-focus="area-measurements"]')?.click();
+        expect(root.querySelector<HTMLInputElement>('input[data-zc-focus="area-measurements"]')?.checked).toBe(true);
+        change(select(root, 'zc-area-restriction'), '');
+        expect(priority()).toBeNull();
     });
 
     it('renders every story', () => {

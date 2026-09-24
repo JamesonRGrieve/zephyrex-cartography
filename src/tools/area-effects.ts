@@ -9,6 +9,7 @@
  */
 import { parseCssHex } from './colour';
 import { isRecord, stringArray } from './guards';
+import { type Costed, parseMovementCost } from './terrain-cost';
 
 /** v14 `CONST.REGION_EVENTS`: what a region behaviour can subscribe to. */
 export const REGION_EVENTS = [
@@ -107,9 +108,87 @@ export function newAreaEffect(kind: AreaEffectKind): AreaEffect {
     return { kind: 'suppressWeather' };
 }
 
-/** What an area carries: its effects, or undefined for none (left out of the stored JSON). */
+/** Who sees an area's region: v14 `CONST.REGION_VISIBILITY` less LAYER_UNLOCKED, which would hide a locked region. */
+export const REGION_VISIBILITIES = ['layer', 'gamemaster', 'observer', 'always'] as const;
+
+export type RegionVisibility = (typeof REGION_VISIBILITIES)[number];
+
+/** How a region is highlighted: its true shapes, or the grid spaces it covers (v14 `highlightMode`). */
+export const HIGHLIGHT_MODES = ['shapes', 'coverage'] as const;
+
+export type HighlightMode = (typeof HIGHLIGHT_MODES)[number];
+
+/** v14 `CONST.EDGE_RESTRICTION_TYPES`: the walls a restricted region's shapes are clipped to. */
+export const RESTRICTION_TYPES = ['light', 'darkness', 'sight', 'sound', 'move'] as const;
+
+export type RestrictionType = (typeof RESTRICTION_TYPES)[number];
+
+/**
+ * How an area's region shows and whether it is shaped by walls. A
+ * restriction does not bar anything: Foundry clips the region's shapes to
+ * walls of its type (and, for light, darkness and sight, sources at or past
+ * its priority), cast from each shape's origin like a light, so an effect
+ * stops at walls.
+ */
+export interface AreaDisplay {
+    readonly visibility: RegionVisibility;
+    readonly highlight: HighlightMode;
+    readonly measurements: boolean;
+    readonly restriction: { readonly type: RestrictionType; readonly priority: number } | null;
+}
+
+/** A region as the engine makes one: on the Regions layer, its true shapes, no measurements, unrestricted. */
+export const DEFAULT_AREA_DISPLAY: AreaDisplay = { visibility: 'layer', highlight: 'shapes', measurements: false, restriction: null };
+
+/** What an area carries: its effects and its region's display, each left out of the stored JSON while it has none. */
 export interface Affected {
     readonly effects?: readonly AreaEffect[] | undefined;
+    readonly display?: AreaDisplay | undefined;
+}
+
+/** An area's region display, the engine's default when it has none. */
+export function displayOf(feature: Affected): AreaDisplay {
+    return feature.display ?? DEFAULT_AREA_DISPLAY;
+}
+
+/** Whether `display` is anything but the default. */
+export function customDisplay(display: AreaDisplay): boolean {
+    const { visibility, highlight, measurements, restriction } = DEFAULT_AREA_DISPLAY;
+    return display.visibility !== visibility || display.highlight !== highlight || display.measurements !== measurements || display.restriction !== restriction;
+}
+
+/** A display as stored: undefined for the default. */
+export function storedDisplay(display: AreaDisplay): AreaDisplay | undefined {
+    return customDisplay(display) ? display : undefined;
+}
+
+/** A typed restriction priority: a whole number from 0, or null. */
+export function parsePriority(typed: string): number | null {
+    const value = typed.trim() === '' ? Number.NaN : Number(typed);
+    return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+/** An area's persisted cost, effects and region display, as its parser spreads them. */
+// eslint-disable-next-line no-restricted-syntax -- boundary: reads an area's fields from one untyped scene-flag entry
+export function parseAreaFields(v: Record<string, unknown>): Costed & Affected {
+    return { movementCost: parseMovementCost(v['movementCost']), effects: parseAreaEffects(v['effects']), display: parseAreaDisplay(v['display']) };
+}
+
+/** The persisted display of an area: each field valid or the default; none when it is the default. */
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows a persisted region display from scene-flag JSON
+export function parseAreaDisplay(v: unknown): AreaDisplay | undefined {
+    if (!isRecord(v)) {
+        return undefined;
+    }
+    const restriction = isRecord(v['restriction']) ? v['restriction'] : null;
+    const type = restriction ? RESTRICTION_TYPES.find((t) => t === restriction['type']) : undefined;
+    const priority = restriction && typeof restriction['priority'] === 'number' ? parsePriority(String(restriction['priority'])) : null;
+    return storedDisplay({
+        visibility: oneOf(REGION_VISIBILITIES, v['visibility'], DEFAULT_AREA_DISPLAY.visibility),
+        highlight: oneOf(HIGHLIGHT_MODES, v['highlight'], DEFAULT_AREA_DISPLAY.highlight),
+        measurements: v['measurements'] === true,
+        restriction: type === undefined ? null : { type, priority: priority ?? 0 },
+    });
 }
 
 /** An area's effects, none when it has none. */

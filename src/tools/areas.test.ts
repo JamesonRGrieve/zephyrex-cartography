@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_AREA_DISPLAY } from './area-effects';
 import { areaSettingsOf, isArea } from './areas';
 import { LIQUID_LOOKS, makePath } from './path';
 import { makeRegion } from './region';
@@ -25,10 +26,11 @@ describe('areas', () => {
 
     it('have ordinary ground and no effects until given some', () => {
         const room = makeRoom('c', 'dirt', square);
-        expect(room && areaSettingsOf(room)).toEqual({ movementCost: 1, effects: [] });
+        expect(room && areaSettingsOf(room)).toEqual({ movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY });
         expect(room && areaSettingsOf({ ...room, movementCost: 2, effects: [{ kind: 'suppressWeather' }] })).toEqual({
             movementCost: 2,
             effects: [{ kind: 'suppressWeather' }],
+            display: DEFAULT_AREA_DISPLAY,
         });
     });
 });

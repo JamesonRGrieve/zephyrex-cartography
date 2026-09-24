@@ -10,7 +10,7 @@ import type { CartographyController } from '../canvas/controller';
 import { I18N } from '../i18n';
 import type { AreaEffectKind } from '../tools/area-effects';
 import { parseCostInput } from '../tools/terrain-cost';
-import { renderEffectsPanel, type EffectsLabels } from '../ui/effects-panel-view';
+import { renderEffectsPanel, type EffectsLabels, type RegionDisplayLabels } from '../ui/effects-panel-view';
 import { localize } from './localize';
 import { createViewWindow } from './view-window';
 
@@ -60,6 +60,35 @@ function labels(): EffectsLabels {
         everyone: behaviour('executeMacro.FIELDS.everyone.label'),
         script: behaviour('executeScript.FIELDS.source.label'),
         activeEffects: localize(I18N.effects.activeEffects),
+        region: regionLabels(),
+    };
+}
+
+/** The region display's fields, as Foundry's Region sheet names them. */
+function regionLabels(): RegionDisplayLabels {
+    const region = (path: string): string => localize(`REGION.${path}`);
+    return {
+        title: localize(I18N.effects.region),
+        visibility: region('FIELDS.visibility.label'),
+        visibilities: {
+            layer: region('VISIBILITY.LAYER.label'),
+            gamemaster: region('VISIBILITY.GAMEMASTER.label'),
+            observer: region('VISIBILITY.OBSERVER.label'),
+            always: region('VISIBILITY.ALWAYS.label'),
+        },
+        highlight: region('FIELDS.highlightMode.label'),
+        highlights: { shapes: region('HIGHLIGHT_MODES.shapes.label'), coverage: region('HIGHLIGHT_MODES.coverage.label') },
+        measurements: region('FIELDS.displayMeasurements.label'),
+        restriction: region('FIELDS.restriction.type.label'),
+        unrestricted: localize(I18N.effects.unrestricted),
+        restrictions: {
+            light: region('RESTRICTION_TYPES.light.label'),
+            darkness: region('RESTRICTION_TYPES.darkness.label'),
+            sight: region('RESTRICTION_TYPES.sight.label'),
+            sound: region('RESTRICTION_TYPES.sound.label'),
+            move: region('RESTRICTION_TYPES.move.label'),
+        },
+        priority: region('FIELDS.restriction.priority.label'),
     };
 }
 
@@ -105,6 +134,9 @@ export function registerEffectsRuntime(controller: () => CartographyController |
                 setAdding: (kind) => {
                     adding = kind;
                     panel.refresh();
+                },
+                setDisplay: (display) => {
+                    save({ ...settings, display });
                 },
             });
         },

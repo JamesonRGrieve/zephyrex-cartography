@@ -466,6 +466,24 @@ describe('regionCreateData', () => {
         expect(data?.levels).toEqual(['C']);
     });
 
+    it('shows an area’s region as chosen, with Foundry’s visibility ids, and shapes it by walls only on exactly one level', () => {
+        const display = { visibility: 'observer', highlight: 'coverage', measurements: true, restriction: { type: 'sight', priority: 3 } } as const;
+        const area: RegionDoc = { id: null, label: { kind: 'room' }, polygon: square, bottom: 0, top: 10, level: 'C', spans: [], behaviour: null, display };
+        const [one, everywhere, spanning] = regionCreateData([area, { ...area, level: null }, { ...area, spans: ['D'] }], ['r1', 'r2', 'r3'], nameOf);
+        expect(one).toMatchObject({
+            visibility: 3,
+            highlightMode: 'coverage',
+            displayMeasurements: true,
+            restriction: { enabled: true, type: 'sight', priority: 3 },
+        });
+        expect(everywhere).not.toHaveProperty('restriction');
+        expect(spanning).not.toHaveProperty('restriction');
+        const { display: _shown, ...undisplayed } = area;
+        const [plain] = regionCreateData([undisplayed], ['r4'], nameOf);
+        expect(plain).toMatchObject({ visibility: 0 });
+        expect(plain).not.toHaveProperty('highlightMode');
+    });
+
     it('makes a floor a solid defineSurface at its bottom, on its level and the one seen from below', () => {
         const floor: RegionDoc = {
             id: null,

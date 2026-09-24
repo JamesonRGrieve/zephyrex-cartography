@@ -28,6 +28,7 @@ describe('parseSceneSpec', () => {
                         ceiling: true,
                         movementCost: 1,
                         effects: [],
+                        display: { visibility: 'layer', highlight: 'shapes', measurements: false, restriction: null },
                         doors: [{ segment: 1, type: 'door', state: 'closed', sound: null, animation: null }],
                     },
                 ],

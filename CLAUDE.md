@@ -642,12 +642,20 @@ These make everything after them cheaper and safer, so they come first.
     (Foundry's Invisible Wall), unless its occlusion walls already bar
     movement. `tests/e2e/stamps.spec.ts` runs Foundry's own move collision
     test through it.
-  - **Still open:** `restriction` as what it is: a region shaped by walls
-    (light, darkness, sight, sound or move) with a `priority`, for effects
-    that should stop at walls;
+  - **[done] Area region display.** An area's `display` sets its region's
+    `visibility` (Foundry's LAYER, GAMEMASTER, OBSERVER or ALWAYS; never
+    LAYER_UNLOCKED, which hides a locked region), `highlightMode` (true
+    shapes or covered grid spaces), `displayMeasurements`, and
+    `restriction`: the region shaped by walls of one type (light, darkness,
+    sight, sound or move) with a `priority`, so an effect stops at walls.
+    - Foundry restricts only a region on exactly one level and refuses the
+      create otherwise, so a restriction is sent only then.
+    - An area with a display other than the default gets its region.
+    - The effects panel's Region section sets it, in Foundry's Region sheet
+      strings. The scene spec's regions, strokes and rooms take `display`.
+      `tests/e2e/structures.spec.ts` checks the real Region.
   - `hidden` [14.360]: GM-only, with behaviours off. Blocked: not in the
     14.359 schema;
-  - `highlightMode` (covered grid spaces) and `displayMeasurements`;
   - `ownership`;
   - `attachment.token`: a region that moves with a token [14.353, renamed
     14.356].

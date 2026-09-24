@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Stories for the area effects panel; each keeps its own area, so the controls work in Storybook. */
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import type { AreaEffectKind, RegionEvent } from '../tools/area-effects';
+import { type AreaEffectKind, DEFAULT_AREA_DISPLAY, type RegionEvent } from '../tools/area-effects';
 import type { AreaSettings } from '../tools/areas';
 import { parseCostInput } from '../tools/terrain-cost';
 import { renderEffectsPanel, type EffectsLabels } from './effects-panel-view';
@@ -63,6 +63,29 @@ const LABELS: EffectsLabels = {
     everyone: 'Everyone',
     script: 'Script',
     activeEffects: 'Effects (one UUID per line)',
+    region: {
+        title: 'Region',
+        visibility: 'Visibility',
+        visibilities: {
+            layer: 'Only on Region Layer',
+            gamemaster: 'Always for Gamemaster',
+            observer: 'Always for Observers',
+            always: 'Always for Anyone',
+        },
+        highlight: 'Highlight Mode',
+        highlights: { shapes: 'True Shapes', coverage: 'Covered Grid Spaces' },
+        measurements: 'Display Measurements',
+        restriction: 'Restricted By',
+        unrestricted: 'Not shaped by walls',
+        restrictions: {
+            light: 'Light-blocking Walls and Darkness Sources with Priority ≥ Threshold',
+            darkness: 'Darkness-blocking Walls and Light Sources with Priority > Threshold',
+            sight: 'Sight-blocking Walls and Darkness Sources with Priority ≥ Threshold',
+            sound: 'Sound-blocking Walls',
+            move: 'Movement-blocking Walls',
+        },
+        priority: 'Priority Threshold',
+    },
 };
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
@@ -91,6 +114,10 @@ export function mountEffectsPanel(args: EffectsPanelArgs): HTMLElement {
                 adding = kind;
                 render();
             },
+            setDisplay: (display) => {
+                settings = { ...settings, display };
+                render();
+            },
         });
     };
     render();
@@ -101,7 +128,7 @@ const meta: Meta<EffectsPanelArgs> = {
     title: 'Regions/Area Effects Panel',
     excludeStories: ['mountEffectsPanel'],
     render: mountEffectsPanel,
-    args: { settings: { movementCost: 1, effects: [] } },
+    args: { settings: { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY } },
 };
 
 export default meta;
@@ -115,6 +142,8 @@ export const DarkMireRoom: Story = {
         settings: {
             movementCost: 2,
             effects: [{ kind: 'darkness', mode: 'darken', modifier: 0.4 }, { kind: 'suppressWeather' }],
+            // The darkness stops at the walls, and players see where it lies.
+            display: { visibility: 'always', highlight: 'coverage', measurements: false, restriction: { type: 'light', priority: 0 } },
         },
     },
 };
@@ -130,6 +159,7 @@ export const TrappedCorridor: Story = {
                 { kind: 'script', source: 'ui.notifications.info("A draught.");', events: ['tokenExit'] },
                 { kind: 'activeEffect', effects: ['Compendium.world.effects.ActiveEffect.poisoned'] },
             ],
+            display: DEFAULT_AREA_DISPLAY,
         },
     },
 };
