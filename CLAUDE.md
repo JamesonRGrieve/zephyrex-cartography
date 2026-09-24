@@ -509,8 +509,11 @@ These make everything after them cheaper and safer, so they come first.
       values, with `visibleLevels` naming other levels by key.
     - 14.359 gives the fog a tint, but fvtt-types lacks it, so the boundary
       reads the fog tint as optional.
-- **Level preloading** [14.364]. The levels panel can preload a level's
-  images before the party climbs to it.
+- **[done] Level preloading** [14.364]. Each row of the levels panel has
+  Foundry's own Preload, which loads that level's art on every connected
+  client (`Scenes#preload` with the level and `broadcast`, as the scene
+  navigation's Preload does) before the party climbs to it.
+  `tests/e2e/levels.spec.ts` sees the call reach Foundry.
 - **Buildings: interior scene or upper levels.** A building can open into a
   separate interior scene (submaps) or have its floors as Levels of the same
   scene. That is the GM's choice per building (operator decision,

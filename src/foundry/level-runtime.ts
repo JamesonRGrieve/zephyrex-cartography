@@ -27,6 +27,8 @@ function panelLabels(): LevelPanelLabels {
         allLevels: localize(l.allLevels),
         addAbove: localize(l.addAbove),
         addBelow: localize(l.addBelow),
+        // Foundry's own scene-navigation entry.
+        preload: localize('SCENE.Preload'),
         remove: localize(l.remove),
         name: localize(l.name),
         bottom: localize(l.bottom),
@@ -106,6 +108,13 @@ export function registerLevelRuntime(controller: () => CartographyController | n
                         void pickImage(level.art[image], (path) => {
                             run(async (c) => c.setLevelArt(id, { ...level.art, [image]: path }));
                         });
+                    }
+                },
+                preload: (id) => {
+                    const scene = canvas?.scene?.id ?? null;
+                    if (scene !== null) {
+                        // As Foundry's own scene navigation preloads a level: on every connected client.
+                        void game.scenes?.preload(scene, { level: id, broadcast: true });
                     }
                 },
                 remove: (id) => {

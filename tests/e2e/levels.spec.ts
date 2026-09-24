@@ -43,6 +43,27 @@ test('a ladder’s changeLevel region is taken only by climbing, and a stair’s
     expect(actions).toBe('[[],["climb"]]');
 });
 
+test('a level’s Preload button preloads it on every client, as Foundry’s scene navigation does', async ({ world }) => {
+    const upper = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        await controller?.addLevel('above', 'Ground');
+        return (await controller?.addLevel('above', 'Upper')) ?? '';
+    });
+    // Record what reaches Foundry's own preload, then let it run.
+    await world.evaluate(
+        `(() => { const scenes = game.scenes; const original = scenes.preload.bind(scenes); window.zcPreloads = [];
+        scenes.preload = (id, options) => { window.zcPreloads.push({ scene: id === canvas.scene.id, level: options.level, broadcast: options.broadcast }); return original(id, options); }; })()`,
+    );
+    await world.evaluate(async () => {
+        await ui.controls?.activate({ control: 'zephyrex-cartography' });
+    });
+    await world.click('button[data-tool="levels"]');
+    await world.click(`button[data-zc-focus="preload:${upper}"]`);
+    await expect
+        .poll(async () => world.evaluate<string>('JSON.stringify(window.zcPreloads)'))
+        .toBe(JSON.stringify([{ scene: true, level: upper, broadcast: true }]));
+});
+
 test('a building’s floors in this scene are native Levels above, joined by one changeLevel stair over it', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();

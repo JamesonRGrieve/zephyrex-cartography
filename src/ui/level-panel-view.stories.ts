@@ -14,12 +14,15 @@ export interface LevelPanelArgs {
     readonly counts: Readonly<Record<string, number>>;
     /** A level whose look section starts open. */
     readonly openLook?: string;
+    /** Told of each level preloaded; Storybook has no scenes to preload into. */
+    readonly onPreload?: (id: string) => void;
 }
 
 const LABELS: LevelPanelLabels = {
     allLevels: 'All levels',
     addAbove: 'Add level above',
     addBelow: 'Add level below',
+    preload: 'Preload',
     remove: 'Remove level',
     name: 'Level name',
     bottom: 'Floor elevation',
@@ -91,6 +94,9 @@ export function mountLevelPanel(args: LevelPanelArgs): HTMLElement {
             browse: (id, image) => {
                 levels = levels.map((l) => (l.id === id ? { ...l, art: { ...l.art, [image]: PICKED } } : l));
                 render();
+            },
+            preload: (id) => {
+                args.onPreload?.(id);
             },
             remove: (id) => {
                 levels = levels.filter((l) => l.id !== id);

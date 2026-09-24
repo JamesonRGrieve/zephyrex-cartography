@@ -42,6 +42,7 @@ export interface LevelPanelLabels {
     readonly allLevels: string;
     readonly addAbove: string;
     readonly addBelow: string;
+    readonly preload: string;
     readonly remove: string;
     readonly name: string;
     readonly bottom: string;
@@ -66,6 +67,8 @@ export interface LevelPanelHandlers {
     readonly setArt: (id: string, art: LevelArt) => void;
     /** Pick one of the level's images with Foundry's file picker. */
     readonly browse: (id: string, image: LevelImage) => void;
+    /** Load the level's art on every client ahead of the party reaching it. */
+    readonly preload: (id: string) => void;
     readonly remove: (id: string) => void;
 }
 
@@ -162,6 +165,9 @@ function levelRow(row: LevelRow, others: readonly Level[], labels: LevelPanelLab
     });
     remove.disabled = !row.removable;
     remove.title = row.removable ? labels.remove : labels.removeBlocked;
+    const preload = button('tw-text-xs', labels.preload, `preload:${level.id}`, () => {
+        handlers.preload(level.id);
+    });
     item.append(
         select,
         labelledInput(labels.name, 'text', level.name, `name:${level.id}`, (typed) => {
@@ -176,6 +182,7 @@ function levelRow(row: LevelRow, others: readonly Level[], labels: LevelPanelLab
         ),
         labelledInput(labels.top, 'number', String(level.top), `top:${level.id}`, (value) => band(level.bottom, value === '' ? Number.NaN : Number(value))),
         el('span', 'tw-text-xs', labels.features(row.count)),
+        preload,
         remove,
         artFields(level, labels, handlers),
         lookSection(level, others, labels.look, handlers),

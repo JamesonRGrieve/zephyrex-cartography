@@ -147,6 +147,13 @@ describe('level panel', () => {
         expect(seen()?.checked).toBe(false);
     });
 
+    it('preloads the level a row is for', () => {
+        const preloaded: string[] = [];
+        const root = mount({ onPreload: (id) => preloaded.push(id) });
+        root.querySelector<HTMLButtonElement>('button[data-zc-focus="preload:upper"]')?.click();
+        expect(preloaded).toEqual(['upper']);
+    });
+
     it('explains an empty scene and still offers to add a level', () => {
         const root = mount({ levels: [], active: null, counts: {} });
         expect(root.textContent).toContain('no levels yet');
