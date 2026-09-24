@@ -88,12 +88,16 @@ export function withParticles(base: FeatureRenderer, viewedLevel: string | null,
             base.set(id, feature);
             emit(id, feature);
         },
-        preview: base.preview,
+        preview: (feature) => {
+            base.preview(feature);
+        },
         remove: (id) => {
             base.remove(id);
             halt(id);
         },
-        clearPreview: base.clearPreview,
+        clearPreview: () => {
+            base.clearPreview();
+        },
         clear: () => {
             base.clear();
             [...running.keys()].forEach(halt);
