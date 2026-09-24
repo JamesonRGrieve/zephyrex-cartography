@@ -200,8 +200,8 @@ export class CartographyController {
     brushRadius = DEFAULT_BRUSH_RADIUS;
     /** Scene grid for snapping room vertices; null disables snapping. */
     grid: Grid | null = null;
-    /** Whether committed paths also emit Foundry walls along their centerline. */
-    emitWalls = false;
+    /** The kind of Foundry walls newly drawn paths put along their centerline, or null for none. */
+    pathWalls: WallPreset | null = null;
     /**
      * Scene distance units per grid square; the entry sets it from the scene's
      * grid. 0 (no grid) leaves new levels at the default height and stamp
@@ -1243,7 +1243,7 @@ export class CartographyController {
         }
         const pts = this.session.simplified();
         if (this.brush.type === 'path') {
-            return makePath(id, this.brush.kind, pts, this.halfWidth, this.emitWalls, this.riverLook);
+            return makePath(id, this.brush.kind, pts, this.halfWidth, this.pathWalls, this.riverLook);
         }
         if (this.brush.type === 'region') {
             return makeRegion(id, this.brush.biome, pts);

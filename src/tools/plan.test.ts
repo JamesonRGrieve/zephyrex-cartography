@@ -44,9 +44,12 @@ describe('planDocuments', () => {
             { x: 0, y: 0 },
             { x: 100, y: 0 },
         ];
-        const walled = makePath('p', 'river', pts, 10, true, LIQUID_LOOKS.water);
-        const unwalled = makePath('q', 'road', pts, 10, false, LIQUID_LOOKS.water);
-        expect(walled ? planDocuments(walled).walls.length : 0).toBeGreaterThan(1);
+        const walled = makePath('p', 'river', pts, 10, 'window', LIQUID_LOOKS.water);
+        const unwalled = makePath('q', 'road', pts, 10, null, LIQUID_LOOKS.water);
+        const walls = walled ? planDocuments(walled).walls : [];
+        expect(walls.length).toBeGreaterThan(1);
+        // Foundry's window: seen and lit through within two squares, fading.
+        expect(walls[0]).toMatchObject({ blocks: { sight: 'proximity', movement: true }, threshold: { sight: 2, attenuation: true } });
         expect(unwalled ? planDocuments(unwalled).walls : null).toEqual([]);
     });
 

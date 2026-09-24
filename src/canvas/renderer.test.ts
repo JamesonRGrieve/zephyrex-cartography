@@ -40,7 +40,7 @@ const road: CartographyPath = {
         { x: 10, y: 0 },
     ],
     halfWidths: [5, 5],
-    walls: false,
+    walls: null,
     river: null,
     ...NEW_FEATURE,
 };

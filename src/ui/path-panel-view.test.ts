@@ -8,6 +8,7 @@ function mount(story: { readonly args?: Partial<stories.PathArgs> }): HTMLElemen
     const el = stories.mountPathPanel({
         kind: story.args?.kind ?? base?.kind ?? 'river',
         width: story.args?.width ?? base?.width ?? 40,
+        walls: story.args?.walls === undefined ? base?.walls ?? null : story.args.walls,
         river: story.args?.river ?? base?.river ?? LIQUID_LOOKS.water,
         beds: story.args?.beds ?? base?.beds ?? [],
     });
@@ -66,15 +67,26 @@ describe('road and river panel', () => {
         expect(bed(mount(stories.BarePoisonWithABedTheSetLacks)).value).toBe('floor.slime');
     });
 
-    it('shows a road only its width', () => {
+    it('shows a road only its width and walls', () => {
         const root = mount(stories.Road);
-        expect(root.querySelectorAll('select')).toHaveLength(0);
+        expect([...root.querySelectorAll('select')].map((s) => s.id)).toEqual(['zc-path-walls']);
         expect(root.querySelector('input[type="color"]')).toBeNull();
         expect(width(root).value).toBe('30');
     });
 
+    it('offers Foundry’s wall kinds or none, showing the path’s and changing it', () => {
+        const root = mount(stories.FencedRoad);
+        const walls = control<HTMLSelectElement>(root, '#zc-path-walls');
+        expect(walls.value).toBe('terrain');
+        expect([...walls.options].map((o) => o.textContent)).toEqual(['None', 'Solid Wall', 'Terrain Wall', 'Invisible Wall', 'Ethereal Wall', 'Window']);
+        change(walls, 'window');
+        expect(control<HTMLSelectElement>(root, '#zc-path-walls').value).toBe('window');
+        change(control<HTMLSelectElement>(root, '#zc-path-walls'), '');
+        expect(control<HTMLSelectElement>(root, '#zc-path-walls').value).toBe('');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.WaterOnDirt, stories.LavaFlow, stories.BarePoisonWithABedTheSetLacks, stories.Road]) {
+        for (const story of [stories.WaterOnDirt, stories.LavaFlow, stories.BarePoisonWithABedTheSetLacks, stories.Road, stories.FencedRoad]) {
             expect(mount(story).querySelectorAll('input')).not.toHaveLength(0);
         }
     });

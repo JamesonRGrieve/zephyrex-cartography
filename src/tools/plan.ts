@@ -31,7 +31,7 @@ import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } f
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
 import { SWITCH_BLOCKS } from './switches';
-import { type PresetWall, presetWall } from './wall-presets';
+import { type PresetWall, presetWall, type WallPreset } from './wall-presets';
 
 export interface DocumentPlan {
     readonly walls: readonly WallDoc[];
@@ -67,14 +67,16 @@ function floorOf(feature: Feature, context: PlanContext): Floor {
 }
 
 /** Plain walls along a path's smoothed centerline. */
-function pathWalls(path: CartographyPath, floor: Floor): WallDoc[] {
+function pathWalls(path: CartographyPath, kind: WallPreset, floor: Floor): WallDoc[] {
     const spine = catmullRom(path.points, RIBBON_SAMPLES);
+    const { blocks, threshold } = presetWall(kind);
     const walls: WallDoc[] = [];
     for (let i = 1; i < spine.length; i++) {
         const a = spine[i - 1];
         const b = spine[i];
         if (a && b) {
-            walls.push({ a, b, door: 'none', doorState: 'closed', blocks: BLOCKS_ALL, level: floor.level });
+            const wall: WallDoc = { a, b, door: 'none', doorState: 'closed', blocks, level: floor.level };
+            walls.push(threshold === undefined ? wall : { ...wall, threshold });
         }
     }
     return walls;
@@ -428,8 +430,8 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
     if (feature.type === 'stamp') {
         return stampPlan(feature, context);
     }
-    if (feature.type === 'path' && feature.walls) {
-        return { ...NO_PLAN, walls: pathWalls(feature, floorOf(feature, context)) };
+    if (feature.type === 'path' && feature.walls !== null) {
+        return { ...NO_PLAN, walls: pathWalls(feature, feature.walls, floorOf(feature, context)) };
     }
     if ((feature.type === 'region' || feature.type === 'stroke') && context.terrainRegions) {
         return { ...NO_PLAN, regions: [terrainRegion(feature, context.levels)] };

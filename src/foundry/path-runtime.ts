@@ -8,9 +8,10 @@ import { I18N } from '../i18n';
 import { floorMaterials } from '../tools/materials';
 import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, type PathKind, type RiverLook } from '../tools/path';
 import { parseSizePx } from '../tools/size-input';
+import type { WallPreset } from '../tools/wall-presets';
 import { renderPathPanel } from '../ui/path-panel-view';
 import { localize } from './localize';
-import { materialLabel } from './materials-runtime';
+import { materialLabel, wallKindNames } from './materials-runtime';
 import { createSettingsWindow } from './view-window';
 
 const PANEL_WIDTH = 300;
@@ -19,6 +20,8 @@ const PANEL_HEIGHT = 200;
 export interface PathSettings {
     /** Full width, scene px. */
     readonly width: number;
+    /** The kind of walls along the path, or null for none. */
+    readonly walls: WallPreset | null;
     readonly river: RiverLook;
 }
 
@@ -36,7 +39,7 @@ export function registerPathRuntime(textureRoles: () => string[], onChange: (set
         title: () => localize(I18N.paths.title),
         width: PANEL_WIDTH,
         height: PANEL_HEIGHT,
-        initial: { width: DEFAULT_HALF_WIDTH * 2, river: LIQUID_LOOKS.water },
+        initial: { width: DEFAULT_HALF_WIDTH * 2, walls: null, river: LIQUID_LOOKS.water },
         onChange,
         render: (root, settings, choose) => {
             const beds = floorMaterials(textureRoles()).map((role) => ({ role, label: materialLabel(role) }));
@@ -55,6 +58,9 @@ export function registerPathRuntime(textureRoles: () => string[], onChange: (set
                     shade: localize(I18N.paths.shade),
                     bed: localize(I18N.paths.bed),
                     noBed: localize(I18N.paths.noBed),
+                    walls: localize(I18N.paths.walls),
+                    noWalls: localize(I18N.paths.noWalls),
+                    wallKinds: wallKindNames(),
                 },
                 {
                     setWidth: (typed) => {
@@ -66,6 +72,9 @@ export function registerPathRuntime(textureRoles: () => string[], onChange: (set
                     },
                     setRiver: (river) => {
                         choose({ ...settings, river });
+                    },
+                    setWalls: (walls) => {
+                        choose({ ...settings, walls });
                     },
                 },
             );

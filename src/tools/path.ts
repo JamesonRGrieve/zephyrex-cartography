@@ -8,6 +8,7 @@
 import type { Point } from '../geometry/spline';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberArray, numberOr } from './guards';
+import { DEFAULT_WALL_PRESET, isWallPreset, type WallPreset } from './wall-presets';
 
 /** Scene-flag key (under the module-id scope) holding the persisted feature blob. */
 export const FLAG_KEY = 'features';
@@ -42,8 +43,8 @@ export interface CartographyPath extends FeatureCommon {
     readonly kind: PathKind;
     /** Half-width in scene pixels at each control point (parallel to `points`). */
     readonly halfWidths: number[];
-    /** Emit Foundry walls along the centerline when true. */
-    readonly walls: boolean;
+    /** The kind of Foundry walls along the centerline (a fence, a cliff edge, a canal wall), or null for none. */
+    readonly walls: WallPreset | null;
     /** A river's look; null for a road. */
     readonly river: RiverLook | null;
 }
@@ -93,7 +94,16 @@ export function parsePath(v: unknown): CartographyPath | null {
     const rawWidths = numberArray(v['halfWidths']);
     const halfWidths = points.map((_, i) => rawWidths[i] ?? rawWidths[0] ?? DEFAULT_HALF_WIDTH);
     const river = v['kind'] === 'river' ? parseRiverLook(v['river']) : null;
-    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: v['walls'] === true, river, ...parseFeatureCommon(v) };
+    return { type: 'path', id: v['id'], kind: v['kind'], points, halfWidths, walls: parsePathWalls(v['walls']), river, ...parseFeatureCommon(v) };
+}
+
+/** A path's persisted walls: a wall kind, or `true` (the original format) for solid walls; anything else, none. */
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows a persisted path's walls from scene-flag JSON
+function parsePathWalls(v: unknown): WallPreset | null {
+    if (v === true) {
+        return DEFAULT_WALL_PRESET;
+    }
+    return isWallPreset(v) ? v : null;
 }
 
 /** Default half-width (scene px) for a freshly drawn path. */
@@ -104,7 +114,14 @@ export const DEFAULT_HALF_WIDTH = 20;
  * if too short. A river takes `river` as its look; a road has none, whatever
  * is passed.
  */
-export function makePath(id: string, kind: PathKind, points: readonly Point[], halfWidth: number, walls: boolean, river: RiverLook): CartographyPath | null {
+export function makePath(
+    id: string,
+    kind: PathKind,
+    points: readonly Point[],
+    halfWidth: number,
+    walls: WallPreset | null,
+    river: RiverLook,
+): CartographyPath | null {
     if (points.length < 2) {
         return null;
     }

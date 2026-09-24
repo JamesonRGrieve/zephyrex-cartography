@@ -26,6 +26,29 @@ test('a room of window walls gets Foundry’s window walls, and its door stays s
     expect(walls.filter((w) => w.door === 1)).toEqual([{ door: 1, sight: 20, light: 20, lightThreshold: null }]);
 });
 
+test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
+    const walls = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            features: [
+                {
+                    type: 'path',
+                    kind: 'road',
+                    walls: 'terrain',
+                    points: [
+                        { x: 1, y: 3 },
+                        { x: 8, y: 3 },
+                    ],
+                },
+            ],
+        });
+        return (canvas?.scene?.walls.contents ?? []).map((w) => ({ sight: w.sight, move: w.move }));
+    });
+    // EDGE_SENSE_TYPES: LIMITED 10, NORMAL 20.
+    expect(walls.length).toBeGreaterThan(0);
+    expect(new Set(walls.map((w) => JSON.stringify(w)))).toEqual(new Set([JSON.stringify({ sight: 10, move: 20 })]));
+});
+
 test('a room spec becomes native walls, a door and a light', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const outcome = await game.modules?.get('zephyrex-cartography').api.buildSpec({

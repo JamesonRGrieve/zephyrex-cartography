@@ -80,6 +80,8 @@ export const I18N = {
         shade: key('Paths.Shade'),
         bed: key('Paths.Bed'),
         noBed: key('Paths.NoBed'),
+        walls: key('Paths.Walls'),
+        noWalls: key('Paths.NoWalls'),
         liquids: {
             water: key('Paths.Liquids.Water'),
             lava: key('Paths.Liquids.Lava'),

@@ -55,7 +55,12 @@ const pathSpec = z
         kind: z.enum(PATH_KINDS),
         points: z.array(point).min(2).describe('Centerline control points.'),
         halfWidth: positive.optional().describe('Half-width at every point (default: the path default).'),
-        walls: z.boolean().default(false).describe('Also emit walls along the centerline.'),
+        walls: z
+            .union([z.boolean(), z.enum(WALL_PRESETS)])
+            .default(false)
+            .describe(
+                "Walls along the centerline: a wall kind as Foundry's Walls palette names them (solid, terrain, invisible, ethereal, window), true for solid, or false for none.",
+            ),
         liquid: z.enum(SPEC_LIQUIDS).optional().describe('What a river carries (default: water). Ignored for a road.'),
         shade: z
             .string()

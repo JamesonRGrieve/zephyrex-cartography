@@ -17,7 +17,7 @@ function road(): Feature {
             { x: 20, y: 0 },
         ],
         5,
-        false,
+        null,
         LIQUID_LOOKS.water,
     );
     if (!p) {
@@ -76,7 +76,7 @@ describe('deletePoint', () => {
                 { x: 10, y: 0 },
             ],
             5,
-            false,
+            null,
             LIQUID_LOOKS.water,
         );
         expect(two).not.toBeNull();

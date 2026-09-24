@@ -237,8 +237,22 @@
                             },
                             "walls": {
                                 "default": false,
-                                "description": "Also emit walls along the centerline.",
-                                "type": "boolean"
+                                "description": "Walls along the centerline: a wall kind as Foundry's Walls palette names them (solid, terrain, invisible, ethereal, window), true for solid, or false for none.",
+                                "anyOf": [
+                                    {
+                                        "type": "boolean"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "enum": [
+                                            "solid",
+                                            "terrain",
+                                            "invisible",
+                                            "ethereal",
+                                            "window"
+                                        ]
+                                    }
+                                ]
                             },
                             "liquid": {
                                 "description": "What a river carries (default: water). Ignored for a road.",

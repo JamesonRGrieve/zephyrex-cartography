@@ -513,7 +513,10 @@ These make everything after them cheaper and safer, so they come first.
     Foundry's own strings, and in the scene spec (`wallKind`), and the
     floor-plan generator passes it on. A room's doors still block everything
     while shut.
-  - **Still open:** path walls, which are always solid.
+  - **[done] Path walls** take a kind too, or none: a road or river's
+    `walls` is a wall preset or null (a persisted `true`, the original
+    format, is solid). The road and river panel picks it, with Foundry's
+    names, and the scene spec's paths take a kind or a boolean.
 - **[done] Door sounds and animation.** A door wall carries a `look`: a
   `CONFIG.Wall.doorSounds` key and an animation, each null for Foundry's
   default. These become the Wall's `doorSound` and `animation`.

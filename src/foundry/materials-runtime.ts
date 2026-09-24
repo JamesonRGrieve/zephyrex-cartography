@@ -9,7 +9,7 @@ import { BIOME_TITLE_KEYS, I18N } from '../i18n';
 import { isBiomeKind } from '../tools/biome';
 import { floorMaterials, materialName, wallMaterials } from '../tools/materials';
 import { DEFAULT_FLOOR, type RoomMaterials } from '../tools/room';
-import { DEFAULT_WALL_PRESET } from '../tools/wall-presets';
+import { DEFAULT_WALL_PRESET, type WallPreset } from '../tools/wall-presets';
 import { renderMaterialsPanel } from '../ui/materials-view';
 import { localize } from './localize';
 import { createViewWindow } from './view-window';
@@ -20,6 +20,17 @@ const PANEL_HEIGHT = 180;
 /** A material's display label: a biome's localised name, or a pack material's name. */
 export function materialLabel(role: string): string {
     return isBiomeKind(role) ? localize(BIOME_TITLE_KEYS[role]) : materialName(role);
+}
+
+/** The wall kinds, named as Foundry's own Walls palette names them. */
+export function wallKindNames(): Record<WallPreset, string> {
+    return {
+        solid: localize('CONTROLS.WallSolid'),
+        terrain: localize('CONTROLS.WallTerrain'),
+        invisible: localize('CONTROLS.WallInvisible'),
+        ethereal: localize('CONTROLS.WallEthereal'),
+        window: localize('CONTROLS.WallWindow'),
+    };
 }
 
 export interface MaterialsRuntime {
@@ -57,13 +68,7 @@ export function registerMaterialsRuntime(controller: () => CartographyController
                     noWall: localize(I18N.materials.noWall),
                     wallKind: localize(I18N.materials.wallKind),
                     // Named as Foundry's own Walls palette names them.
-                    wallKinds: {
-                        solid: localize('CONTROLS.WallSolid'),
-                        terrain: localize('CONTROLS.WallTerrain'),
-                        invisible: localize('CONTROLS.WallInvisible'),
-                        ethereal: localize('CONTROLS.WallEthereal'),
-                        window: localize('CONTROLS.WallWindow'),
-                    },
+                    wallKinds: wallKindNames(),
                 },
                 (materials) => {
                     last = materials;

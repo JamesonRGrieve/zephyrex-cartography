@@ -36,7 +36,8 @@ describe('parsePath', () => {
         });
         expect(p?.type).toBe('path');
         expect(p?.kind).toBe('road');
-        expect(p?.walls).toBe(true);
+        // `walls: true`, the original format, is solid walls.
+        expect(p?.walls).toBe('solid');
         expect(p?.halfWidths).toEqual([DEFAULT_HALF_WIDTH, DEFAULT_HALF_WIDTH]);
     });
 
@@ -65,22 +66,30 @@ describe('makePath', () => {
                 { x: 5, y: 5 },
             ],
             8,
-            true,
+            'window',
             LIQUID_LOOKS.lava,
         );
         expect(p?.type).toBe('path');
         expect(p?.halfWidths).toEqual([8, 8]);
-        expect(p?.walls).toBe(true);
+        expect(p?.walls).toBe('window');
         expect(p?.river).toBeNull(); // a road has no look, whatever is passed
     });
 
     it('gives a river the look it is drawn with', () => {
         const look = { liquid: 'acid', shade: 0x00ff00, bed: null } as const;
-        expect(makePath('id', 'river', LINE, 8, false, look)?.river).toEqual(look);
+        expect(makePath('id', 'river', LINE, 8, null, look)?.river).toEqual(look);
     });
 
     it('returns null for fewer than two points', () => {
-        expect(makePath('id', 'road', [{ x: 0, y: 0 }], 8, false, LIQUID_LOOKS.water)).toBeNull();
+        expect(makePath('id', 'road', [{ x: 0, y: 0 }], 8, null, LIQUID_LOOKS.water)).toBeNull();
+    });
+});
+
+describe('path walls', () => {
+    it('reads a wall kind, solid for the original `true`, and none for anything else', () => {
+        const walls = (value: string | boolean | number): string | null | undefined =>
+            parsePath({ type: 'path', id: 'a', kind: 'road', points: LINE, walls: value })?.walls;
+        expect([walls('terrain'), walls(true), walls(false), walls('brick'), walls(3)]).toEqual(['terrain', 'solid', null, null, null]);
     });
 });
 

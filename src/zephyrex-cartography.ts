@@ -80,6 +80,7 @@ const paint = registerPaintRuntime(packs.textures, (settings) => {
 /** Put the road and river panel's width and river look in the controller's hand for the next path. */
 function applyPathSettings(controller: CartographyController, settings: PathSettings): void {
     controller.halfWidth = settings.width / 2;
+    controller.pathWalls = settings.walls;
     controller.riverLook = settings.river;
 }
 

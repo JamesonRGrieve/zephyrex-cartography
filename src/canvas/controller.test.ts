@@ -189,15 +189,16 @@ describe('CartographyController', () => {
         expect(s.saved).toHaveLength(1);
     });
 
-    it('emits tracked walls for a path when enabled, and deletes them with the path', async () => {
+    it('emits tracked walls of the chosen kind for a path, and deletes them with the path', async () => {
         const { c, d } = make();
-        c.emitWalls = true;
+        c.pathWalls = 'terrain';
         c.begin({ type: 'path', kind: 'river' }, 'click');
         c.addPoint({ x: 0, y: 0 });
         c.addPoint({ x: 10, y: 10 });
         await c.commit();
         const created = d.walls[0] ?? [];
         expect(created.length).toBeGreaterThan(0);
+        expect(created.every((w) => w.blocks.sight === 'limited' && w.blocks.movement)).toBe(true);
         expect(c.getFeature('p1')?.docs.walls).toHaveLength(created.length);
         await c.remove('p1');
         expect(d.deletedIds()).toHaveLength(created.length);
@@ -225,7 +226,7 @@ describe('CartographyController', () => {
                     { x: 5, y: 5 },
                 ],
                 halfWidths: [10, 10],
-                walls: false,
+                walls: null,
                 river: null,
                 docs: { walls: [], lights: [], tiles: [], regions: [], sounds: [] },
                 level: null,

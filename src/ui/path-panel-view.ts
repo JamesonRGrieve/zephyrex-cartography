@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * The road and river tools' panel: the width the next path is drawn at and,
- * for a river, what it carries (water, lava, poison or acid), the liquid's
+ * The road and river tools' panel: the width the next path is drawn at, the
+ * kind of walls along it (Foundry's own, or none) and, for a river, what it carries (water, lava, poison or acid), the liquid's
  * shade, and the texture of the bed laid beneath it (or none). A pure
  * function from the panel state to elements; unit-tested under happy-dom.
  */
 import { cssHex, parseCssHex } from '../tools/colour';
 import { LIQUID_LOOKS, LIQUIDS, type Liquid, type PathKind, type RiverLook } from '../tools/path';
+import { isWallPreset, WALL_PRESETS, type WallPreset } from '../tools/wall-presets';
 import { choice, el, focusKey, labelledInput, replacePreservingFocus } from './dom';
 
 export interface BedChoice {
@@ -18,6 +19,8 @@ export interface PathPanel {
     readonly kind: PathKind;
     /** Full width, scene px. */
     readonly width: number;
+    /** The kind of walls along the path, or null for none. */
+    readonly walls: WallPreset | null;
     readonly river: RiverLook;
     /** Bed textures on offer, from the active set. */
     readonly beds: readonly BedChoice[];
@@ -30,16 +33,21 @@ export interface PathLabels {
     readonly shade: string;
     readonly bed: string;
     readonly noBed: string;
+    readonly walls: string;
+    readonly noWalls: string;
+    /** Foundry's own Walls palette names. */
+    readonly wallKinds: Readonly<Record<WallPreset, string>>;
 }
 
 export interface PathHandlers {
     /** Apply a typed width; false rejects it (the input reverts). */
     readonly setWidth: (typed: string) => boolean;
+    readonly setWalls: (walls: WallPreset | null) => void;
     readonly setRiver: (river: RiverLook) => void;
 }
 
-/** The bed select's value standing for "no bed" (no real role is empty). */
-const NO_BED = '';
+/** The bed and walls selects' value standing for "none" (no real role or wall kind is empty). */
+const NONE = '';
 
 function shadeInput(label: string, shade: number, onChange: (shade: number) => void): HTMLElement {
     const wrap = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', label);
@@ -76,8 +84,8 @@ function riverControls(panel: PathPanel, labels: PathLabels, handlers: PathHandl
         shadeInput(labels.shade, river.shade, (shade) => {
             handlers.setRiver({ ...river, shade });
         }),
-        choice('zc-path-bed', labels.bed, [[NO_BED, labels.noBed] as const, ...beds.map((b) => [b.role, b.label] as const)], bed ?? NO_BED, (picked) => {
-            handlers.setRiver({ ...river, bed: picked === NO_BED ? null : picked });
+        choice('zc-path-bed', labels.bed, [[NONE, labels.noBed] as const, ...beds.map((b) => [b.role, b.label] as const)], bed ?? NONE, (picked) => {
+            handlers.setRiver({ ...river, bed: picked === NONE ? null : picked });
         }),
     ];
 }
@@ -85,6 +93,15 @@ function riverControls(panel: PathPanel, labels: PathLabels, handlers: PathHandl
 export function renderPathPanel(root: HTMLElement, panel: PathPanel, labels: PathLabels, handlers: PathHandlers): void {
     replacePreservingFocus(root, [
         labelledInput(labels.width, 'number', String(panel.width), 'path-width', handlers.setWidth),
+        choice(
+            'zc-path-walls',
+            labels.walls,
+            [[NONE, labels.noWalls] as const, ...WALL_PRESETS.map((kind) => [kind, labels.wallKinds[kind]] as const)],
+            panel.walls ?? NONE,
+            (picked) => {
+                handlers.setWalls(isWallPreset(picked) ? picked : null);
+            },
+        ),
         ...(panel.kind === 'river' ? riverControls(panel, labels, handlers) : []),
     ]);
 }

@@ -29,7 +29,7 @@ describe('featureHit', () => {
                 { x: 100, y: 0 },
             ],
             10,
-            false,
+            null,
             LIQUID_LOOKS.water,
         );
         expect(road).not.toBeNull();

@@ -3,11 +3,13 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { LIQUID_LOOKS, type PathKind, type RiverLook } from '../tools/path';
 import { parseSizePx } from '../tools/size-input';
+import type { WallPreset } from '../tools/wall-presets';
 import { renderPathPanel, type BedChoice, type PathLabels } from './path-panel-view';
 
 export interface PathArgs {
     readonly kind: PathKind;
     readonly width: number;
+    readonly walls: WallPreset | null;
     readonly river: RiverLook;
     readonly beds: readonly BedChoice[];
 }
@@ -19,6 +21,10 @@ const LABELS: PathLabels = {
     shade: 'Shade',
     bed: 'Bed',
     noBed: 'No bed',
+    walls: 'Walls',
+    noWalls: 'None',
+    // Named as Foundry's own Walls palette names them.
+    wallKinds: { solid: 'Solid Wall', terrain: 'Terrain Wall', invisible: 'Invisible Wall', ethereal: 'Ethereal Wall', window: 'Window' },
 };
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
@@ -27,9 +33,13 @@ export function mountPathPanel(args: PathArgs): HTMLElement {
     windowEl.className = 'zephyrex-cartography zc-story-window';
     const root = document.createElement('div');
     windowEl.append(root);
-    let { width, river } = args;
+    let { width, river, walls } = args;
     const render = (): void => {
-        renderPathPanel(root, { kind: args.kind, width, river, beds: args.beds }, LABELS, {
+        renderPathPanel(root, { kind: args.kind, width, walls, river, beds: args.beds }, LABELS, {
+            setWalls: (kind) => {
+                walls = kind;
+                render();
+            },
             setWidth: (typed) => {
                 const size = parseSizePx(typed);
                 if (size === null) {
@@ -60,7 +70,7 @@ const meta: Meta<PathArgs> = {
     title: 'Terrain/Road and River Panel',
     excludeStories: ['mountPathPanel'],
     render: mountPathPanel,
-    args: { kind: 'river', width: 40, river: LIQUID_LOOKS.water, beds: BEDS },
+    args: { kind: 'river', width: 40, walls: null, river: LIQUID_LOOKS.water, beds: BEDS },
 };
 
 export default meta;
@@ -79,4 +89,8 @@ export const BarePoisonWithABedTheSetLacks: Story = {
 
 export const Road: Story = {
     args: { kind: 'road', width: 30 },
+};
+
+export const FencedRoad: Story = {
+    args: { kind: 'road', width: 30, walls: 'terrain' },
 };

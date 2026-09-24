@@ -15,6 +15,7 @@ import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
 import type { StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
+import { DEFAULT_WALL_PRESET } from '../tools/wall-presets';
 import type { CartographyController } from './controller';
 
 export interface RealizeOptions {
@@ -64,7 +65,8 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
             shade: (spec.shade === undefined ? null : parseCssHex(spec.shade)) ?? base.shade,
             bed: spec.bed === undefined ? base.bed : spec.bed,
         };
-        feature = makePath(id, spec.kind, points, spec.halfWidth === undefined ? DEFAULT_HALF_WIDTH : scale.length(spec.halfWidth), spec.walls, river);
+        const walls = spec.walls === true ? DEFAULT_WALL_PRESET : spec.walls === false ? null : spec.walls;
+        feature = makePath(id, spec.kind, points, spec.halfWidth === undefined ? DEFAULT_HALF_WIDTH : scale.length(spec.halfWidth), walls, river);
     } else {
         const room = makeRoom(id, spec.floor ?? DEFAULT_FLOOR, points, spec.wall, spec.wallKind);
         feature =
