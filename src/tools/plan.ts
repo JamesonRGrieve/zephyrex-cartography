@@ -182,12 +182,12 @@ function stampDoorWall(stamp: StampFeature, floor: Floor): WallDoc | null {
 }
 
 /**
- * A transition stamp's teleport regions: one on its own level over its
- * footprint, and one per connected level (the one above for `up`, below for
- * `down`, both for `both`) at the same footprint. Its own region teleports to
- * every connected end, offering a choice when there are two, and each end
- * teleports back. With no connected level (none above/below, or the stamp is
- * on no level), nothing is planned.
+ * A transition stamp's way between floors: one native `changeLevel` region
+ * over its footprint, on its own level and each level it reaches (the one
+ * above for `up`, below for `down`, both for `both`), spanning their
+ * elevation bands. A token entering it on any of those levels is offered the
+ * others. With no level to reach (none above/below, or the stamp is on no
+ * level), nothing is planned.
  */
 function transitionRegions(stamp: StampFeature, levels: readonly Level[]): RegionDoc[] {
     const transition = stamp.behaviour.transition;
@@ -202,29 +202,17 @@ function transitionRegions(stamp: StampFeature, levels: readonly Level[]): Regio
     if (ends.length === 0) {
         return [];
     }
-    const polygon = stampCorners(stamp);
-    const start: RegionDoc = {
-        id: null,
-        label: { kind: transition.kind, from: here.name, to: ends.map((end) => end.name) },
-        polygon,
-        bottom: here.bottom,
-        top: here.top,
-        level: here.id,
-        teleport: { targets: ends.map((_, i) => ({ plan: i + 1 })) },
-    };
+    const joined = [here, ...ends];
     return [
-        start,
-        ...ends.map(
-            (end): RegionDoc => ({
-                id: null,
-                label: { kind: transition.kind, from: end.name, to: [here.name] },
-                polygon,
-                bottom: end.bottom,
-                top: end.top,
-                level: end.id,
-                teleport: { targets: [{ plan: 0 }] },
-            }),
-        ),
+        {
+            id: null,
+            label: { kind: transition.kind, from: here.name, to: ends.map((end) => end.name) },
+            polygon: stampCorners(stamp),
+            bottom: Math.min(...joined.map((level) => level.bottom)),
+            top: Math.max(...joined.map((level) => level.top)),
+            level: here.id,
+            behaviour: { kind: 'changeLevel', levels: joined.map((level) => level.id) },
+        },
     ];
 }
 
@@ -242,7 +230,7 @@ function entranceRegion(stamp: StampFeature, levels: readonly Level[]): RegionDo
         bottom: band?.bottom ?? null,
         top: band?.top ?? null,
         level: stamp.level,
-        teleport: { targets: [{ scene: link.scene, region: link.exitRegion }] },
+        behaviour: { kind: 'teleport', targets: [{ scene: link.scene, region: link.exitRegion }] },
     };
 }
 
@@ -377,6 +365,6 @@ function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly 
         bottom: band?.bottom ?? null,
         top: band?.top ?? null,
         level: feature.level,
-        teleport: null,
+        behaviour: null,
     };
 }

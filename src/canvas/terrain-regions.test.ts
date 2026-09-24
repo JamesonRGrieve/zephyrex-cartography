@@ -48,7 +48,7 @@ describe('terrain as Scene Regions', () => {
                 { kind: 'terrain', biome: 'forest' },
             ],
         ]);
-        expect(h.d.regions[0]?.[0]?.teleport).toBeNull();
+        expect(h.d.regions[0]?.[0]?.behaviour).toBeNull();
         expect(h.d.regions[0]?.[0]?.polygon.length).toBeGreaterThan(3);
         expect(h.c.getFeature('p1')?.docs.regions).toEqual(['r0']);
         await h.c.setTerrainRegions(false);

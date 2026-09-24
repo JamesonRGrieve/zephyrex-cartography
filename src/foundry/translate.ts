@@ -8,7 +8,19 @@
 import type { TileFrame } from '../canvas/controller';
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
-import type { DoorState, DoorType, LightDoc, RegionDoc, SenseLevel, SoundDoc, TileDoc, WallDirection, WallDoc, WallThreshold } from '../tools/documents';
+import type {
+    DoorState,
+    DoorType,
+    LightDoc,
+    RegionBehaviour,
+    RegionDoc,
+    SenseLevel,
+    SoundDoc,
+    TileDoc,
+    WallDirection,
+    WallDoc,
+    WallThreshold,
+} from '../tools/documents';
 import type { LightCreateData, RegionCreateData, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
 
 /** `CONST.WALL_DOOR_TYPES`. */
@@ -163,51 +175,46 @@ function flatten(points: readonly Point[]): number[] {
     return points.flatMap((p) => [p.x, p.y]);
 }
 
-/**
- * A teleport behaviour to `destinations` (region UUIDs). The token keeps its
- * position relative to the region (the ends of a stair share a footprint),
- * and chooses when there is more than one way to go.
- */
-function teleportBehaviour(destinations: readonly string[]): RegionCreateData['behaviors'][number] {
-    return { type: 'teleportToken', system: { destinations: [...destinations], placement: 'relative', choice: destinations.length > 1 } };
-}
-
 /** A Scene Region's UUID. */
 export function regionUuid(scene: string, region: string): string {
     return `Scene.${scene}.Region.${region}`;
 }
 
 /**
- * Create data for the regions of one plan in scene `sceneId`, whose ids are
- * chosen up front (`ids[i]` for `regions[i]`) so each teleport can name its
- * destinations' UUIDs within the same create call. A target in another scene
- * is addressed directly.
+ * A region's native behaviour.
+ * - A teleport names its destinations by region UUID. The token keeps its
+ *   position relative to the region, and chooses when there is more than one
+ *   way to go.
+ * - `changeLevel` has no options in v14: which levels it offers comes from
+ *   the region's own level membership.
  */
-export function regionCreateData(
-    regions: readonly RegionDoc[],
-    ids: readonly string[],
-    sceneId: string,
-    nameOf: (region: RegionDoc) => string,
-): RegionCreateData[] {
-    return regions.map((region, i) => {
-        const destinations = (region.teleport?.targets ?? []).flatMap((target) => {
-            if ('plan' in target) {
-                const id = ids[target.plan];
-                return id === undefined ? [] : [regionUuid(sceneId, id)];
-            }
-            return [regionUuid(target.scene, target.region)];
-        });
-        return {
-            _id: ids[i] ?? '',
-            name: nameOf(region),
-            shapes: [{ type: 'polygon', points: flatten(region.polygon), hole: false }],
-            elevation: { bottom: region.bottom, top: region.top },
-            behaviors: destinations.length > 0 ? [teleportBehaviour(destinations)] : [],
-            // A region drawn from a feature is edited through the feature, so it is locked and
-            // shown on the Regions layer. An interior exit is the GM's to place, so it stays free.
-            locked: region.label.kind !== 'exit',
-            visibility: REGION_VISIBILITY_LAYER,
-            ...levelsField(region.level),
-        };
-    });
+function behaviourData(behaviour: RegionBehaviour | null): RegionCreateData['behaviors'] {
+    if (behaviour === null) {
+        return [];
+    }
+    if (behaviour.kind === 'changeLevel') {
+        return [{ type: 'changeLevel', system: {} }];
+    }
+    const destinations = behaviour.targets.map((target) => regionUuid(target.scene, target.region));
+    return [{ type: 'teleportToken', system: { destinations, placement: 'relative', choice: destinations.length > 1 } }];
+}
+
+/**
+ * Create data for the regions of one plan, whose ids are chosen up front
+ * (`ids[i]` for `regions[i]`).
+ */
+export function regionCreateData(regions: readonly RegionDoc[], ids: readonly string[], nameOf: (region: RegionDoc) => string): RegionCreateData[] {
+    return regions.map((region, i) => ({
+        _id: ids[i] ?? '',
+        name: nameOf(region),
+        shapes: [{ type: 'polygon', points: flatten(region.polygon), hole: false }],
+        elevation: { bottom: region.bottom, top: region.top },
+        behaviors: behaviourData(region.behaviour),
+        // A region drawn from a feature is edited through the feature, so it is locked and
+        // shown on the Regions layer. An interior exit is the GM's to place, so it stays free.
+        locked: region.label.kind !== 'exit',
+        visibility: REGION_VISIBILITY_LAYER,
+        // A way between levels exists on every level it joins.
+        ...(region.behaviour?.kind === 'changeLevel' ? { levels: [...region.behaviour.levels] } : levelsField(region.level)),
+    }));
 }

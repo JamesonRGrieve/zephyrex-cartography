@@ -132,44 +132,42 @@ describe('CartographyController levels', () => {
         expect(await c.setLevelBand('nope', 0, 5)).toBe(false);
     });
 
-    it('connects a stair to the level above with paired teleport regions', async () => {
+    it('joins a stair to the level above with one changeLevel region spanning both', async () => {
         const { c, d } = makeHarness(stairs);
         c.grid = { size: 100, originX: 0, originY: 0 };
         await c.addLevel('above', 'Ground');
         await c.addLevel('above', 'Upper');
         c.setActiveLevel('lv1');
         await c.placeStamp({ stamp: 'pack:stairs', x: 50, y: 50 });
-        const [start, end] = d.regions[0] ?? [];
-        expect(start).toMatchObject({
-            level: 'lv1',
-            bottom: 0,
-            top: 10,
-            teleport: { targets: [{ plan: 1 }] },
-            label: { kind: 'stairs', from: 'Ground', to: ['Upper'] },
-        });
-        expect(end).toMatchObject({ level: 'lv2', bottom: 10, top: 20, teleport: { targets: [{ plan: 0 }] } });
-        expect(start?.polygon).toEqual(end?.polygon);
-        expect(c.getFeature('p1')?.docs.regions).toEqual(['r0', 'r1']);
+        expect(d.regions[0]).toEqual([
+            expect.objectContaining({
+                level: 'lv1',
+                bottom: 0,
+                top: 20,
+                behaviour: { kind: 'changeLevel', levels: ['lv1', 'lv2'] },
+                label: { kind: 'stairs', from: 'Ground', to: ['Upper'] },
+            }),
+        ]);
+        expect(c.getFeature('p1')?.docs.regions).toEqual(['r0']);
     });
 
-    it('plans no regions for a stair with nowhere to go, and adds them when a level appears', async () => {
+    it('plans no region for a stair with nowhere to go, and adds it when a level appears', async () => {
         const { c, d } = makeHarness(stairs);
         await c.addLevel('above', 'Ground');
         await c.placeStamp({ stamp: 'pack:stairs', x: 50, y: 50 });
         expect(d.regions).toEqual([]);
         await c.addLevel('above', 'Upper');
-        expect(d.regions[0]?.map((r) => r.level)).toEqual(['lv1', 'lv2']);
+        expect(d.regions[0]?.map((r) => r.behaviour)).toEqual([{ kind: 'changeLevel', levels: ['lv1', 'lv2'] }]);
     });
 
-    it('offers both ways from a stairwell', async () => {
+    it('offers both ways from a stairwell, over all three bands', async () => {
         const { c, d } = makeHarness(stairs);
         await c.addLevel('above', 'Ground');
         await c.addLevel('above', 'Upper');
         await c.addLevel('below', 'Cellar');
         c.setActiveLevel('lv1');
         await c.placeStamp({ stamp: 'pack:well', x: 50, y: 50 });
-        const regions = d.regions[d.regions.length - 1] ?? [];
-        expect(regions.map((r) => r.level)).toEqual(['lv1', 'lv2', 'lv3']);
-        expect(regions[0]?.teleport).toEqual({ targets: [{ plan: 1 }, { plan: 2 }] });
+        const [well] = d.regions[d.regions.length - 1] ?? [];
+        expect(well).toMatchObject({ bottom: -10, top: 20, behaviour: { kind: 'changeLevel', levels: ['lv1', 'lv2', 'lv3'] } });
     });
 });

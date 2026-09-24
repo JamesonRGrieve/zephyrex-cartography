@@ -85,7 +85,11 @@ export interface RegionCreateData extends OnLevels {
     readonly shapes: readonly { readonly type: 'polygon'; readonly points: readonly number[]; readonly hole: boolean }[];
     /** A null bound is open-ended. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
-    readonly behaviors: readonly { readonly type: 'teleportToken'; readonly system: TeleportSystem }[];
+    /** `changeLevel` has an empty schema in v14 (14.359). */
+    readonly behaviors: readonly (
+        | { readonly type: 'teleportToken'; readonly system: TeleportSystem }
+        | { readonly type: 'changeLevel'; readonly system: Readonly<Record<string, never>> }
+    )[];
     readonly locked: boolean;
     /** A `CONST.REGION_VISIBILITY` value. */
     readonly visibility: number;

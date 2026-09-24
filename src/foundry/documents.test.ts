@@ -18,7 +18,7 @@ const REGION: RegionDoc = {
     bottom: null,
     top: null,
     level: null,
-    teleport: null,
+    behaviour: null,
 };
 
 const NOTHING: StagedWrite = { deletes: NO_DOCS, walls: [], lights: [], tiles: [], sounds: [], regions: [], tileUpdates: [], regionUpdates: [] };

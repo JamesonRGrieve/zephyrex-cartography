@@ -263,11 +263,14 @@ tool; an auto `AmbientLightDocument` per room at its centroid.
   add above or below, rename, set band, remove when empty). Only that level's
   features, plus level-less ones, are drawn and pickable.
 - **Stairs.** `transition` stamps (stairs, ladder, lift, hatch; up, down or
-  both) generate paired teleport Scene Regions between adjacent levels. Each end
-  sits on its level's band and teleports to the other.
+  both) generate one native `changeLevel` region over the stamp. It sits on
+  the stamp's level and each adjacent level it reaches, spanning their bands.
+  A token entering it is offered the other levels and keeps its height above
+  the floor.
 - **Native.** Levels *are* the scene's native Level documents. Walls, tiles,
-  lights and regions get `levels`, so vision is per floor, and teleports use
-  `destinations`, `placement: relative` and a choice between two ends.
+  lights and regions get `levels`, so vision is per floor. Submap teleports
+  use `destinations`, `placement: relative` and a choice when there are
+  several.
 
 **Submaps [done]:** an enterable stamp (a building, a hab) gets an "Interior"
 button on its Tile HUD. The GM either creates a new interior scene (gridded like
@@ -429,14 +432,16 @@ These make everything after them cheaper and safer, so they come first.
   [14.364] and `PlaceableObject#isFilteredOut` [14.364].
 
 ### Priority 2: native levels
-- **Stairs → `changeLevel`.** v14's way between floors is one region spanning
-  the levels with a `changeLevel` behaviour: Foundry asks the token which level
-  to take. Transition stamps currently create paired `teleportToken` regions
-  instead. Keep teleport for submaps (cross-scene), not for stairs.
-  - It can restrict which movement actions trigger it [14.361]. Stair stamps
-    walk, ladders climb, and the pack schema says which.
-  - The token arrives at the destination level's base elevation, and the
-    behaviour fires until the token leaves the region [14.361].
+- **[done] Stairs → `changeLevel`.** A transition stamp makes one region
+  spanning the levels it joins, with a `changeLevel` behaviour: Foundry asks
+  the token which level to take. Teleport stays for submaps, which cross
+  scenes. `RegionDoc.behaviour` is a `teleport` / `changeLevel` union, and
+  Priority 5 extends it. `tests/e2e/levels.spec.ts` proves it in Foundry.
+  - **Still open:** restricting which movement actions trigger it [14.361],
+    so stair stamps walk and ladders climb, with the pack schema saying
+    which. In 14.359 the behaviour's schema is empty. Build this against a
+    ≥14.361 reference release; the behaviour firing until the token leaves
+    the region is also from 14.361.
 - **Floors and ceilings → `defineSurface`** [14.353]. It gives a region a
   surface at its bottom, top or both that restricts light, movement, sight and
   sound and causes occlusion or exposure. Rooms on upper levels get floors,
@@ -537,9 +542,9 @@ These make everything after them cheaper and safer, so they come first.
   - `ownership`;
   - `attachment.token`: a region that moves with a token [14.353, renamed
     14.356].
-- **Region behaviours** on terrain regions and rooms. Today only
-  `teleportToken` is generated, and `changeLevel` and `defineSurface` come in
-  Priority 2. Still to add:
+- **Region behaviours** on terrain regions and rooms. Today `teleportToken`
+  (submaps) and `changeLevel` (stairs) are generated, and `defineSurface`
+  comes in Priority 2. Still to add:
   - `increaseMovementCost` (difficult terrain);
   - `adjustDarknessLevel`, `suppressWeather` and `applyActiveEffect`;
   - `displayScrollingText`, `executeMacro`, `executeScript`, `pauseGame` and

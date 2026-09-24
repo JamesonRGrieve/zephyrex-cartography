@@ -44,17 +44,17 @@ export class FoundryDocumentSink implements DocumentSink {
 
     async write(write: StagedWrite): Promise<void> {
         const scene = this.getScene();
-        const sceneId = scene?.id;
-        if (!scene || sceneId === null || sceneId === undefined) {
+        // A scene not yet saved has no id, and cannot hold embedded documents.
+        if (!scene || scene.id === null) {
             return;
         }
         // A GM may have deleted a document by hand, and updating a missing one fails the whole batch: a missing tile is
         // left to its feature's next sync, a missing kept-id region is created afresh.
         const tileUpdates = write.tileUpdates.filter(({ id }) => scene.tiles.has(id)).map(({ id, doc }) => ({ _id: id, ...tileCreateData(doc) }));
-        const replaced = write.regionUpdates.flatMap(({ id, doc }) => regionCreateData([doc], [id], sceneId, this.options.regionName));
+        const replaced = write.regionUpdates.flatMap(({ id, doc }) => regionCreateData([doc], [id], this.options.regionName));
         const regionUpdates = replaced.filter((region) => scene.regions.has(region._id)).map(({ behaviors: _behaviors, ...region }) => region);
         const recreated = replaced.filter((region) => !scene.regions.has(region._id));
-        const operations = [...deleteOperations(scene, write), ...this.createOperations(scene, sceneId, write, recreated)];
+        const operations = [...deleteOperations(scene, write), ...this.createOperations(scene, write, recreated)];
         if (tileUpdates.length > 0) {
             operations.push({ action: 'update', documentName: 'Tile', parent: scene, updates: tileUpdates });
         }
@@ -66,11 +66,11 @@ export class FoundryDocumentSink implements DocumentSink {
         }
     }
 
-    private createOperations(scene: FoundryScene, sceneId: string, write: StagedWrite, recreated: readonly RegionCreateData[]): BatchOperation[] {
+    private createOperations(scene: FoundryScene, write: StagedWrite, recreated: readonly RegionCreateData[]): BatchOperation[] {
         const { grid } = scene;
         const regions = [
             ...write.regions.flatMap((group) =>
-                regionCreateData(group.regions, group.ids, sceneId, this.options.regionName).filter((region) => !group.cancelled.includes(region._id)),
+                regionCreateData(group.regions, group.ids, this.options.regionName).filter((region) => !group.cancelled.includes(region._id)),
             ),
             ...recreated,
         ];

@@ -53,7 +53,7 @@ export function exitRegion(link: SubmapLink, polygon: readonly Point[], originSc
         bottom: null,
         top: null,
         level: null,
-        teleport: { targets: [{ scene: originScene, region: link.entryRegion }] },
+        behaviour: { kind: 'teleport', targets: [{ scene: originScene, region: link.entryRegion }] },
     };
 }
 

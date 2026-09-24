@@ -20,7 +20,7 @@ function region(id: string | null): RegionDoc {
         bottom: null,
         top: null,
         level: null,
-        teleport: null,
+        behaviour: null,
     };
 }
 

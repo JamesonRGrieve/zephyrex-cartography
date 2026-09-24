@@ -139,12 +139,23 @@ type RegionLabel =
     | { readonly kind: 'entrance' | 'exit'; readonly scene: string }
     | { readonly kind: 'terrain'; readonly biome: BiomeKind };
 
+/** Where a teleport leads: a region in any scene, by id (a submap's other side). */
+interface RegionTarget {
+    readonly scene: string;
+    readonly region: string;
+}
+
 /**
- * Where a teleport leads: another region of the same plan (by index, so a
- * stair's two ends can point at each other before either exists), or a region
- * in any scene by id (a submap's other side).
+ * What a generated region does to a token that enters it:
+ * - `teleport` moves it to one of `targets`, in this scene or another (a
+ *   submap's entrance and exit);
+ * - `changeLevel` is v14's way between floors of one scene: the region spans
+ *   every level in `levels`, and a token entering it is offered each of them
+ *   but its own, keeping its height above the floor.
  */
-type RegionTarget = { readonly plan: number } | { readonly scene: string; readonly region: string };
+export type RegionBehaviour =
+    | { readonly kind: 'teleport'; readonly targets: readonly RegionTarget[] }
+    | { readonly kind: 'changeLevel'; readonly levels: readonly string[] };
 
 /** A native Scene Region. The sink turns its targets into region UUIDs. */
 export interface RegionDoc {
@@ -155,8 +166,9 @@ export interface RegionDoc {
     /** Elevation band (scene distance units); null is open-ended. */
     readonly bottom: number | null;
     readonly top: number | null;
+    /** The level it sits on, or null for every level. A `changeLevel` region sits on all of its behaviour's levels instead. */
     readonly level: string | null;
-    readonly teleport: { readonly targets: readonly RegionTarget[] } | null;
+    readonly behaviour: RegionBehaviour | null;
 }
 
 /** The ids of every native document one feature generated, by document type. */

@@ -29,9 +29,8 @@ export interface Staged<T> {
 }
 
 /**
- * Regions are staged per change, because a region's teleport names others of
- * the same change by position (`{plan: i}`); `ids[i]` is region `i`'s id. A
- * cancelled region keeps its position, so the others still resolve, and is
+ * Regions are staged per change, each with the id it will have: `ids[i]` is
+ * region `i`'s. A cancelled region keeps its position in the group and is
  * simply not created.
  */
 export interface StagedRegions {

@@ -1,6 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from './lib/foundry';
 
+test('a stair is one native changeLevel region spanning the floors it joins', async ({ world }) => {
+    const result = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const ground = await controller?.addLevel('above', 'Ground');
+        const upper = await controller?.addLevel('above', 'Upper');
+        controller?.setActiveLevel(ground ?? null);
+        await controller?.placeStamp({ stamp: 'zc-e2e-pack:stairs', x: 600, y: 600 });
+        const regions = canvas?.scene?.regions.contents ?? [];
+        const byName = (a: string, b: string): number => a.localeCompare(b);
+        return {
+            count: regions.length,
+            behaviours: regions.flatMap((region) => region.behaviors.contents.map((behaviour) => behaviour.type)),
+            levels: regions.flatMap((region) => [...region.levels]).sort(byName),
+            // A fresh v14 scene has a default Level, so Ground sits between it and Upper, and a two-way stair joins all three.
+            expected: (canvas?.scene?.levels.contents ?? []).map((level) => level.id).sort(byName),
+            joins: [ground, upper],
+        };
+    });
+    expect(result.count).toBe(1);
+    expect(result.behaviours).toEqual(['changeLevel']);
+    expect(result.expected).toHaveLength(3);
+    expect(result.levels).toEqual(result.expected);
+    expect(result.levels).toEqual(expect.arrayContaining(result.joins));
+});
+
 test('levels are native Level documents, and a room on one has walls on that level only', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const api = game.modules?.get('zephyrex-cartography').api;

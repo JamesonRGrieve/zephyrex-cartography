@@ -39,13 +39,13 @@ describe('CartographyController submaps', () => {
         expect(link).toEqual({ scene: 'sc1', sceneName: 'Hab Block interior', entryRegion: 'p3', exitRegion: 'p4' });
         const exit = w.regions[0];
         expect(exit?.scene).toBe('sc1');
-        expect(exit?.region).toMatchObject({ id: 'p4', label: { kind: 'exit', scene: 'Town' }, teleport: { targets: [{ scene: 'here', region: 'p3' }] } });
+        expect(exit?.region).toMatchObject({ id: 'p4', label: { kind: 'exit', scene: 'Town' }, behaviour: { kind: 'teleport', targets: [{ scene: 'here', region: 'p3' }] } });
         expect(exit?.region.polygon[0]).toEqual({ x: 450, y: 350 });
         const entrance = d.regions[d.regions.length - 1]?.[0];
         expect(entrance).toMatchObject({
             id: 'p3',
             label: { kind: 'entrance', scene: 'Hab Block interior' },
-            teleport: { targets: [{ scene: 'sc1', region: 'p4' }] },
+            behaviour: { kind: 'teleport', targets: [{ scene: 'sc1', region: 'p4' }] },
         });
         expect(entrance?.polygon).toHaveLength(4);
         expect(c.getFeature('p1')?.docs.regions).toEqual(['p3']);

@@ -45,7 +45,7 @@ export function createWorldScenes(options: WorldScenesOptions): WorldScenes {
             if (scene?.id == null || scene.id === '' || region.id === null) {
                 return false;
             }
-            const [data] = regionCreateData([region], [region.id], scene.id, options.regionName);
+            const [data] = regionCreateData([region], [region.id], options.regionName);
             if (!data) {
                 return false;
             }
