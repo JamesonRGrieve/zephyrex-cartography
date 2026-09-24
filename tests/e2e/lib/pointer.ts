@@ -78,13 +78,29 @@ export async function activate(page: Page, control: string, tool: string): Promi
 /** The panels tools open when picked. */
 const TOOL_PANELS = ['paint', 'paths', 'pin', 'label', 'zone'] as const;
 
-/** Tuck the tool panels away, as a GM would, so clicks land on the canvas; the choices made in them stand. */
+/** Width (px) given each tucked panel's title bar along the bottom of the screen. */
+const TUCKED_WIDTH = 210;
+
+/** How far (px) above the bottom edge the tucked title bars sit: two bars' height, clear of the hotbar's top. */
+const TUCKED_RISE = 72;
+
+/**
+ * Tuck the tool panels away, as a GM would, so clicks land on the canvas:
+ * minimized, and moved to the bottom edge, since a minimized panel's title bar
+ * still covers the canvas where it was. The choices made in them stand.
+ */
 export async function tuckPanels(page: Page): Promise<void> {
     await page.evaluate(
-        async (ids) => {
-            await Promise.all(ids.map(async (id) => foundry.applications.instances.get(id)?.minimize()));
+        async ({ ids, width, rise }) => {
+            await Promise.all(
+                ids.map(async (id, i) => {
+                    const app = foundry.applications.instances.get(id);
+                    await app?.minimize();
+                    app?.setPosition({ left: i * width, top: innerHeight - rise });
+                }),
+            );
         },
-        TOOL_PANELS.map((panel) => `${MODULE_ID}-${panel}`),
+        { ids: TOOL_PANELS.map((panel) => `${MODULE_ID}-${panel}`), width: TUCKED_WIDTH, rise: TUCKED_RISE },
     );
 }
 
