@@ -1,0 +1,204 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * Area effects: Foundry v14 region behaviours a GM puts on a painted area,
+ * a stroke or a room, carried by the Scene Region the area generates. Each
+ * mirrors one behaviour type's fields in the 14.359 source
+ * (`client/data/region-behaviors/`): Adjust Darkness Level, Suppress Weather,
+ * Display Scrolling Text, Pause Game, Execute Macro, Execute Script and Apply
+ * Active Effect. Pure and unit-tested; the boundary translates them.
+ */
+import { parseCssHex } from './colour';
+import { isRecord, stringArray } from './guards';
+
+/** v14 `CONST.REGION_EVENTS`: what a region behaviour can subscribe to. */
+export const REGION_EVENTS = [
+    'regionBoundary',
+    'regionAnimation',
+    'behaviorActivated',
+    'behaviorDeactivated',
+    'behaviorViewed',
+    'behaviorUnviewed',
+    'tokenEnter',
+    'tokenExit',
+    'tokenMoveIn',
+    'tokenMoveOut',
+    'tokenMoveWithin',
+    'tokenAnimateIn',
+    'tokenAnimateOut',
+    'tokenTurnStart',
+    'tokenTurnEnd',
+    'tokenRoundStart',
+    'tokenRoundEnd',
+] as const;
+
+export type RegionEvent = (typeof REGION_EVENTS)[number];
+
+/** The events Display Scrolling Text takes (its schema narrows them). */
+export const TEXT_EVENTS = [
+    'tokenAnimateIn',
+    'tokenAnimateOut',
+    'tokenTurnStart',
+    'tokenTurnEnd',
+    'tokenRoundStart',
+    'tokenRoundEnd',
+] as const satisfies readonly RegionEvent[];
+
+export type TextEvent = (typeof TEXT_EVENTS)[number];
+
+/** Adjust Darkness Level's `MODES`, in their numeric order (OVERRIDE 0, BRIGHTEN 1, DARKEN 2). */
+export const DARKNESS_MODES = ['override', 'brighten', 'darken'] as const;
+
+export type DarknessMode = (typeof DARKNESS_MODES)[number];
+
+/** Display Scrolling Text's `VISIBILITY_MODES`, in their numeric order (GAMEMASTER 0, OBSERVER 1, ANYONE 2). */
+export const TEXT_VISIBILITIES = ['gamemaster', 'observer', 'anyone'] as const;
+
+export type TextVisibility = (typeof TEXT_VISIBILITIES)[number];
+
+export type AreaEffect =
+    | { readonly kind: 'darkness'; readonly mode: DarknessMode; readonly modifier: number }
+    | { readonly kind: 'suppressWeather' }
+    | {
+          readonly kind: 'text';
+          readonly text: string;
+          /** `#rrggbb`. */
+          readonly colour: string;
+          readonly visibility: TextVisibility;
+          readonly once: boolean;
+          readonly events: readonly TextEvent[];
+      }
+    | { readonly kind: 'pause'; readonly once: boolean }
+    /** `uuid` is a Macro's, or null until one is chosen. */
+    | { readonly kind: 'macro'; readonly uuid: string | null; readonly everyone: boolean; readonly events: readonly RegionEvent[] }
+    | { readonly kind: 'script'; readonly source: string; readonly events: readonly RegionEvent[] }
+    /** `effects` are ActiveEffect UUIDs. */
+    | { readonly kind: 'activeEffect'; readonly effects: readonly string[] };
+
+export type AreaEffectKind = AreaEffect['kind'];
+
+export const AREA_EFFECT_KINDS = [
+    'darkness',
+    'suppressWeather',
+    'text',
+    'pause',
+    'macro',
+    'script',
+    'activeEffect',
+] as const satisfies readonly AreaEffectKind[];
+
+/** A new effect of `kind`, as Foundry makes a new behaviour of its type. */
+export function newAreaEffect(kind: AreaEffectKind): AreaEffect {
+    switch (kind) {
+        case 'darkness':
+            return { kind, mode: 'override', modifier: 0 };
+        case 'text':
+            return { kind, text: '', colour: '#ffffff', visibility: 'anyone', once: false, events: [] };
+        case 'pause':
+            return { kind, once: false };
+        case 'macro':
+            return { kind, uuid: null, everyone: false, events: [] };
+        case 'script':
+            return { kind, source: '', events: [] };
+        case 'activeEffect':
+            return { kind, effects: [] };
+        case 'suppressWeather':
+            break;
+    }
+    return { kind: 'suppressWeather' };
+}
+
+/** What an area carries: its effects, or undefined for none (left out of the stored JSON). */
+export interface Affected {
+    readonly effects?: readonly AreaEffect[] | undefined;
+}
+
+/** An area's effects, none when it has none. */
+export function effectsOf(feature: Affected): readonly AreaEffect[] {
+    return feature.effects ?? [];
+}
+
+/** A typed darkness modifier (0–1), or null when it is not one. */
+export function parseModifier(typed: string): number | null {
+    const value = typed.trim() === '' ? Number.NaN : Number(typed);
+    return Number.isFinite(value) && value >= 0 && value <= 1 ? value : null;
+}
+
+/** `events` with `event` subscribed or not, in `order`'s order. */
+export function withEvent<T extends string>(order: readonly T[], events: readonly T[], toggled: T, on: boolean): T[] {
+    return order.filter((candidate) => (candidate === toggled ? on : events.includes(candidate)));
+}
+
+/** UUIDs typed one per line: trimmed, blank lines dropped. */
+export function parseUuidLines(typed: string): string[] {
+    return typed
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line !== '');
+}
+
+/** Effects as stored: undefined for none, so only real effects are kept. */
+export function storedEffects(effects: readonly AreaEffect[]): readonly AreaEffect[] | undefined {
+    return effects.length > 0 ? effects : undefined;
+}
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows a persisted enum value from scene-flag JSON
+function oneOf<T extends string>(choices: readonly T[], v: unknown, fallback: T): T {
+    return choices.find((choice) => choice === v) ?? fallback;
+}
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows persisted region events from scene-flag JSON
+function eventsOf<T extends string>(choices: readonly T[], v: unknown): T[] {
+    return stringArray(v).flatMap((stored) => choices.filter((choice) => choice === stored));
+}
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: parses one persisted effect from scene-flag JSON
+function parseAreaEffect(v: unknown): AreaEffect | null {
+    if (!isRecord(v)) {
+        return null;
+    }
+    const base = AREA_EFFECT_KINDS.find((kind) => kind === v['kind']);
+    if (base === undefined) {
+        return null;
+    }
+    const fresh = newAreaEffect(base);
+    switch (fresh.kind) {
+        case 'darkness': {
+            const modifier = typeof v['modifier'] === 'number' && v['modifier'] >= 0 && v['modifier'] <= 1 ? v['modifier'] : fresh.modifier;
+            return { ...fresh, mode: oneOf(DARKNESS_MODES, v['mode'], fresh.mode), modifier };
+        }
+        case 'text': {
+            const colour = typeof v['colour'] === 'string' && parseCssHex(v['colour']) !== null ? v['colour'] : fresh.colour;
+            return {
+                ...fresh,
+                text: typeof v['text'] === 'string' ? v['text'] : fresh.text,
+                colour,
+                visibility: oneOf(TEXT_VISIBILITIES, v['visibility'], fresh.visibility),
+                once: v['once'] === true,
+                events: eventsOf(TEXT_EVENTS, v['events']),
+            };
+        }
+        case 'pause':
+            return { ...fresh, once: v['once'] === true };
+        case 'macro':
+            return {
+                ...fresh,
+                uuid: typeof v['uuid'] === 'string' && v['uuid'] !== '' ? v['uuid'] : null,
+                everyone: v['everyone'] === true,
+                events: eventsOf(REGION_EVENTS, v['events']),
+            };
+        case 'script':
+            return { ...fresh, source: typeof v['source'] === 'string' ? v['source'] : fresh.source, events: eventsOf(REGION_EVENTS, v['events']) };
+        case 'activeEffect':
+            return { ...fresh, effects: stringArray(v['effects']).filter((uuid) => uuid !== '') };
+        case 'suppressWeather':
+            break;
+    }
+    return fresh;
+}
+
+/** The persisted effects of an area: each valid one, in order; none when there are none. */
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows persisted area effects from scene-flag JSON
+export function parseAreaEffects(v: unknown): readonly AreaEffect[] | undefined {
+    const effects = Array.isArray(v) ? v.map(parseAreaEffect).filter((effect): effect is AreaEffect => effect !== null) : [];
+    return storedEffects(effects);
+}

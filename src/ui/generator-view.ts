@@ -6,7 +6,10 @@
  * function from the panel state to elements; unit-tested under happy-dom.
  */
 import type { GeneratorField, GeneratorForm } from '../generate/form';
-import { button, el, focusKey, labelledCheckbox, labelledInput, replacePreservingFocus } from './dom';
+import { button, el, labelledCheckbox, labelledInput, labelledTextArea, replacePreservingFocus } from './dom';
+
+/** Lines of the scene spec box. */
+const SPEC_ROWS = 6;
 
 export interface GeneratorPanel {
     readonly form: GeneratorForm;
@@ -70,18 +73,13 @@ function floorPlanSection(panel: GeneratorPanel, labels: GeneratorLabels, handle
 }
 
 function specSection(panel: GeneratorPanel, labels: GeneratorLabels, handlers: GeneratorHandlers): HTMLElement {
-    const wrap = el('label', 'tw-flex tw-flex-col tw-gap-1 tw-text-xs tw-w-full', labels.spec);
-    const area = el('textarea', 'tw-text-xs tw-font-mono tw-w-full');
-    area.rows = 6;
-    area.spellcheck = false;
-    area.value = panel.specText;
-    focusKey(area, 'spec');
-    area.addEventListener('change', () => {
-        handlers.setSpecText(area.value);
-    });
-    wrap.append(area);
+    const wrap = labelledTextArea(labels.spec, panel.specText, 'spec', SPEC_ROWS, handlers.setSpecText);
     const build = button('tw-text-xs', labels.buildSpec, 'build-spec', () => {
-        handlers.setSpecText(area.value);
+        // The text is committed as the button is pressed, even if the text area still has focus.
+        const area = wrap.querySelector('textarea');
+        if (area) {
+            handlers.setSpecText(area.value);
+        }
         handlers.buildSpec();
     });
     build.disabled = panel.busy;

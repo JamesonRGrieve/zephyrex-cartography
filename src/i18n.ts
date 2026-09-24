@@ -30,6 +30,7 @@ export const I18N = {
         stamp: key('Tools.Stamp'),
         levels: key('Tools.Levels'),
         materials: key('Tools.Materials'),
+        effects: key('Tools.Effects'),
         generator: key('Tools.Generator'),
     },
     generator: {
@@ -122,6 +123,15 @@ export const I18N = {
             acid: key('Paths.Liquids.Acid'),
         },
     },
+    effects: {
+        title: key('Effects.Title'),
+        effects: key('Effects.Effects'),
+        none: key('Effects.None'),
+        adding: key('Effects.Adding'),
+        add: key('Effects.Add'),
+        remove: key('Effects.Remove'),
+        activeEffects: key('Effects.ActiveEffects'),
+    },
     materials: {
         title: key('Materials.Title'),
         floor: key('Materials.Floor'),
@@ -154,6 +164,7 @@ export const I18N = {
         exit: key('Regions.Exit'),
         floor: key('Regions.Floor'),
         ceiling: key('Regions.Ceiling'),
+        room: key('Regions.Room'),
         terrain: key('Regions.Terrain'),
         surface: key('Regions.Surface'),
         body: key('Regions.Body'),

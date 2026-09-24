@@ -17,6 +17,7 @@
             "Stamp": "Stamps (click the canvas to place the selected stamp)",
             "Levels": "Levels",
             "Materials": "Room materials (click a room to set its floor and walls)",
+            "Effects": "Area effects (click painted ground or a room to set its movement cost and region behaviours)",
             "Generator": "Map builder (generate a floor plan, or build a scene spec)"
         },
         "Generator": {
@@ -69,6 +70,15 @@
                 "Poison": "Poison",
                 "Acid": "Acid"
             }
+        },
+        "Effects": {
+            "Title": "Area effects",
+            "Effects": "Region behaviours",
+            "None": "No region behaviours yet.",
+            "Adding": "New behaviour",
+            "Add": "Add behaviour",
+            "Remove": "Remove",
+            "ActiveEffects": "Active Effect UUIDs, one per line"
         },
         "Materials": {
             "Title": "Room materials",
@@ -181,6 +191,7 @@
             "Exit": "Back to {scene}",
             "Floor": "Floor of {level}",
             "Ceiling": "Ceiling of {level}",
+            "Room": "Room",
             "Terrain": "{name} terrain",
             "Surface": "{name} surface",
             "Body": "{name} (impassable)",

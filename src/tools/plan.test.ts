@@ -57,4 +57,33 @@ describe('planDocuments', () => {
         const region = makeRegion('g', 'grassland', square);
         expect(region ? planDocuments(region) : null).toEqual({ walls: [], lights: [], tiles: [], regions: [], sounds: [] });
     });
+
+    it('gives painted ground with effects its region, the effects after any movement cost', () => {
+        const region = makeRegion('g', 'marsh', square);
+        const dark = { kind: 'darkness', mode: 'darken', modifier: 0.5 } as const;
+        const plan = region ? planDocuments({ ...region, effects: [dark] }) : null;
+        expect(plan?.regions).toEqual([expect.objectContaining({ label: { kind: 'terrain', biome: 'marsh' }, behaviour: null, effects: [dark] })]);
+        const mire = region ? planDocuments({ ...region, movementCost: 2, effects: [dark] }) : null;
+        expect(mire?.regions[0]).toMatchObject({ behaviour: { kind: 'terrain', difficulties: { walk: 2 } }, effects: [dark] });
+    });
+
+    it('gives a room with difficult ground or effects a region over its floor, and a plain room none', () => {
+        const room = makeRoom('r', 'dirt', square);
+        expect(room ? planDocuments(room).regions : null).toEqual([]);
+        const rubble = room ? planDocuments({ ...room, movementCost: 3 }) : null;
+        expect(rubble?.regions).toEqual([
+            {
+                id: null,
+                label: { kind: 'room' },
+                polygon: square,
+                bottom: null,
+                top: null,
+                level: null,
+                spans: [],
+                behaviour: { kind: 'terrain', difficulties: { walk: 3 } },
+            },
+        ]);
+        const dim = room ? planDocuments({ ...room, effects: [{ kind: 'suppressWeather' }] }) : null;
+        expect(dim?.regions).toEqual([expect.objectContaining({ label: { kind: 'room' }, behaviour: null, effects: [{ kind: 'suppressWeather' }] })]);
+    });
 });

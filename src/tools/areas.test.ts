@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { describe, expect, it } from 'vitest';
+import { areaSettingsOf, isArea } from './areas';
+import { LIQUID_LOOKS, makePath } from './path';
+import { makeRegion } from './region';
+import { makeRoom } from './room';
+import { makeStroke } from './stroke';
+
+const square = [
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    { x: 100, y: 100 },
+];
+
+describe('areas', () => {
+    it('are painted ground and rooms, not paths', () => {
+        const features = [
+            makeRegion('a', 'forest', square),
+            makeStroke('b', 'sand', square, 20),
+            makeRoom('c', 'dirt', square),
+            makePath('d', 'road', square, 10, null, LIQUID_LOOKS.water),
+        ];
+        expect(features.map((f) => (f ? isArea(f) : null))).toEqual([true, true, true, false]);
+    });
+
+    it('have ordinary ground and no effects until given some', () => {
+        const room = makeRoom('c', 'dirt', square);
+        expect(room && areaSettingsOf(room)).toEqual({ movementCost: 1, effects: [] });
+        expect(room && areaSettingsOf({ ...room, movementCost: 2, effects: [{ kind: 'suppressWeather' }] })).toEqual({
+            movementCost: 2,
+            effects: [{ kind: 'suppressWeather' }],
+        });
+    });
+});

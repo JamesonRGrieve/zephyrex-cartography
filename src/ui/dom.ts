@@ -63,6 +63,21 @@ export function labelledInput(
     return wrap;
 }
 
+/** A labelled monospace text area, full width; `onChange` gets its text once edited. */
+export function labelledTextArea(label: string, value: string, key: string, rows: number, onChange: (text: string) => void): HTMLLabelElement {
+    const wrap = el('label', 'tw-flex tw-flex-col tw-gap-1 tw-text-xs tw-w-full', label);
+    const area = el('textarea', 'tw-text-xs tw-font-mono tw-w-full');
+    area.rows = rows;
+    area.spellcheck = false;
+    area.value = value;
+    focusKey(area, key);
+    area.addEventListener('change', () => {
+        onChange(area.value);
+    });
+    wrap.append(area);
+    return wrap;
+}
+
 /** A labelled checkbox (the label wraps it); `onChange` gets whether it is now checked. */
 export function labelledCheckbox(label: string, checked: boolean, key: string, onChange: (checked: boolean) => void): HTMLLabelElement {
     const wrap = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', label);

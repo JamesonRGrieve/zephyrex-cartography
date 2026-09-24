@@ -320,6 +320,247 @@
                                 "minimum": 0,
                                 "maximum": 5
                             },
+                            "effects": {
+                                "default": [],
+                                "description": "Region behaviours on the area's Scene Region.",
+                                "type": "array",
+                                "items": {
+                                    "oneOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "darkness"
+                                                },
+                                                "mode": {
+                                                    "default": "override",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "override",
+                                                        "brighten",
+                                                        "darken"
+                                                    ]
+                                                },
+                                                "modifier": {
+                                                    "default": 0,
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "suppressWeather"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "text"
+                                                },
+                                                "text": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "colour": {
+                                                    "default": "#ffffff",
+                                                    "type": "string",
+                                                    "pattern": "^#[0-9a-fA-F]{6}$"
+                                                },
+                                                "visibility": {
+                                                    "default": "anyone",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "gamemaster",
+                                                        "observer",
+                                                        "anyone"
+                                                    ]
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "pause"
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "macro"
+                                                },
+                                                "uuid": {
+                                                    "default": null,
+                                                    "description": "The Macro to run, by UUID.",
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        {
+                                                            "type": "null"
+                                                        }
+                                                    ]
+                                                },
+                                                "everyone": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "script"
+                                                },
+                                                "source": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "activeEffect"
+                                                },
+                                                "effects": {
+                                                    "default": [],
+                                                    "description": "ActiveEffect UUIDs.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        }
+                                    ],
+                                    "description": "A region behaviour on the area, as Foundry's: Adjust Darkness Level, Suppress Weather, Display Scrolling Text, Pause Game, Execute Macro, Execute Script or Apply Active Effect."
+                                }
+                            },
                             "level": {
                                 "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
                                 "type": "string",
@@ -396,6 +637,247 @@
                                 "type": "number",
                                 "minimum": 0,
                                 "maximum": 5
+                            },
+                            "effects": {
+                                "default": [],
+                                "description": "Region behaviours on the area's Scene Region.",
+                                "type": "array",
+                                "items": {
+                                    "oneOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "darkness"
+                                                },
+                                                "mode": {
+                                                    "default": "override",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "override",
+                                                        "brighten",
+                                                        "darken"
+                                                    ]
+                                                },
+                                                "modifier": {
+                                                    "default": 0,
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "suppressWeather"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "text"
+                                                },
+                                                "text": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "colour": {
+                                                    "default": "#ffffff",
+                                                    "type": "string",
+                                                    "pattern": "^#[0-9a-fA-F]{6}$"
+                                                },
+                                                "visibility": {
+                                                    "default": "anyone",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "gamemaster",
+                                                        "observer",
+                                                        "anyone"
+                                                    ]
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "pause"
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "macro"
+                                                },
+                                                "uuid": {
+                                                    "default": null,
+                                                    "description": "The Macro to run, by UUID.",
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        {
+                                                            "type": "null"
+                                                        }
+                                                    ]
+                                                },
+                                                "everyone": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "script"
+                                                },
+                                                "source": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "activeEffect"
+                                                },
+                                                "effects": {
+                                                    "default": [],
+                                                    "description": "ActiveEffect UUIDs.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        }
+                                    ],
+                                    "description": "A region behaviour on the area, as Foundry's: Adjust Darkness Level, Suppress Weather, Display Scrolling Text, Pause Game, Execute Macro, Execute Script or Apply Active Effect."
+                                }
                             },
                             "level": {
                                 "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
@@ -605,6 +1087,254 @@
                                 "default": true,
                                 "description": "Whether a level above gets a ceiling over the room (false for an open courtyard).",
                                 "type": "boolean"
+                            },
+                            "movementCost": {
+                                "default": 1,
+                                "description": "Difficult ground: what crossing it on foot costs, times the distance (1 ordinary, 2 mud), as Foundry's Modify Movement Cost.",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5
+                            },
+                            "effects": {
+                                "default": [],
+                                "description": "Region behaviours on the area's Scene Region.",
+                                "type": "array",
+                                "items": {
+                                    "oneOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "darkness"
+                                                },
+                                                "mode": {
+                                                    "default": "override",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "override",
+                                                        "brighten",
+                                                        "darken"
+                                                    ]
+                                                },
+                                                "modifier": {
+                                                    "default": 0,
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "suppressWeather"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "text"
+                                                },
+                                                "text": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "colour": {
+                                                    "default": "#ffffff",
+                                                    "type": "string",
+                                                    "pattern": "^#[0-9a-fA-F]{6}$"
+                                                },
+                                                "visibility": {
+                                                    "default": "anyone",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "gamemaster",
+                                                        "observer",
+                                                        "anyone"
+                                                    ]
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "pause"
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "macro"
+                                                },
+                                                "uuid": {
+                                                    "default": null,
+                                                    "description": "The Macro to run, by UUID.",
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        {
+                                                            "type": "null"
+                                                        }
+                                                    ]
+                                                },
+                                                "everyone": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "script"
+                                                },
+                                                "source": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "activeEffect"
+                                                },
+                                                "effects": {
+                                                    "default": [],
+                                                    "description": "ActiveEffect UUIDs.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ],
+                                            "additionalProperties": false
+                                        }
+                                    ],
+                                    "description": "A region behaviour on the area, as Foundry's: Adjust Darkness Level, Suppress Weather, Display Scrolling Text, Pause Game, Execute Macro, Execute Script or Apply Active Effect."
+                                }
                             },
                             "doors": {
                                 "default": [],

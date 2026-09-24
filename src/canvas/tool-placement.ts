@@ -10,12 +10,12 @@
  */
 
 /** Foundry's control groups the module adds tools to. */
-export const NATIVE_GROUPS = ['walls', 'tiles', 'lighting'] as const;
+export const NATIVE_GROUPS = ['walls', 'tiles', 'lighting', 'regions'] as const;
 
 export type NativeGroup = (typeof NATIVE_GROUPS)[number];
 
 /** A module tool that appears in a native group. */
-export type NativeTool = 'room' | 'door' | 'materials' | 'stamp' | 'edit' | 'erase' | 'link';
+export type NativeTool = 'room' | 'door' | 'materials' | 'stamp' | 'edit' | 'erase' | 'link' | 'effects';
 
 /** Tools placed in a native group, in the order they appear after Foundry's own. */
 export const NATIVE_TOOLS: Readonly<Record<NativeGroup, readonly NativeTool[]>> = {
@@ -23,10 +23,12 @@ export const NATIVE_TOOLS: Readonly<Record<NativeGroup, readonly NativeTool[]>> 
     tiles: ['stamp', 'erase'],
     // Linking light switches to the lights they control sits with Foundry's light tools.
     lighting: ['link'],
+    // Area effects are the behaviours of the regions painted ground and rooms generate.
+    regions: ['effects'],
 };
 
 /** Tools that live only in a native group, and so are left out of the module's own group. */
-const NATIVE_ONLY: ReadonlySet<string> = new Set(['room', 'door', 'materials', 'stamp', 'link']);
+const NATIVE_ONLY: ReadonlySet<string> = new Set(['room', 'door', 'materials', 'stamp', 'link', 'effects']);
 
 /**
  * A tool's name in a native group. Foundry requires tool names to be unique

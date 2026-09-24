@@ -6,6 +6,7 @@
  * parser + edit constructor. Pure and unit-tested.
  */
 import type { Point } from '../geometry/spline';
+import { parseAreaEffects, type Affected } from './area-effects';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr } from './guards';
@@ -15,7 +16,7 @@ import { parseMovementCost, type Costed } from './terrain-cost';
 export const DEFAULT_BRUSH_RADIUS = 25;
 
 /** A painted biome swath; its `points` are the painted centerline. */
-export interface StrokeFeature extends FeatureCommon, Costed {
+export interface StrokeFeature extends FeatureCommon, Costed, Affected {
     readonly type: 'stroke';
     readonly biome: BiomeKind;
     /** Half-width (scene px) of the painted swath. */
@@ -48,5 +49,5 @@ export function parseStroke(v: unknown): StrokeFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const stroke = makeStroke(v['id'], v['biome'], points, numberOr(v['radius'], DEFAULT_BRUSH_RADIUS));
-    return stroke && { ...stroke, movementCost: parseMovementCost(v['movementCost']), ...parseFeatureCommon(v) };
+    return stroke && { ...stroke, movementCost: parseMovementCost(v['movementCost']), effects: parseAreaEffects(v['effects']), ...parseFeatureCommon(v) };
 }

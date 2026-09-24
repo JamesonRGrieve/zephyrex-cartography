@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FLOOR_PLAN, generateFloorPlan } from '../generate/floor-plan';
 import { parseSceneSpec, type SceneSpec } from '../generate/spec';
+import { areaSettingsOf, isArea } from '../tools/areas';
 import type { WallDoc } from '../tools/documents';
 import { NO_LEVEL_ART } from '../tools/levels';
 import { LIQUID_LOOKS } from '../tools/path';
@@ -288,6 +289,37 @@ describe('realizeSpec', () => {
         );
         expect(h.s.last().map((f) => f.type === 'room' && f.ceiling)).toEqual([true, false]);
         expect(h.d.regions.flat().map((r) => r.label)).toEqual([{ kind: 'ceiling', level: 'Ground' }]);
+    });
+
+    it('gives rooms and painted ground their movement cost and region behaviours, with Foundry’s defaults for what is left out', async () => {
+        const h = makeHarness();
+        const square = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 2 },
+        ];
+        await realizeSpec(
+            h.c,
+            spec({
+                features: [
+                    { type: 'room', points: square, movementCost: 2, effects: [{ kind: 'darkness', modifier: 0.7 }] },
+                    { type: 'region', biome: 'marsh', points: square, effects: [{ kind: 'text', text: 'Squelch', events: ['tokenTurnEnd'] }] },
+                    { type: 'stroke', biome: 'sand', points: square },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        const [room, marsh, sand] = h.s.last();
+        expect(room && isArea(room) ? areaSettingsOf(room) : null).toEqual({
+            movementCost: 2,
+            effects: [{ kind: 'darkness', mode: 'override', modifier: 0.7 }],
+        });
+        expect(marsh && isArea(marsh) ? areaSettingsOf(marsh).effects : null).toEqual([
+            { kind: 'text', text: 'Squelch', colour: '#ffffff', visibility: 'anyone', once: false, events: ['tokenTurnEnd'] },
+        ]);
+        // Ordinary ground with no effects stores neither.
+        expect(sand).not.toHaveProperty('effects', []);
+        expect(sand && 'effects' in sand ? sand.effects : undefined).toBeUndefined();
     });
 
     it('links a light switch to the lamps and rooms it names by key, and the lights it names by id', async () => {

@@ -9,11 +9,13 @@
  */
 import { distance, type Point } from '../geometry/spline';
 import { centroid, perimeterSegments, type Segment } from '../geometry/wall';
+import { parseAreaEffects, type Affected } from './area-effects';
 import type { BiomeKind } from './biome';
 import { DOOR_ANIMATIONS, type DoorAnimationType, type DoorLook, type DoorState, type GeneratedDocs, NO_DOCS, parseGeneratedDocs } from './documents';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, stringArray } from './guards';
 import { type FloorMaterial, isFloorMaterial, parseWallMaterial, type WallMaterial } from './materials';
+import { parseMovementCost, type Costed } from './terrain-cost';
 import { DEFAULT_WALL_PRESET, isWallPreset, type WallPreset } from './wall-presets';
 
 /** Default floor material for a freshly drawn room. */
@@ -49,8 +51,12 @@ export function roomDoorLook(door: RoomDoor): DoorLook {
     return { sound: door.sound, animation: door.animation === null ? null : { type: door.animation } };
 }
 
-/** A room; its `points` are the grid-snapped boundary (>= 3), its documents the perimeter walls and centre light. */
-export interface RoomFeature extends FeatureCommon {
+/**
+ * A room; its `points` are the grid-snapped boundary (>= 3), its documents the
+ * perimeter walls and centre light. A room whose floor is difficult to cross,
+ * or that has area effects, also gets a Scene Region over its floor.
+ */
+export interface RoomFeature extends FeatureCommon, Costed, Affected {
     readonly type: 'room';
     /** Floor material: a biome, or a pack `floor.<name>` role. */
     readonly floor: FloorMaterial;
@@ -196,6 +202,8 @@ export function parseRoom(v: unknown): RoomFeature | null {
         lit: v['lit'] !== false,
         points: points.map((p) => ({ x: p.x, y: p.y })),
         doors,
+        movementCost: parseMovementCost(v['movementCost']),
+        effects: parseAreaEffects(v['effects']),
         ...parseFeatureCommon(v),
         docs: roomDocs(v),
     };

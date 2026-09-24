@@ -12,6 +12,7 @@
  * this file. Changes to v1 are additive only.
  */
 import { z } from 'zod';
+import { DARKNESS_MODES, REGION_EVENTS, TEXT_EVENTS, TEXT_VISIBILITIES } from '../tools/area-effects';
 import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
 import { NO_LEVEL_ART, TEXTURE_FITS } from '../tools/levels';
@@ -44,8 +45,50 @@ const movementCost = z
     .default(1)
     .describe("Difficult ground: what crossing it on foot costs, times the distance (1 ordinary, 2 mud), as Foundry's Modify Movement Cost.");
 
+const regionEvents = z.array(z.enum(REGION_EVENTS)).default([]).describe("Foundry's region events the behaviour runs on.");
+
+const areaEffectSpec = z
+    .discriminatedUnion('kind', [
+        z.object({ kind: z.literal('darkness'), mode: z.enum(DARKNESS_MODES).default('override'), modifier: z.number().min(0).max(1).default(0) }).strict(),
+        z.object({ kind: z.literal('suppressWeather') }).strict(),
+        z
+            .object({
+                kind: z.literal('text'),
+                text: z.string().default(''),
+                colour: hexColour.default('#ffffff'),
+                visibility: z.enum(TEXT_VISIBILITIES).default('anyone'),
+                once: z.boolean().default(false),
+                events: z.array(z.enum(TEXT_EVENTS)).default([]),
+            })
+            .strict(),
+        z.object({ kind: z.literal('pause'), once: z.boolean().default(false) }).strict(),
+        z
+            .object({
+                kind: z.literal('macro'),
+                uuid: text.nullable().default(null).describe('The Macro to run, by UUID.'),
+                everyone: z.boolean().default(false),
+                events: regionEvents,
+            })
+            .strict(),
+        z.object({ kind: z.literal('script'), source: z.string().default(''), events: regionEvents }).strict(),
+        z.object({ kind: z.literal('activeEffect'), effects: z.array(text).default([]).describe('ActiveEffect UUIDs.') }).strict(),
+    ])
+    .describe(
+        "A region behaviour on the area, as Foundry's: Adjust Darkness Level, Suppress Weather, Display Scrolling Text, Pause Game, Execute Macro, Execute Script or Apply Active Effect.",
+    );
+
+const areaEffects = z.array(areaEffectSpec).default([]).describe("Region behaviours on the area's Scene Region.");
+
 const regionSpec = z
-    .object({ type: z.literal('region'), key: featureKey, biome, points: z.array(point).min(3).describe('Boundary control points.'), movementCost, level })
+    .object({
+        type: z.literal('region'),
+        key: featureKey,
+        biome,
+        points: z.array(point).min(3).describe('Boundary control points.'),
+        movementCost,
+        effects: areaEffects,
+        level,
+    })
     .strict()
     .describe('A closed, smoothed area of one biome.');
 
@@ -57,6 +100,7 @@ const strokeSpec = z
         points: z.array(point).min(2).describe('Centerline.'),
         radius: positive.optional().describe('Half-width of the swath (default: the brush default).'),
         movementCost,
+        effects: areaEffects,
         level,
     })
     .strict()
@@ -113,6 +157,8 @@ const roomSpec = z
             .default(DEFAULT_WALL_PRESET)
             .describe("What kind of walls, as Foundry's Walls palette names them: solid, terrain, invisible, ethereal or window."),
         ceiling: z.boolean().default(true).describe('Whether a level above gets a ceiling over the room (false for an open courtyard).'),
+        movementCost,
+        effects: areaEffects,
         doors: z.array(doorSpec).default([]),
         level,
     })

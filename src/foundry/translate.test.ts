@@ -325,6 +325,38 @@ describe('regionCreateData', () => {
         ]);
     });
 
+    it('adds an area’s effects as native behaviours after its movement cost, with Foundry’s enum values', () => {
+        const room: RegionDoc = {
+            id: null,
+            label: { kind: 'room' },
+            polygon: square,
+            bottom: null,
+            top: null,
+            level: null,
+            spans: [],
+            behaviour: { kind: 'terrain', difficulties: { walk: 2 } },
+            effects: [
+                { kind: 'darkness', mode: 'darken', modifier: 0.5 },
+                { kind: 'suppressWeather' },
+                { kind: 'text', text: 'Hot', colour: '#ff0000', visibility: 'observer', once: true, events: ['tokenTurnStart'] },
+                { kind: 'pause', once: true },
+                { kind: 'macro', uuid: 'Macro.m', everyone: true, events: ['tokenEnter'] },
+                { kind: 'script', source: 'return;', events: ['tokenExit'] },
+                { kind: 'activeEffect', effects: ['Item.i.ActiveEffect.e'] },
+            ],
+        };
+        expect(regionCreateData([room], ['r0'], nameOf)[0]?.behaviors).toEqual([
+            { type: 'modifyMovementCost', system: { difficulties: { walk: 2 } } },
+            { type: 'adjustDarknessLevel', system: { mode: 2, modifier: 0.5 } },
+            { type: 'suppressWeather', system: {} },
+            { type: 'displayScrollingText', system: { events: ['tokenTurnStart'], text: 'Hot', color: '#ff0000', visibility: 1, once: true } },
+            { type: 'pauseGame', system: { once: true } },
+            { type: 'executeMacro', system: { events: ['tokenEnter'], uuid: 'Macro.m', everyone: true } },
+            { type: 'executeScript', system: { events: ['tokenExit'], source: 'return;' } },
+            { type: 'applyActiveEffect', system: { effects: ['Item.i.ActiveEffect.e'] } },
+        ]);
+    });
+
     it('makes an impassable stamp body a region barring movement, and leaves other regions unrestricted', () => {
         const body: RegionDoc = {
             id: null,

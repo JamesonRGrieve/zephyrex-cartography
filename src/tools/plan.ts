@@ -11,6 +11,7 @@ import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { catmullRom, distanceToSegment, type Point } from '../geometry/spline';
 import { cutSegment, perimeterSegments, type Segment, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
+import { type Affected, effectsOf } from './area-effects';
 import {
     BLOCKS_ALL,
     type LightDoc,
@@ -31,7 +32,7 @@ import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } f
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
 import { SWITCH_BLOCKS } from './switches';
-import { movementCostOf, NORMAL_COST } from './terrain-cost';
+import { type Costed, movementCostOf, NORMAL_COST } from './terrain-cost';
 import { type PresetWall, presetWall, type WallPreset } from './wall-presets';
 
 export interface DocumentPlan {
@@ -492,7 +493,11 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
         ),
         lights: room.lit && light.dim > 0 ? [{ source: { kind: 'room' }, ...light, elevation: floor.elevation, level: floor.level }] : [],
         tiles: [],
-        regions: [roomFloor(room, context.levels), roomCeiling(room, context.levels)].filter((region): region is RegionDoc => region !== null),
+        regions: [
+            roomFloor(room, context.levels),
+            roomCeiling(room, context.levels),
+            needsArea(room) ? areaRegion(room, { kind: 'room' }, room.points, context.levels) : null,
+        ].filter((region): region is RegionDoc => region !== null),
         sounds: [],
     };
 }
@@ -508,8 +513,8 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
     if (feature.type === 'path' && feature.walls !== null) {
         return { ...NO_PLAN, walls: pathWalls(feature, feature.walls, floorOf(feature, context)) };
     }
-    // Painted ground is mirrored as a region when the world asks for it, and always where it is difficult to cross.
-    if ((feature.type === 'region' || feature.type === 'stroke') && (context.terrainRegions || movementCostOf(feature) !== NORMAL_COST)) {
+    // Painted ground is mirrored as a region when the world asks for it, and always where it is difficult to cross or has effects.
+    if ((feature.type === 'region' || feature.type === 'stroke') && (context.terrainRegions || needsArea(feature))) {
         return { ...NO_PLAN, regions: [terrainRegion(feature, context.levels)] };
     }
     return NO_PLAN;
@@ -543,16 +548,32 @@ function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly 
                       false,
                   ),
               );
+    return areaRegion(feature, { kind: 'terrain', biome: feature.biome }, outlinePoints(outline), levels);
+}
+
+/**
+ * The Scene Region over an area (painted ground or a room's floor), on its
+ * level's band: Modify Movement Cost for walking when the ground is
+ * difficult, then the effects the GM put on it.
+ */
+function areaRegion(feature: Feature & Costed & Affected, label: RegionDoc['label'], polygon: readonly Point[], levels: readonly Level[]): RegionDoc {
     const band = findLevel(levels, feature.level);
     const cost = movementCostOf(feature);
+    const effects = effectsOf(feature);
     return {
         id: null,
-        label: { kind: 'terrain', biome: feature.biome },
-        polygon: outlinePoints(outline),
+        label,
+        polygon,
         bottom: band?.bottom ?? null,
         top: band?.top ?? null,
         level: feature.level,
         spans: [],
         behaviour: cost === NORMAL_COST ? null : { kind: 'terrain', difficulties: { walk: cost } },
+        ...(effects.length > 0 ? { effects } : {}),
     };
+}
+
+/** Whether an area needs its own Scene Region whatever the world's terrain setting: difficult ground, or effects on it. */
+function needsArea(feature: Costed & Affected): boolean {
+    return movementCostOf(feature) !== NORMAL_COST || effectsOf(feature).length > 0;
 }

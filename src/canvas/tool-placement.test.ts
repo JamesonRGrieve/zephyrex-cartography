@@ -10,10 +10,12 @@ describe('tool placement', () => {
         expect(NATIVE_TOOLS.tiles).toContain('stamp');
     });
 
-    it('places tools in the Walls, Tiles and Lighting groups only', () => {
-        expect(NATIVE_GROUPS).toEqual(['walls', 'tiles', 'lighting']);
+    it('places tools in the Walls, Tiles, Lighting and Regions groups only', () => {
+        expect(NATIVE_GROUPS).toEqual(['walls', 'tiles', 'lighting', 'regions']);
         expect(NATIVE_TOOLS.lighting).toEqual(['link']);
+        expect(NATIVE_TOOLS.regions).toEqual(['effects']);
         expect(Object.keys(NATIVE_TOOLS).sort()).toEqual([...NATIVE_GROUPS].sort());
+        expect(moduleTool('regions', 'zephyrex-effects', OWN)).toBe('effects');
     });
 
     it('also offers edit and erase in each native group', () => {
@@ -22,7 +24,7 @@ describe('tool placement', () => {
     });
 
     it('keeps a native-only tool out of the module group, and the rest in it', () => {
-        expect(['room', 'door', 'materials', 'stamp', 'link'].map(inOwnGroup)).toEqual([false, false, false, false, false]);
+        expect(['room', 'door', 'materials', 'stamp', 'link', 'effects'].map(inOwnGroup)).toEqual([false, false, false, false, false, false]);
         expect(['road', 'river', 'forest', 'edit', 'erase', 'undo', 'levels'].map(inOwnGroup)).toEqual([true, true, true, true, true, true, true]);
     });
 

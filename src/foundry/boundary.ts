@@ -134,6 +134,27 @@ interface SurfaceSystem {
     readonly exposure: boolean;
 }
 
+/** The behaviours an area effect becomes, with their 14.359 schemas (`client/data/region-behaviors/`). */
+export type AreaEffectBehaviour =
+    /** `mode` is an `AdjustDarknessLevelRegionBehaviorType.MODES` value. */
+    | { readonly type: 'adjustDarknessLevel'; readonly system: { readonly mode: number; readonly modifier: number } }
+    | { readonly type: 'suppressWeather'; readonly system: Readonly<Record<string, never>> }
+    /** `visibility` is a `DisplayScrollingTextRegionBehaviorType.VISIBILITY_MODES` value. */
+    | {
+          readonly type: 'displayScrollingText';
+          readonly system: {
+              readonly events: readonly string[];
+              readonly text: string;
+              readonly color: string;
+              readonly visibility: number;
+              readonly once: boolean;
+          };
+      }
+    | { readonly type: 'pauseGame'; readonly system: { readonly once: boolean } }
+    | { readonly type: 'executeMacro'; readonly system: { readonly events: readonly string[]; readonly uuid: string | null; readonly everyone: boolean } }
+    | { readonly type: 'executeScript'; readonly system: { readonly events: readonly string[]; readonly source: string } }
+    | { readonly type: 'applyActiveEffect'; readonly system: { readonly effects: readonly string[] } };
+
 export interface RegionCreateData extends OnLevels {
     readonly _id: string;
     readonly name: string;
@@ -151,6 +172,7 @@ export interface RegionCreateData extends OnLevels {
         | { readonly type: 'defineSurface'; readonly system: SurfaceSystem }
         /** Cost multipliers per movement action (v14 `modifyMovementCost`, 14.359); actions left out keep Foundry's 1. */
         | { readonly type: 'modifyMovementCost'; readonly system: { readonly difficulties: Readonly<Record<string, number>> } }
+        | AreaEffectBehaviour
     )[];
     readonly locked: boolean;
     /** A `CONST.REGION_VISIBILITY` value. */

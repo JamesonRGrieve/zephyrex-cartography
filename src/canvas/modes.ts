@@ -16,9 +16,13 @@ export type Mode =
     | { readonly kind: 'door' }
     | { readonly kind: 'stamp' }
     | { readonly kind: 'materials' }
-    | { readonly kind: 'link' };
+    | { readonly kind: 'link' }
+    | { readonly kind: 'effects' };
 
 export const IDLE: Mode = { kind: 'idle' };
+
+/** The tools whose mode is just their name: they act on what is clicked. */
+const PLAIN_MODES = ['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects'] as const satisfies readonly Exclude<Mode['kind'], 'idle' | 'brush'>[];
 
 /** What the GM last chose in the tools' panels: the paint tool's texture, and new rooms' materials. */
 export interface ToolChoices {
@@ -44,8 +48,9 @@ export function modeForTool(toolName: string, active: boolean, choices: ToolChoi
     if (!active) {
         return IDLE;
     }
-    if (toolName === 'erase' || toolName === 'edit' || toolName === 'door' || toolName === 'stamp' || toolName === 'materials' || toolName === 'link') {
-        return { kind: toolName };
+    const plain = PLAIN_MODES.find((kind) => kind === toolName);
+    if (plain !== undefined) {
+        return { kind: plain };
     }
     const brush = brushFor(toolName, choices);
     return brush ? { kind: 'brush', brush } : IDLE;

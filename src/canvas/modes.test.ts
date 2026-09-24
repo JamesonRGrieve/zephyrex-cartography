@@ -16,13 +16,14 @@ describe('modeForTool', () => {
     });
 
     it('maps the interaction tools to their own modes', () => {
-        expect(['erase', 'edit', 'door', 'stamp', 'materials', 'link'].map((t) => modeForTool(t, true, CHOICES).kind)).toEqual([
+        expect(['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects'].map((t) => modeForTool(t, true, CHOICES).kind)).toEqual([
             'erase',
             'edit',
             'door',
             'stamp',
             'materials',
             'link',
+            'effects',
         ]);
     });
 

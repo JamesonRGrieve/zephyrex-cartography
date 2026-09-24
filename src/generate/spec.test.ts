@@ -25,6 +25,8 @@ describe('parseSceneSpec', () => {
                         wall: null,
                         wallKind: 'solid',
                         ceiling: true,
+                        movementCost: 1,
+                        effects: [],
                         doors: [{ segment: 1, type: 'door', state: 'closed', sound: null, animation: null }],
                     },
                 ],

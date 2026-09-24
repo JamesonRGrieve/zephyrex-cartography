@@ -8,6 +8,7 @@
  */
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { NEW_DOOR } from '../tools/room';
+import { NORMAL_COST } from '../tools/terrain-cost';
 import { DEFAULT_WALL_PRESET, type WallPreset } from '../tools/wall-presets';
 import { pick, randomInt, seededRandom, type Random } from './random';
 import { SCENE_SPEC_SCHEMA_VERSION, type RoomSpec, type SceneSpec } from './spec';
@@ -195,7 +196,7 @@ function roomSpec(room: Rect, slots: readonly DoorSlot[], o: FloorPlanOptions): 
         .map((d) => points.findIndex((p) => p.x === d.x && p.y === d.y))
         .filter((segment) => segment >= 0)
         .map((segment) => ({ segment, ...NEW_DOOR }));
-    return { type: 'room', points, floor: o.floor, wall: o.wall, wallKind: o.wallKind, ceiling: o.ceiling, doors };
+    return { type: 'room', points, floor: o.floor, wall: o.wall, wallKind: o.wallKind, ceiling: o.ceiling, movementCost: NORMAL_COST, effects: [], doors };
 }
 
 /** Generate a floor plan; the same options always give the same plan. */

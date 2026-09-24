@@ -5,6 +5,7 @@
  * + defensive parser + the smoothed fill outline. Pure and unit-tested.
  */
 import { closedSpline, type Point } from '../geometry/spline';
+import { parseAreaEffects, type Affected } from './area-effects';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord } from './guards';
@@ -14,7 +15,7 @@ import { parseMovementCost, type Costed } from './terrain-cost';
 const REGION_SAMPLES = 10;
 
 /** A closed biome area; its `points` are the boundary control points (>= 3). */
-export interface RegionFeature extends FeatureCommon, Costed {
+export interface RegionFeature extends FeatureCommon, Costed, Affected {
     readonly type: 'region';
     readonly biome: BiomeKind;
 }
@@ -56,5 +57,5 @@ export function parseRegion(v: unknown): RegionFeature | null {
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
     const region = makeRegion(v['id'], v['biome'], points);
-    return region && { ...region, movementCost: parseMovementCost(v['movementCost']), ...parseFeatureCommon(v) };
+    return region && { ...region, movementCost: parseMovementCost(v['movementCost']), effects: parseAreaEffects(v['effects']), ...parseFeatureCommon(v) };
 }

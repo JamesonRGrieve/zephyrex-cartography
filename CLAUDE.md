@@ -204,8 +204,9 @@ plus a link flag. It never rewrites content the plugin did not create.
 **Scene controls [done]:** a tool that makes a native document type sits in
 that type's own control group, after Foundry's tools
 (`canvas/tool-placement.ts`).
-- **Walls:** room, door and materials. **Tiles:** stamp. Edit and erase
-  appear in both groups too, so what a group draws can be reshaped there.
+- **Walls:** room, door and materials. **Tiles:** stamp. **Lighting:**
+  link. **Regions:** effects. Edit and erase appear in the Walls and Tiles
+  groups too, so what a group draws can be reshaped there.
 - **The module's own group** keeps what has no native home: roads, rivers,
   the paint tool, edit, erase, undo/redo, levels and the generator.
 - **Tool panels.** A tool with choices opens its panel when picked, and the
@@ -647,10 +648,26 @@ These make everything after them cheaper and safer, so they come first.
     give a painted area or stroke a movement cost (0–5, 1 ordinary). Ground
     that is not ordinary always gets its terrain region, with a Modify
     Movement Cost for walking, whether or not terrain is mirrored;
-  - difficult terrain in rooms;
-  - `adjustDarknessLevel`, `suppressWeather` and `applyActiveEffect`;
-  - `displayScrollingText`, `executeMacro`, `executeScript`, `pauseGame` and
-    `toggleBehavior`.
+  - **[done] area effects and difficult rooms.** Painted areas, strokes and
+    rooms are *areas* (`tools/areas.ts`). Each has a movement cost and
+    `effects` (`tools/area-effects.ts`), which mirror the 14.359 behaviour
+    schemas:
+    - `adjustDarknessLevel`, `suppressWeather` and `applyActiveEffect`;
+    - `displayScrollingText` (its narrower event set);
+    - `pauseGame`, `executeMacro` and `executeScript`.
+
+    An area with a cost or effects always gets its Scene Region. A room's is
+    labelled "Room" and sits over its floor. The effects come after any
+    Modify Movement Cost.
+
+    The **effects tool** sits with Foundry's Regions tools. Clicking an area
+    opens its panel: the cost, each behaviour with the fields Foundry's own
+    sheet gives it (named in Foundry's strings), and a picker to add
+    another. The scene spec's regions, strokes and rooms take `effects`,
+    rooms take `movementCost` too, and fields left out take Foundry's
+    defaults. Proven in `tests/e2e/pointer.spec.ts`.
+  - **Still open:** `toggleBehavior`. It names other behaviours by UUID,
+    which generated regions recreate on every re-sync.
 - **[done] Teleport options for submap entrances** [14.349, 14.353]. A
   link carries its `travel`, used both ways:
   - where the token lands: relative, centre or anywhere (14.359's

@@ -59,7 +59,14 @@ async function dragScene(page: Page, from: Point, path: readonly Point[], option
 }
 
 /** Where a module tool sits among Foundry's groups; any other is in the module's own group. */
-const NATIVE_HOME: Readonly<Record<string, string>> = { room: 'walls', door: 'walls', materials: 'walls', stamp: 'tiles', link: 'lighting' };
+const NATIVE_HOME: Readonly<Record<string, string>> = {
+    room: 'walls',
+    door: 'walls',
+    materials: 'walls',
+    stamp: 'tiles',
+    link: 'lighting',
+    effects: 'regions',
+};
 
 async function activate(page: Page, control: string, tool: string): Promise<void> {
     await page.evaluate(
@@ -392,6 +399,35 @@ test('the materials tool opens a room’s materials, and the erase tool removes 
     await useTool(world, 'erase');
     await clickScene(world, { x: 450, y: 450 });
     await expect.poll(async () => wallCount(world)).toBe(0);
+});
+
+test('the effects tool, with the Regions tools, gives a room difficult ground and region behaviours on a native region', async ({ world }) => {
+    await useTool(world, 'room');
+    await holdView(world);
+    await drawShape(world, SQUARE);
+    await expect.poll(async () => wallCount(world)).toBe(4);
+    await useTool(world, 'effects');
+    await clickScene(world, { x: 450, y: 450 });
+    const panel = world.locator(`#${MODULE_ID}-effects`);
+    await expect(panel).toBeVisible();
+    await panel.getByLabel('Movement cost (×)').fill('2');
+    await panel.getByLabel('Movement cost (×)').press('Enter');
+    // Foundry's own name for the behaviour type.
+    await panel.getByLabel('New behaviour').selectOption({ label: 'Adjust Darkness Level' });
+    await panel.getByRole('button', { name: 'Add behaviour' }).click();
+    await panel.getByLabel('Mode').selectOption({ label: 'Darken' });
+    // The darkness behaviour's mode is Foundry's DARKEN (2).
+    const behaviours = async (): Promise<{ type: string; mode: number | null }[]> =>
+        world.evaluate(() =>
+            (canvas?.scene?.regions.contents.find((region) => region.name === 'Room')?.behaviors.contents ?? []).map((behaviour) => ({
+                type: behaviour.type,
+                mode: behaviour.type === 'adjustDarknessLevel' ? Number(behaviour.system.mode) : null,
+            })),
+        );
+    await expect.poll(behaviours).toEqual([
+        { type: 'modifyMovementCost', mode: null },
+        { type: 'adjustDarknessLevel', mode: 2 },
+    ]);
 });
 
 test('the stamp tool places the stamp armed in the browser where the GM clicks', async ({ world }) => {

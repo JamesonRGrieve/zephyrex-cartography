@@ -17,6 +17,7 @@ import { registerApi } from './foundry/api';
 import { lightName, regionName, soundName } from './foundry/document-names';
 import { FoundryDocumentSink } from './foundry/documents';
 import { registerDoorRuntime } from './foundry/door-runtime';
+import { registerEffectsRuntime } from './foundry/effects-runtime';
 import { registerGeneratorRuntime } from './foundry/generator-runtime';
 import { createItemPilesContainers } from './foundry/item-piles';
 import { registerLevelRuntime } from './foundry/level-runtime';
@@ -68,6 +69,8 @@ registerSubmapRuntime(() => state?.controller ?? null, packs.catalog);
 const doors = registerDoorRuntime(() => state?.controller ?? null);
 
 const materials = registerMaterialsRuntime(() => state?.controller ?? null, packs.textureRoles);
+
+const effects = registerEffectsRuntime(() => state?.controller ?? null);
 
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
@@ -220,6 +223,13 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
             const hit = st.controller.hitTest(pt);
             if (hit !== null && st.controller.roomMaterials(hit)) {
                 materials.edit(hit);
+            }
+            return;
+        }
+        case 'effects': {
+            const hit = st.controller.hitTest(pt);
+            if (hit !== null && st.controller.areaSettings(hit)) {
+                effects.edit(hit);
             }
             return;
         }
@@ -484,6 +494,7 @@ const NATIVE_TOOL_LOOKS: Readonly<Record<NativeTool, ToolLook>> = {
     edit: { title: I18N.tools.edit, icon: 'fa-solid fa-arrows-up-down-left-right' },
     erase: { title: I18N.tools.erase, icon: 'fa-solid fa-eraser' },
     link: { title: I18N.tools.link, icon: 'fa-solid fa-link' },
+    effects: { title: I18N.tools.effects, icon: 'fa-solid fa-wand-sparkles' },
 };
 
 /** Every pointer tool, by name, in toolbar order: paths, painting, then the tools native groups share. */

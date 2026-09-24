@@ -8,6 +8,7 @@
 import type { TileFrame } from '../canvas/controller';
 import type { Point } from '../geometry/spline';
 import { MODULE_ID } from '../module-id';
+import { type AreaEffect, DARKNESS_MODES, TEXT_VISIBILITIES } from '../tools/area-effects';
 import type {
     DoorState,
     DoorType,
@@ -23,7 +24,7 @@ import type {
 } from '../tools/documents';
 import { regionColour } from '../tools/region-colours';
 import { FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
-import type { LightCreateData, RegionCreateData, SceneSettingsUpdate, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
+import type { AreaEffectBehaviour, LightCreateData, RegionCreateData, SceneSettingsUpdate, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
 
 /** A scene's settings as the partial Scene update Foundry takes; settings not given are left out, so they keep their values. */
 export function sceneSettingsData(settings: SceneSettings): SceneSettingsUpdate {
@@ -323,6 +324,39 @@ export function behaviourData(behaviour: RegionBehaviour | null): RegionCreateDa
     ];
 }
 
+/**
+ * An area effect as its native behaviour. Modes and visibilities are the
+ * behaviour types' numeric enums, in the order the core lists them.
+ */
+export function effectBehaviour(effect: AreaEffect): AreaEffectBehaviour {
+    switch (effect.kind) {
+        case 'darkness':
+            return { type: 'adjustDarknessLevel', system: { mode: DARKNESS_MODES.indexOf(effect.mode), modifier: effect.modifier } };
+        case 'suppressWeather':
+            return { type: 'suppressWeather', system: {} };
+        case 'text':
+            return {
+                type: 'displayScrollingText',
+                system: {
+                    events: [...effect.events],
+                    text: effect.text,
+                    color: effect.colour,
+                    visibility: TEXT_VISIBILITIES.indexOf(effect.visibility),
+                    once: effect.once,
+                },
+            };
+        case 'pause':
+            return { type: 'pauseGame', system: { once: effect.once } };
+        case 'macro':
+            return { type: 'executeMacro', system: { events: [...effect.events], uuid: effect.uuid, everyone: effect.everyone } };
+        case 'script':
+            return { type: 'executeScript', system: { events: [...effect.events], source: effect.source } };
+        case 'activeEffect':
+            break;
+    }
+    return { type: 'applyActiveEffect', system: { effects: [...effect.effects] } };
+}
+
 /** The levels a region sits on: its own, and those it spans; none (every level) for a level-less region. */
 function regionLevels(region: RegionDoc): { readonly levels?: readonly string[] } {
     if (region.level === null) {
@@ -343,7 +377,7 @@ export function regionCreateData(regions: readonly RegionDoc[], ids: readonly st
         shapes: [{ type: 'polygon', points: flatten(region.polygon), hole: false }],
         ...(region.restriction === undefined ? {} : { restriction: { enabled: true, type: region.restriction, priority: 0 } }),
         elevation: { bottom: region.bottom, top: region.top },
-        behaviors: behaviourData(region.behaviour),
+        behaviors: [...behaviourData(region.behaviour), ...(region.effects ?? []).map(effectBehaviour)],
         // A region drawn from a feature is edited through the feature, so it is locked and
         // shown on the Regions layer. An interior exit is the GM's to place, so it stays free.
         locked: region.label.kind !== 'exit',

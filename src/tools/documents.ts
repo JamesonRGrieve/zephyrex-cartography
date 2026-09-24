@@ -9,6 +9,7 @@
  */
 import type { Point } from '../geometry/spline';
 import type { PlacedBehaviour, StampLight, StampTile } from '../stamps/schema';
+import type { AreaEffect } from './area-effects';
 import type { BiomeKind } from './biome';
 import { isRecord, stringArray } from './guards';
 
@@ -177,6 +178,7 @@ type RegionLabel =
     | { readonly kind: 'entrance' | 'exit'; readonly scene: string }
     | { readonly kind: 'terrain'; readonly biome: BiomeKind }
     | { readonly kind: 'floor' | 'ceiling'; readonly level: string }
+    | { readonly kind: 'room' }
     | { readonly kind: 'stamp-terrain' | 'stamp-surface' | 'stamp-body'; readonly name: string };
 
 /** Where a teleported token lands in the region it arrives in (v14 `teleportToken` placement). */
@@ -243,6 +245,8 @@ export interface RegionDoc {
     readonly behaviour: RegionBehaviour | null;
     /** What the region bars, as Foundry's region restriction (`move`: tokens cannot enter); absent for none. */
     readonly restriction?: 'move';
+    /** The area effects the GM put on the feature, as further behaviours after `behaviour`; absent for none. */
+    readonly effects?: readonly AreaEffect[];
 }
 
 /** The ids of every native document one feature generated, by document type. */

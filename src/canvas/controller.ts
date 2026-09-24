@@ -11,6 +11,8 @@ import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
 import { centroid, nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
+import { storedEffects } from '../tools/area-effects';
+import { type AreaSettings, areaSettingsOf, isArea } from '../tools/areas';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
 import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type RegionDoc, type SubmapTravel, type TileDoc } from '../tools/documents';
@@ -56,7 +58,7 @@ import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { DEFAULT_TRAVEL, exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
 import { sameTarget, type SwitchTarget, toggleTarget } from '../tools/switch-targets';
 import { lampVariant, switchOf } from '../tools/switches';
-import { NORMAL_COST, storedCost } from '../tools/terrain-cost';
+import { NORMAL_COST, storedCost, validCost } from '../tools/terrain-cost';
 import type { WallPreset } from '../tools/wall-presets';
 import type { FeatureRenderer } from './renderer';
 import { type DocumentKind, StagedChanges, type StagedWrite } from './staged-changes';
@@ -1073,7 +1075,6 @@ export class CartographyController {
         return f?.type === 'room' ? doorOn(f, index) : null;
     }
 
-    /** Put a door with `settings` on a room's perimeter segment, or clear it with null; re-syncs the native walls. */
     /** A room's floor and wall materials, or null for anything else. */
     roomMaterials(id: string): RoomMaterials | null {
         const f = this.getFeature(id);
@@ -1090,6 +1091,23 @@ export class CartographyController {
         return true;
     }
 
+    /** What crossing an area (painted ground or a room) costs, and its effects; null for anything else. */
+    areaSettings(id: string): AreaSettings | null {
+        const f = this.getFeature(id);
+        return f && isArea(f) ? areaSettingsOf(f) : null;
+    }
+
+    /** Give an area another movement cost and effects, re-syncing its Scene Region; false if it is not an area or the cost is not one Foundry takes. */
+    async setAreaSettings(id: string, settings: AreaSettings): Promise<boolean> {
+        const f = this.getFeature(id);
+        if (!f || !isArea(f) || validCost(settings.movementCost) === null) {
+            return false;
+        }
+        await this.replaceFeature(id, { ...f, movementCost: storedCost(settings.movementCost), effects: storedEffects(settings.effects) });
+        return true;
+    }
+
+    /** Put a door with `settings` on a room's perimeter segment, or clear it with null; re-syncs the native walls. */
     async setRoomDoor(id: string, index: number, settings: DoorSettings | null): Promise<boolean> {
         const f = this.getFeature(id);
         if (f?.type !== 'room' || index < 0 || index >= f.points.length) {

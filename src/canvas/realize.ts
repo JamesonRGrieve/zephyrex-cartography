@@ -8,6 +8,7 @@
  */
 import type { FeatureSpec, SceneSpec } from '../generate/spec';
 import type { Point } from '../geometry/spline';
+import { type Affected, type AreaEffect, storedEffects } from '../tools/area-effects';
 import { parseCssHex } from '../tools/colour';
 import type { Feature } from '../tools/feature';
 import type { LevelArt } from '../tools/levels';
@@ -17,7 +18,7 @@ import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
 import type { StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { SwitchTarget } from '../tools/switch-targets';
-import { storedCost } from '../tools/terrain-cost';
+import { type Costed, storedCost } from '../tools/terrain-cost';
 import { DEFAULT_WALL_PRESET } from '../tools/wall-presets';
 import type { CartographyController } from './controller';
 
@@ -59,10 +60,10 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
     let feature: Feature | null;
     if (spec.type === 'region') {
         const region = makeRegion(id, spec.biome, points);
-        feature = region && { ...region, movementCost: storedCost(spec.movementCost) };
+        feature = region && { ...region, ...areaOf(spec) };
     } else if (spec.type === 'stroke') {
         const stroke = makeStroke(id, spec.biome, points, spec.radius === undefined ? DEFAULT_BRUSH_RADIUS : scale.length(spec.radius));
-        feature = stroke && { ...stroke, movementCost: storedCost(spec.movementCost) };
+        feature = stroke && { ...stroke, ...areaOf(spec) };
     } else if (spec.type === 'path') {
         const base = LIQUID_LOOKS[spec.liquid ?? 'water'];
         const river = {
@@ -74,10 +75,16 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         feature = makePath(id, spec.kind, points, spec.halfWidth === undefined ? DEFAULT_HALF_WIDTH : scale.length(spec.halfWidth), walls, river);
     } else {
         const room = makeRoom(id, spec.floor ?? DEFAULT_FLOOR, points, spec.wall, spec.wallKind, spec.ceiling);
-        feature =
+        const doored =
             room && spec.doors.reduce((r, d) => withRoomDoor(r, d.segment, { type: d.type, state: d.state, sound: d.sound, animation: d.animation }), room);
+        feature = doored && { ...doored, ...areaOf(spec) };
     }
     return feature && { ...feature, level };
+}
+
+/** What a spec area costs to cross and the effects on it, as a feature stores them. */
+function areaOf(spec: { readonly movementCost: number; readonly effects: readonly AreaEffect[] }): Costed & Affected {
+    return { movementCost: storedCost(spec.movementCost), effects: storedEffects(spec.effects) };
 }
 
 function placement(spec: Extract<FeatureSpec, { type: 'stamp' }>, scale: Scale): StampPlacement {

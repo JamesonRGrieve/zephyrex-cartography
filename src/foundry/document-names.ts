@@ -25,6 +25,9 @@ export function regionName(region: RegionDoc): string {
     if ('level' in label) {
         return format(label.kind === 'floor' ? I18N.regions.floor : I18N.regions.ceiling, { level: label.level });
     }
+    if (label.kind === 'room') {
+        return localize(I18N.regions.room);
+    }
     return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
 }
 
