@@ -521,10 +521,12 @@ These make everything after them cheaper and safer, so they come first.
   `CONFIG.Wall.doorSounds` key and an animation, each null for Foundry's
   default. These become the Wall's `doorSound` and `animation`.
   - Door stamps declare theirs in the pack schema, with the animation's
-    type, direction, double, duration, flip and strength.
+    type, direction, double, duration, flip, strength and leaf texture.
   - Room doors pick a sound and an animation type in the door panel, from
     Foundry's own lists, and the scene spec's room doors take both.
-  - Still open: the animation `texture`. Door types and states are complete.
+  - **[done]** A door stamp's animation takes a `texture`: the door leaf
+    image Foundry animates, served from its pack. Door types and states are
+    complete. Room doors keep Foundry's default leaf.
 - **[done] No blank walls.** Foundry groups walls that block nothing as
   "Blank Walls" [14.361]. The engine never emits one. A stamp whose walls
   would block nothing gets none, and every room wall kind blocks something.

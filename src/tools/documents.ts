@@ -66,6 +66,8 @@ export interface DoorAnimation {
     readonly duration?: number | undefined;
     readonly flip?: boolean | undefined;
     readonly strength?: number | undefined;
+    /** The served image of the door leaf Foundry animates. */
+    readonly texture?: string | undefined;
 }
 
 /** How a door sounds and moves: a `CONFIG.Wall.doorSounds` key and an animation, each null for Foundry's default. */

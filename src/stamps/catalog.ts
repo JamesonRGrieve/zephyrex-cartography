@@ -11,6 +11,7 @@ import {
     type PackIssue,
     parseStampPack,
     type Stamp,
+    type StampDoor,
     type StampLight,
     type StampOcclusion,
     type StampParticleEmitter,
@@ -79,6 +80,12 @@ function servedSound(sound: StampSound, url: AssetUrl): StampSound {
     return { ...sound, path: url(sound.path) };
 }
 
+/** A door with its animation's leaf image served. */
+function servedDoor(door: StampDoor, url: AssetUrl): StampDoor {
+    const texture = door.animation?.texture;
+    return door.animation === undefined || texture === undefined ? door : { ...door, animation: { ...door.animation, texture: url(texture) } };
+}
+
 /** A container flag with its pile's sound paths served; a plain `true` or `false` is unchanged. */
 function servedContainer(container: boolean | StampPile, url: AssetUrl): boolean | StampPile {
     if (typeof container === 'boolean' || container.sounds === undefined) {
@@ -120,6 +127,7 @@ export function loadPacks(sources: readonly PackSource[]): LoadedPacks {
                 ...stamp,
                 ...(stamp.particles === undefined ? {} : { particles: servedEmitters(stamp.particles, url) }),
                 ...(stamp.sound === undefined ? {} : { sound: servedSound(stamp.sound, url) }),
+                ...(stamp.door === undefined ? {} : { door: servedDoor(stamp.door, url) }),
                 container: servedContainer(stamp.container, url),
                 key: `${moduleId}:${stamp.id}`,
                 moduleId,

@@ -67,7 +67,8 @@
                 "type": "door",
                 "animation": {
                     "type": "slide",
-                    "duration": 500
+                    "duration": 500,
+                    "texture": "stamps/door-closed.svg"
                 },
                 "sound": "slidingMetal"
             },

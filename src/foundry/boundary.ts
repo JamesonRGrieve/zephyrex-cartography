@@ -33,6 +33,8 @@ export interface WallCreateData extends OnLevels {
         readonly duration?: number | undefined;
         readonly flip?: boolean | undefined;
         readonly strength?: number | undefined;
+        /** The door leaf's image path. */
+        readonly texture?: string | undefined;
     };
 }
 

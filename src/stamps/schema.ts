@@ -264,6 +264,7 @@ const doorSchema = z
                 duration: z.number().int().positive().optional().describe('Milliseconds.'),
                 flip: z.boolean().optional(),
                 strength: z.number().min(0).max(2).optional(),
+                texture: text.optional().describe('Image of the door leaf Foundry animates, relative to the pack module root.'),
             })
             .strict()
             .optional()
@@ -403,6 +404,8 @@ export type Stamp = StampPack['stamps'][number];
 export type StampVariant = Stamp['variants'][number];
 
 export type StampLight = z.infer<typeof lightSchema>;
+
+export type StampDoor = z.infer<typeof doorSchema>;
 
 export type StampOcclusion = z.infer<typeof occlusionSchema>;
 

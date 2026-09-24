@@ -237,6 +237,7 @@ describe('effectiveProperties', () => {
                         perspective: 'top-down',
                         container: { type: 'vault', locked: true, sounds: { open: 'creak.ogg' } },
                         sound: { path: 'hum.ogg', radius: 3 },
+                        door: { type: 'door', animation: { type: 'swing', texture: 'lid.png' } },
                         variants: [
                             { state: 'intact', image: 'a.png', width: 100, height: 100 },
                             {
@@ -267,6 +268,7 @@ describe('effectiveProperties', () => {
         });
         // Asset paths resolve to the pack module's served URLs, like variant images.
         expect(intact.sound).toMatchObject({ path: 'modules/pack/hum.ogg', radius: 3, volume: 0.5, repeat: true, walls: true, easing: true });
+        expect(crate.door?.animation?.texture).toBe('modules/pack/lid.png');
         const destroyed = effectiveProperties(crate, 1);
         expect(destroyed.particles).toEqual([{ ...smoke, textures: ['modules/pack/smoke.png'], area: { x: 0.5, y: 0.5, radius: 0 } }]);
         expect(destroyed).toMatchObject({ sound: null, pile: null, terrain: { difficulty: { walk: 2 } }, tile: { occlusion: { modes: ['fade'] } } });

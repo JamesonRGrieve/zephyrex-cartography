@@ -5,9 +5,10 @@ test('a door stamp’s wall slides open with its pack’s animation and sound', 
     const door = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.controller()?.placeStamp({ stamp: 'zc-e2e-pack:door', x: 500, y: 500 });
         const wall = canvas?.scene?.walls.contents.find((w) => w.door === CONST.WALL_DOOR_TYPES.DOOR);
-        return wall ? { doorSound: wall.doorSound, type: wall.animation?.type, duration: wall.animation?.duration } : null;
+        return wall ? { doorSound: wall.doorSound, type: wall.animation?.type, duration: wall.animation?.duration, texture: wall.animation?.texture } : null;
     });
-    expect(door).toEqual({ doorSound: 'slidingMetal', type: 'slide', duration: 500 });
+    // The door leaf's image is served from the pack module.
+    expect(door).toEqual({ doorSound: 'slidingMetal', type: 'slide', duration: 500, texture: 'modules/zc-e2e-pack/stamps/door-closed.svg' });
 });
 
 test('stamp walls carry every sense level, a one-way direction and thresholds into Foundry', async ({ world }) => {
