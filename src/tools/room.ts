@@ -58,17 +58,23 @@ export interface RoomFeature extends FeatureCommon {
     readonly wall: WallMaterial;
     /** What kind of walls the room has, as Foundry's Walls palette names them: solid, window, terrain… */
     readonly wallKind: WallPreset;
+    /** Whether a level above gets a ceiling over the room; an open courtyard has none. */
+    readonly ceiling: boolean;
     readonly doors: RoomDoor[];
     /** Whether its centre light is on; a light switch linked to the room turns it on and off. */
     readonly lit: boolean;
 }
 
-/** What a room is made of: its floor, its drawn walls, and the kind of walls they are. */
+/** What a room is made of: its floor, its drawn walls, the kind of walls they are, and whether it has a ceiling. */
 export interface RoomMaterials {
     readonly floor: FloorMaterial;
     readonly wall: WallMaterial;
     readonly wallKind: WallPreset;
+    readonly ceiling: boolean;
 }
+
+/** What a room is made of until the GM picks otherwise. */
+export const DEFAULT_ROOM_MATERIALS: RoomMaterials = { floor: DEFAULT_FLOOR, wall: null, wallKind: DEFAULT_WALL_PRESET, ceiling: true };
 
 /** One perimeter segment of a room, and the door on it if any. */
 export interface RoomWall extends Segment {
@@ -83,11 +89,12 @@ export function makeRoom(
     points: readonly Point[],
     wall: WallMaterial = null,
     wallKind: WallPreset = DEFAULT_WALL_PRESET,
+    ceiling = true,
 ): RoomFeature | null {
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id, floor, wall, wallKind, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], lit: true, ...NEW_FEATURE };
+    return { type: 'room', id, floor, wall, wallKind, ceiling, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], lit: true, ...NEW_FEATURE };
 }
 
 /** The same room with its light on or off. */
@@ -97,12 +104,12 @@ export function withRoomLit(room: RoomFeature, lit: boolean): RoomFeature {
 
 /** The same room in other materials. */
 export function withRoomMaterials(room: RoomFeature, materials: RoomMaterials): RoomFeature {
-    return { ...room, floor: materials.floor, wall: materials.wall, wallKind: materials.wallKind };
+    return { ...room, floor: materials.floor, wall: materials.wall, wallKind: materials.wallKind, ceiling: materials.ceiling };
 }
 
 /** What `room` is made of. */
 export function roomMaterialsOf(room: RoomFeature): RoomMaterials {
-    return { floor: room.floor, wall: room.wall, wallKind: room.wallKind };
+    return { floor: room.floor, wall: room.wall, wallKind: room.wallKind, ceiling: room.ceiling };
 }
 
 /** Rebuild a room with new boundary points (edit ops), preserving floor + doors + document links, or null if < 3. */
@@ -184,6 +191,7 @@ export function parseRoom(v: unknown): RoomFeature | null {
         wall: parseWallMaterial(v['wall']),
         // Rooms saved before wall kinds existed have solid walls, as they always did.
         wallKind: isWallPreset(v['wallKind']) ? v['wallKind'] : DEFAULT_WALL_PRESET,
+        ceiling: v['ceiling'] !== false,
         // A room saved before switches existed is lit, as it always was.
         lit: v['lit'] !== false,
         points: points.map((p) => ({ x: p.x, y: p.y })),

@@ -24,6 +24,7 @@ describe('parseSceneSpec', () => {
                         points: square,
                         wall: null,
                         wallKind: 'solid',
+                        ceiling: true,
                         doors: [{ segment: 1, type: 'door', state: 'closed', sound: null, animation: null }],
                     },
                 ],

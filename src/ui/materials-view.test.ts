@@ -5,7 +5,7 @@ import * as stories from './materials-view.stories';
 function mount(story: { readonly args?: Partial<stories.MaterialsArgs> }): HTMLElement {
     const base = stories.default.args;
     const el = stories.mountMaterialsPanel({
-        current: story.args?.current ?? base?.current ?? { floor: 'dirt', wall: null, wallKind: 'solid' },
+        current: story.args?.current ?? base?.current ?? { floor: 'dirt', wall: null, wallKind: 'solid', ceiling: true },
         floors: story.args?.floors ?? base?.floors ?? [],
         walls: story.args?.walls ?? base?.walls ?? [],
     });
@@ -70,8 +70,24 @@ describe('materials panel', () => {
         expect(control(root, 'zc-room-wall-kind').value).toBe('terrain');
     });
 
+    it('shows whether the room has a ceiling, and opens it to the sky', () => {
+        const root = mount(stories.DirtFloorNoWalls);
+        const ceiling = (): HTMLInputElement | null => root.querySelector<HTMLInputElement>('input[type="checkbox"]');
+        expect(ceiling()?.closest('label')?.textContent).toBe('Ceiling (when a level is above)');
+        expect(ceiling()?.checked).toBe(true);
+        ceiling()?.click();
+        expect(ceiling()?.checked).toBe(false);
+        expect(mount(stories.OpenCourtyard).querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false);
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.DirtFloorNoWalls, stories.OakWithBrickWalls, stories.GlassWalledRoom, stories.MaterialsMissingFromTheSet]) {
+        for (const story of [
+            stories.DirtFloorNoWalls,
+            stories.OakWithBrickWalls,
+            stories.GlassWalledRoom,
+            stories.OpenCourtyard,
+            stories.MaterialsMissingFromTheSet,
+        ]) {
             expect(mount(story).querySelectorAll('select')).toHaveLength(3);
         }
     });

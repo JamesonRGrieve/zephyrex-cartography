@@ -46,10 +46,12 @@ describe('materials', () => {
         const r = makeRoom('r', 'dirt', pts);
         expect(r?.wall).toBeNull();
         expect(r?.wallKind).toBe('solid');
-        const dressed = r ? withRoomMaterials(r, { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'terrain' }) : null;
+        expect(r?.ceiling).toBe(true);
+        const dressed = r ? withRoomMaterials(r, { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'terrain', ceiling: false }) : null;
         expect(dressed?.floor).toBe('floor.oak');
         expect(dressed?.wall).toBe('wall.brick');
         expect(dressed?.wallKind).toBe('terrain');
+        expect(dressed?.ceiling).toBe(false);
         expect(dressed?.points).toEqual(r?.points);
     });
 
@@ -153,6 +155,11 @@ describe('parseRoom', () => {
         expect(parseRoom({ type: 'room', id: 'b', floor: 'dirt', wall: 'brick', points: pts })?.wall).toBeNull();
         expect(parseRoom({ type: 'room', id: 'c', floor: 'dirt', points: pts })?.wall).toBeNull();
         expect(parseRoom({ type: 'room', id: 'd', floor: 'floor.', points: pts })).toBeNull();
+    });
+
+    it('reads a room saved before ceilings existed as having one, and keeps an open one open', () => {
+        expect(parseRoom({ type: 'room', id: 'a', floor: 'dirt', points: pts })?.ceiling).toBe(true);
+        expect(parseRoom({ type: 'room', id: 'b', floor: 'dirt', points: pts, ceiling: false })?.ceiling).toBe(false);
     });
 
     it('rejects non-rooms, unknown floors, and too-few points', () => {

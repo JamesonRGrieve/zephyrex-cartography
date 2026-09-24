@@ -17,6 +17,7 @@ const LABELS: MaterialsLabels = {
     wallKind: 'Wall kind',
     // Named as Foundry's own Walls palette names them.
     wallKinds: { solid: 'Solid Wall', terrain: 'Terrain Wall', invisible: 'Invisible Wall', ethereal: 'Ethereal Wall', window: 'Window' },
+    ceiling: 'Ceiling (when a level is above)',
 };
 
 /** Mount an interactive panel inside a stand-in Foundry window scoped for the module's styles. */
@@ -46,7 +47,7 @@ const meta: Meta<MaterialsArgs> = {
     title: 'Rooms/Materials Panel',
     excludeStories: ['mountMaterialsPanel'],
     render: mountMaterialsPanel,
-    args: { current: { floor: 'dirt', wall: null, wallKind: 'solid' }, floors: FLOORS, walls: [{ role: 'wall.brick', label: 'brick' }] },
+    args: { current: { floor: 'dirt', wall: null, wallKind: 'solid', ceiling: true }, floors: FLOORS, walls: [{ role: 'wall.brick', label: 'brick' }] },
 };
 
 export default meta;
@@ -56,13 +57,17 @@ type Story = StoryObj<MaterialsArgs>;
 export const DirtFloorNoWalls: Story = {};
 
 export const OakWithBrickWalls: Story = {
-    args: { current: { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'solid' } },
+    args: { current: { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'solid', ceiling: true } },
 };
 
 export const GlassWalledRoom: Story = {
-    args: { current: { floor: 'floor.oak', wall: null, wallKind: 'window' } },
+    args: { current: { floor: 'floor.oak', wall: null, wallKind: 'window', ceiling: true } },
+};
+
+export const OpenCourtyard: Story = {
+    args: { current: { floor: 'rock', wall: 'wall.brick', wallKind: 'solid', ceiling: false } },
 };
 
 export const MaterialsMissingFromTheSet: Story = {
-    args: { current: { floor: 'floor.marble', wall: 'wall.granite', wallKind: 'solid' }, walls: [] },
+    args: { current: { floor: 'floor.marble', wall: 'wall.granite', wallKind: 'solid', ceiling: true }, walls: [] },
 };

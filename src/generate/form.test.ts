@@ -33,11 +33,12 @@ describe('newSeed and floorPlanOptions', () => {
     });
 
     it('combines the form with the room materials', () => {
-        expect(floorPlanOptions(DEFAULT_GENERATOR_FORM, { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'window' })).toEqual({
+        expect(floorPlanOptions(DEFAULT_GENERATOR_FORM, { floor: 'floor.oak', wall: 'wall.brick', wallKind: 'window', ceiling: false })).toEqual({
             ...DEFAULT_FLOOR_PLAN,
             floor: 'floor.oak',
             wall: 'wall.brick',
             wallKind: 'window',
+            ceiling: false,
         });
     });
 });

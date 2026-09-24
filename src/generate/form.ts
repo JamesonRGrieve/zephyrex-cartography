@@ -58,5 +58,5 @@ export function newSeed(random: () => number): number {
 }
 
 export function floorPlanOptions(form: GeneratorForm, materials: RoomMaterials): FloorPlanOptions {
-    return { ...form, floor: materials.floor, wall: materials.wall, wallKind: materials.wallKind };
+    return { ...form, ...materials };
 }

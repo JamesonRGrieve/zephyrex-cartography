@@ -57,6 +57,20 @@ export function labelledInput(label: string, type: 'text' | 'number', value: str
     return wrap;
 }
 
+/** A labelled checkbox (the label wraps it); `onChange` gets whether it is now checked. */
+export function labelledCheckbox(label: string, checked: boolean, key: string, onChange: (checked: boolean) => void): HTMLLabelElement {
+    const wrap = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', label);
+    const checkbox = el('input', '');
+    checkbox.type = 'checkbox';
+    checkbox.checked = checked;
+    focusKey(checkbox, key);
+    checkbox.addEventListener('change', () => {
+        onChange(checkbox.checked);
+    });
+    wrap.prepend(checkbox);
+    return wrap;
+}
+
 /**
  * A labelled select over typed `[value, shown]` entries; `onChange` gets the
  * picked entry's value (never a string the entries do not hold).

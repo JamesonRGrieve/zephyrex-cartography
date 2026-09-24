@@ -243,6 +243,32 @@ describe('realizeSpec', () => {
         expect(h.c.activeLevel).toBeNull();
     });
 
+    it('roofs a room under another level with a ceiling, unless the spec leaves it open', async () => {
+        const h = makeHarness();
+        const square = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 2 },
+            { x: 0, y: 2 },
+        ];
+        await realizeSpec(
+            h.c,
+            spec({
+                levels: [
+                    { key: 'ground', name: 'Ground' },
+                    { key: 'upper', name: 'Upper' },
+                ],
+                features: [
+                    { type: 'room', points: square, level: 'ground' },
+                    { type: 'room', points: square.map((p) => ({ x: p.x + 4, y: p.y })), level: 'ground', ceiling: false },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        expect(h.s.last().map((f) => f.type === 'room' && f.ceiling)).toEqual([true, false]);
+        expect(h.d.regions.flat().map((r) => r.label)).toEqual([{ kind: 'ceiling', level: 'Ground' }]);
+    });
+
     it('places stamps with their interiors, and reports what it could not build', async () => {
         const h = makeHarness(stamps);
         const report = await realizeSpec(

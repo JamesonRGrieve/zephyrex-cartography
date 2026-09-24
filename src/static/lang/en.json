@@ -74,7 +74,8 @@
             "Floor": "Floor",
             "Wall": "Walls",
             "NoWall": "Not drawn",
-            "WallKind": "Wall kind"
+            "WallKind": "Wall kind",
+            "Ceiling": "Ceiling (when a level is above)"
         },
         "Levels": {
             "Title": "Levels",
@@ -158,6 +159,7 @@
             "Entrance": "Enter {scene}",
             "Exit": "Back to {scene}",
             "Floor": "Floor of {level}",
+            "Ceiling": "Ceiling of {level}",
             "Terrain": "{name} terrain",
             "Surface": "{name} surface",
             "Body": "{name} (impassable)",

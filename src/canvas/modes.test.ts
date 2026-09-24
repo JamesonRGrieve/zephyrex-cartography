@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { IDLE, modeForTool, type ToolChoices } from './modes';
 
-const CHOICES: ToolChoices = { paint: 'lava', room: { floor: 'floor.stone', wall: 'wall.brick', wallKind: 'window' } };
+const CHOICES: ToolChoices = { paint: 'lava', room: { floor: 'floor.stone', wall: 'wall.brick', wallKind: 'window', ceiling: false } };
 
 describe('modeForTool', () => {
     it('maps drawing tools to brushes, with the texture and materials last chosen', () => {
@@ -10,7 +10,7 @@ describe('modeForTool', () => {
         expect(modeForTool('river', true, CHOICES)).toEqual({ kind: 'brush', brush: { type: 'path', kind: 'river' } });
         expect(modeForTool('room', true, CHOICES)).toEqual({
             kind: 'brush',
-            brush: { type: 'room', floor: 'floor.stone', wall: 'wall.brick', wallKind: 'window' },
+            brush: { type: 'room', floor: 'floor.stone', wall: 'wall.brick', wallKind: 'window', ceiling: false },
         });
         expect(modeForTool('paint', true, CHOICES)).toEqual({ kind: 'brush', brush: { type: 'region', biome: 'lava' } });
     });

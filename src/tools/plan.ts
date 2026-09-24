@@ -425,6 +425,30 @@ function roomFloor(room: RoomFeature, levels: readonly Level[]): RegionDoc | nul
     };
 }
 
+/**
+ * A room's ceiling, when it has one and another level stands above: a solid,
+ * flat surface over the room at its level's top, on both levels, so nothing
+ * above sees, hears, lights or drops into the room, and those in it cannot
+ * see up. The room's own `ceiling` leaves it out for an open courtyard.
+ */
+function roomCeiling(room: RoomFeature, levels: readonly Level[]): RegionDoc | null {
+    const here = room.ceiling ? findLevel(levels, room.level) : null;
+    const above = here ? adjacentLevel(levels, here.id, 1) : null;
+    if (!here || !above) {
+        return null;
+    }
+    return {
+        id: null,
+        label: { kind: 'ceiling', level: here.name },
+        polygon: room.points,
+        bottom: here.top,
+        top: here.top,
+        level: here.id,
+        spans: [above.id],
+        behaviour: { kind: 'surface', placement: 'top', reveal: false },
+    };
+}
+
 /** A stretch of room wall, as a door if `door` is set; tagged with the perimeter segment it comes from. */
 function roomWallDoc(part: Segment, door: RoomDoor | null, segment: number, level: string | null, kind: PresetWall): WallDoc {
     if (door !== null) {
@@ -468,7 +492,7 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
         ),
         lights: room.lit && light.dim > 0 ? [{ source: { kind: 'room' }, ...light, elevation: floor.elevation, level: floor.level }] : [],
         tiles: [],
-        regions: [roomFloor(room, context.levels)].filter((region): region is RegionDoc => region !== null),
+        regions: [roomFloor(room, context.levels), roomCeiling(room, context.levels)].filter((region): region is RegionDoc => region !== null),
         sounds: [],
     };
 }

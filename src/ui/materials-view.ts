@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * The room materials panel: the floor (a biome or a pack floor material) and
- * the drawn walls (a pack wall material, or none). The choices on offer are
+ * The room materials panel: the floor (a biome or a pack floor material), the
+ * drawn walls (a pack wall material, or none), the wall kind, and whether a
+ * level above puts a ceiling over the room. The choices on offer are
  * whatever the active texture set has. A pure function from the room's
  * materials and the choices to elements; unit-tested under happy-dom.
  */
 import type { RoomMaterials } from '../tools/room';
 import { isWallPreset, WALL_PRESETS, type WallPreset } from '../tools/wall-presets';
-import { choice, replacePreservingFocus } from './dom';
+import { choice, labelledCheckbox, replacePreservingFocus } from './dom';
 
 export interface MaterialChoice {
     readonly role: string;
@@ -27,6 +28,7 @@ export interface MaterialsLabels {
     readonly noWall: string;
     readonly wallKind: string;
     readonly wallKinds: Readonly<Record<WallPreset, string>>;
+    readonly ceiling: string;
 }
 
 /** Select value standing for "walls not drawn" (no real role is empty). */
@@ -66,5 +68,8 @@ export function renderMaterialsPanel(root: HTMLElement, panel: MaterialsPanel, l
                 }
             },
         ),
+        labelledCheckbox(labels.ceiling, current.ceiling, 'zc-room-ceiling', (ceiling) => {
+            onChange({ ...current, ceiling });
+        }),
     ]);
 }

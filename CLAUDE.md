@@ -487,7 +487,12 @@ These make everything after them cheaper and safer, so they come first.
     bottom, top or both. `reveal` is Foundry's **Reveal Elevated Surface**
     [14.355] (`exposure` in the behaviour's data): roofs and balconies stay
     hidden from observers almost directly below.
-  - **Still open: room ceilings.**
+  - **[done] Room ceilings.** A room on a level with another above gets a
+    ceiling: the floor's mirror, a flat region at its level's top on both
+    levels, whose `top` surface restricts everything and occludes. A room's
+    `ceiling` (a room material: the materials panel, the scene spec and the
+    floor-plan generator) is on by default. Turning it off leaves an open
+    courtyard. `tests/e2e/levels.spec.ts` proves it with `Scene#getSurfaces`.
   - It pairs with the tile **SURFACE** occlusion mode (Priority 4).
 - **[done] Per-level images.** A `Level` carries its `art`: the native
   Level's `background`, `foreground` and `fog` image paths. The levels panel

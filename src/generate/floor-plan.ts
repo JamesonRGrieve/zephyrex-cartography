@@ -26,6 +26,7 @@ export interface FloorPlanOptions {
     readonly floor: FloorMaterial;
     readonly wall: WallMaterial;
     readonly wallKind: WallPreset;
+    readonly ceiling: boolean;
 }
 
 export const DEFAULT_FLOOR_PLAN: FloorPlanOptions = {
@@ -38,6 +39,7 @@ export const DEFAULT_FLOOR_PLAN: FloorPlanOptions = {
     floor: 'dirt',
     wall: null,
     wallKind: DEFAULT_WALL_PRESET,
+    ceiling: true,
 };
 
 /** Chance that a room-sized part, which could still be split, is kept whole: variety in room size. */
@@ -193,7 +195,7 @@ function roomSpec(room: Rect, slots: readonly DoorSlot[], o: FloorPlanOptions): 
         .map((d) => points.findIndex((p) => p.x === d.x && p.y === d.y))
         .filter((segment) => segment >= 0)
         .map((segment) => ({ segment, ...NEW_DOOR }));
-    return { type: 'room', points, floor: o.floor, wall: o.wall, wallKind: o.wallKind, doors };
+    return { type: 'room', points, floor: o.floor, wall: o.wall, wallKind: o.wallKind, ceiling: o.ceiling, doors };
 }
 
 /** Generate a floor plan; the same options always give the same plan. */

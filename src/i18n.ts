@@ -103,6 +103,7 @@ export const I18N = {
         wall: key('Materials.Wall'),
         noWall: key('Materials.NoWall'),
         wallKind: key('Materials.WallKind'),
+        ceiling: key('Materials.Ceiling'),
     },
     doors: {
         title: key('Doors.Title'),
@@ -127,6 +128,7 @@ export const I18N = {
         entrance: key('Regions.Entrance'),
         exit: key('Regions.Exit'),
         floor: key('Regions.Floor'),
+        ceiling: key('Regions.Ceiling'),
         terrain: key('Regions.Terrain'),
         surface: key('Regions.Surface'),
         body: key('Regions.Body'),

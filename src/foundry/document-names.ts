@@ -22,8 +22,8 @@ export function regionName(region: RegionDoc): string {
     if ('biome' in label) {
         return localize(BIOME_TITLE_KEYS[label.biome]);
     }
-    if (label.kind === 'floor') {
-        return format(I18N.regions.floor, { level: label.level });
+    if ('level' in label) {
+        return format(label.kind === 'floor' ? I18N.regions.floor : I18N.regions.ceiling, { level: label.level });
     }
     return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
 }

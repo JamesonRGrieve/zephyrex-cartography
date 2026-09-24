@@ -19,6 +19,7 @@ const KIND_COLOURS: Readonly<Record<Exclude<RegionKind, 'terrain'>, number>> = {
     'entrance': 0x9b59b6,
     'exit': 0x9b59b6,
     'floor': 0x7f8c8d,
+    'ceiling': 0x95a5a6,
     'stamp-surface': 0x8d6e63,
     'stamp-terrain': 0xe67e22,
     'stamp-body': 0xc0392b,

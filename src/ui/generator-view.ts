@@ -6,7 +6,7 @@
  * function from the panel state to elements; unit-tested under happy-dom.
  */
 import type { GeneratorField, GeneratorForm } from '../generate/form';
-import { button, el, focusKey, labelledInput, replacePreservingFocus } from './dom';
+import { button, el, focusKey, labelledCheckbox, labelledInput, replacePreservingFocus } from './dom';
 
 export interface GeneratorPanel {
     readonly form: GeneratorForm;
@@ -57,15 +57,7 @@ function section(title: string, children: readonly HTMLElement[]): HTMLElement {
 
 function floorPlanSection(panel: GeneratorPanel, labels: GeneratorLabels, handlers: GeneratorHandlers): HTMLElement {
     const { form } = panel;
-    const entrance = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', labels.entrance);
-    const checkbox = el('input', '');
-    checkbox.type = 'checkbox';
-    checkbox.checked = form.entrance;
-    focusKey(checkbox, 'entrance');
-    checkbox.addEventListener('change', () => {
-        handlers.setEntrance(checkbox.checked);
-    });
-    entrance.prepend(checkbox);
+    const entrance = labelledCheckbox(labels.entrance, form.entrance, 'entrance', handlers.setEntrance);
     const generate = button('tw-text-xs', labels.generate, 'generate', handlers.generate);
     generate.disabled = panel.busy;
     return section(labels.floorPlan, [

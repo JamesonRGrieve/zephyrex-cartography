@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_ROOM_MATERIALS } from '../tools/room';
 import { catalogStamps, makeHarness } from './test-fakes';
 
 const stairs = catalogStamps([
@@ -152,6 +153,7 @@ describe('CartographyController levels', () => {
         await c.addLevel('above', 'Upper');
         c.setActiveLevel('lv2');
         await drawRoom(c);
+        // The top level has nothing above it, so no ceiling either.
         expect(d.regions.flat()).toEqual([
             expect.objectContaining({
                 label: { kind: 'floor', level: 'Upper' },
@@ -164,7 +166,28 @@ describe('CartographyController levels', () => {
         ]);
         c.setActiveLevel('lv1');
         await drawRoom(c);
-        expect(d.regions.flat()).toHaveLength(1);
+        expect(d.regions.flat().filter((r) => r.label.kind === 'floor')).toHaveLength(1);
+    });
+
+    it('gives a room under another level a solid ceiling at its band’s top, on both levels, unless it is open to the sky', async () => {
+        const { c, d } = makeHarness();
+        await c.addLevel('above', 'Ground');
+        await c.addLevel('above', 'Upper');
+        c.setActiveLevel('lv1');
+        await drawRoom(c);
+        expect(d.regions.flat()).toEqual([
+            expect.objectContaining({
+                label: { kind: 'ceiling', level: 'Ground' },
+                level: 'lv1',
+                spans: ['lv2'],
+                bottom: 10,
+                top: 10,
+                behaviour: { kind: 'surface', placement: 'top', reveal: false },
+            }),
+        ]);
+        expect(c.roomMaterials('p1')?.ceiling).toBe(true);
+        await c.setRoomMaterials('p1', { ...DEFAULT_ROOM_MATERIALS, ceiling: false });
+        expect(c.getFeature('p1')?.docs.regions).toEqual([]);
     });
 
     it('joins a stair to the level above with one changeLevel region spanning both', async () => {

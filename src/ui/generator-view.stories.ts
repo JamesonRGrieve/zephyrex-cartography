@@ -59,7 +59,7 @@ export function mountGeneratorPanel(args: GeneratorArgs): HTMLElement {
                 render();
             },
             generate: () => {
-                const spec = generateFloorPlan(floorPlanOptions(panel.form, { floor: 'dirt', wall: null, wallKind: 'solid' }));
+                const spec = generateFloorPlan(floorPlanOptions(panel.form, { floor: 'dirt', wall: null, wallKind: 'solid', ceiling: true }));
                 panel = { ...panel, status: [describeBuild(spec.features.length)] };
                 render();
             },

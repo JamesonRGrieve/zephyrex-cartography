@@ -174,7 +174,7 @@ type RegionLabel =
     | { readonly kind: NonNullable<PlacedBehaviour['transition']>['kind']; readonly from: string; readonly to: readonly string[] }
     | { readonly kind: 'entrance' | 'exit'; readonly scene: string }
     | { readonly kind: 'terrain'; readonly biome: BiomeKind }
-    | { readonly kind: 'floor'; readonly level: string }
+    | { readonly kind: 'floor' | 'ceiling'; readonly level: string }
     | { readonly kind: 'stamp-terrain' | 'stamp-surface' | 'stamp-body'; readonly name: string };
 
 /** Where a teleported token lands in the region it arrives in (v14 `teleportToken` placement). */

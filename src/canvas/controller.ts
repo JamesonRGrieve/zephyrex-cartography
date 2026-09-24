@@ -200,7 +200,7 @@ export type Brush =
     | { readonly type: 'path'; readonly kind: PathKind }
     | { readonly type: 'region'; readonly biome: BiomeKind }
     | { readonly type: 'stroke'; readonly biome: BiomeKind }
-    | { readonly type: 'room'; readonly floor: FloorMaterial; readonly wall?: WallMaterial; readonly wallKind?: WallPreset };
+    | { readonly type: 'room'; readonly floor: FloorMaterial; readonly wall?: WallMaterial; readonly wallKind?: WallPreset; readonly ceiling?: boolean };
 
 /** Cap on retained undo snapshots — bounds memory on a long editing session. */
 const MAX_HISTORY = 50;
@@ -1507,7 +1507,7 @@ export class CartographyController {
             return region && { ...region, movementCost: storedCost(this.movementCost) };
         }
         if (this.brush.type === 'room') {
-            return makeRoom(id, this.brush.floor, pts, this.brush.wall ?? null, this.brush.wallKind);
+            return makeRoom(id, this.brush.floor, pts, this.brush.wall ?? null, this.brush.wallKind, this.brush.ceiling);
         }
         const stroke = makeStroke(id, this.brush.biome, pts, this.brushRadius);
         return stroke && { ...stroke, movementCost: storedCost(this.movementCost) };

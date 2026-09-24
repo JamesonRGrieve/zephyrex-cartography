@@ -110,6 +110,7 @@ const roomSpec = z
             .enum(WALL_PRESETS)
             .default(DEFAULT_WALL_PRESET)
             .describe("What kind of walls, as Foundry's Walls palette names them: solid, terrain, invisible, ethereal or window."),
+        ceiling: z.boolean().default(true).describe('Whether a level above gets a ceiling over the room (false for an open courtyard).'),
         doors: z.array(doorSpec).default([]),
         level,
     })

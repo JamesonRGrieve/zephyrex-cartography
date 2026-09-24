@@ -71,7 +71,7 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         const walls = spec.walls === true ? DEFAULT_WALL_PRESET : spec.walls === false ? null : spec.walls;
         feature = makePath(id, spec.kind, points, spec.halfWidth === undefined ? DEFAULT_HALF_WIDTH : scale.length(spec.halfWidth), walls, river);
     } else {
-        const room = makeRoom(id, spec.floor ?? DEFAULT_FLOOR, points, spec.wall, spec.wallKind);
+        const room = makeRoom(id, spec.floor ?? DEFAULT_FLOOR, points, spec.wall, spec.wallKind, spec.ceiling);
         feature =
             room && spec.doors.reduce((r, d) => withRoomDoor(r, d.segment, { type: d.type, state: d.state, sound: d.sound, animation: d.animation }), room);
     }

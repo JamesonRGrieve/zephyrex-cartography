@@ -82,6 +82,47 @@ test('a room on an upper level has a floor Foundry treats as a solid surface fro
     expect(result.fromGround).toEqual([floor]);
 });
 
+test('a room under another level has a ceiling Foundry treats as a solid surface from both levels, and a courtyard none', async ({ world }) => {
+    const result = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        // The fresh scene's own Level is the ground: nothing below it, so its rooms have no floor.
+        const ground = controller?.levels[0];
+        const upper = await controller?.addLevel('above', 'Upper');
+        controller?.setActiveLevel(ground?.id ?? null);
+        const room = async (x: number, roofed: boolean): Promise<void> => {
+            controller?.begin({ type: 'room', floor: 'dirt', ceiling: roofed }, 'click');
+            for (const at of [
+                { x, y: 200 },
+                { x: x + 400, y: 200 },
+                { x: x + 400, y: 600 },
+                { x, y: 600 },
+            ]) {
+                controller?.addPoint(at);
+            }
+            await controller?.commit();
+        };
+        await room(200, true);
+        await room(800, false);
+        const scene = canvas?.scene;
+        const groundTop = scene?.levels.contents.find((level) => level.id === ground?.id)?.elevation.top ?? null;
+        const seen = async (level: string | null | undefined): Promise<{ elevation: number; move: boolean; sight: boolean }[]> => {
+            await scene?.view({ level: level ?? '' });
+            return (canvas?.scene?.getSurfaces({ level: level ?? '' }) ?? []).map((surface) => ({
+                elevation: surface.elevation,
+                move: surface.move,
+                sight: surface.sight,
+            }));
+        };
+        const names = (scene?.regions.contents ?? []).map((region) => region.name);
+        return { groundTop, groundName: ground?.name, names, fromGround: await seen(ground?.id), fromUpper: await seen(upper) };
+    });
+    const ceiling = { elevation: result.groundTop, move: true, sight: true };
+    // One ceiling: the courtyard is open to the sky.
+    expect(result.names).toEqual([`Ceiling of ${result.groundName ?? ''}`]);
+    expect(result.fromGround).toEqual([ceiling]);
+    expect(result.fromUpper).toEqual([ceiling]);
+});
+
 test('a level’s own images are its native Level background, foreground and fog', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const art = { background: 'modules/zc-e2e-pack/stamps/hab.svg', foreground: null, fog: 'modules/zc-e2e-pack/stamps/crate.svg' };
