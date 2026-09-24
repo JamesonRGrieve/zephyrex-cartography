@@ -6,8 +6,9 @@
  * controller for click-to-select and the eraser.
  */
 import { distanceToPolyline, pointInPolygon } from '../geometry/hit';
-import type { Point } from '../geometry/spline';
+import { distance, type Point } from '../geometry/spline';
 import { isRegion, isRoom, isStamp, isStroke, type Feature } from './feature';
+import { PIN_HIT_RADIUS, pinPoint } from './pin';
 import { regionOutline } from './region';
 import { stampCorners } from './stamp';
 
@@ -33,6 +34,9 @@ export function featureHit(feature: Feature, pt: Point): boolean {
     }
     if (isStroke(feature)) {
         return distanceToPolyline(pt, feature.points) <= feature.radius + PATH_HIT_PADDING;
+    }
+    if (feature.type === 'pin') {
+        return distance(pt, pinPoint(feature)) <= PIN_HIT_RADIUS;
     }
     const maxHalf = feature.halfWidths.reduce((m, w) => Math.max(m, w), 0);
     return distanceToPolyline(pt, feature.points) <= maxHalf + PATH_HIT_PADDING;

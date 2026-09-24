@@ -17,12 +17,16 @@ export type Mode =
     | { readonly kind: 'stamp' }
     | { readonly kind: 'materials' }
     | { readonly kind: 'link' }
-    | { readonly kind: 'effects' };
+    | { readonly kind: 'effects' }
+    | { readonly kind: 'pin' };
 
 export const IDLE: Mode = { kind: 'idle' };
 
 /** The tools whose mode is just their name: they act on what is clicked. */
-const PLAIN_MODES = ['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects'] as const satisfies readonly Exclude<Mode['kind'], 'idle' | 'brush'>[];
+const PLAIN_MODES = ['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects', 'pin'] as const satisfies readonly Exclude<
+    Mode['kind'],
+    'idle' | 'brush'
+>[];
 
 /** What the GM last chose in the tools' panels: the paint tool's texture, and new rooms' materials. */
 export interface ToolChoices {

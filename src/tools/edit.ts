@@ -19,8 +19,8 @@ export function movePoint(feature: Feature, index: number, to: Point): Feature |
         return null;
     }
     const points = feature.points.map((p, i) => (i === index ? { x: to.x, y: to.y } : p));
-    if (isStamp(feature)) {
-        // A stamp's one point is its centre: moving it moves the whole stamp.
+    if (isStamp(feature) || feature.type === 'pin') {
+        // A stamp's or a pin's one point is where it stands: moving it moves the whole thing.
         return { ...feature, points };
     }
     if (isRegion(feature)) {
@@ -60,7 +60,8 @@ export function deletePoint(feature: Feature, index: number): Feature | null {
     if (index < 0 || index >= feature.points.length) {
         return null;
     }
-    if (isStamp(feature)) {
+    // A stamp or a pin is its one point: it is erased, not thinned.
+    if (isStamp(feature) || feature.type === 'pin') {
         return null;
     }
     const points = feature.points.filter((_, i) => i !== index);

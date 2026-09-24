@@ -247,7 +247,23 @@ const levelSpec = z
     })
     .strict();
 
-const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec]);
+const pinSpec = z
+    .object({
+        type: z.literal('pin'),
+        key: featureKey,
+        x: z.number(),
+        y: z.number(),
+        text: z.string().default('').describe("The note's text label."),
+        entry: text.nullable().default(null).describe('Id of the JournalEntry it opens; null: none.'),
+        page: text.nullable().default(null).describe('Id of the page within that entry; null: the whole entry.'),
+        icon: text.nullable().default(null).describe("The icon's image path; null: Foundry's own."),
+        global: z.boolean().default(false).describe('Shown to everyone whatever their tokens see.'),
+        level,
+    })
+    .strict()
+    .describe('A map pin: a native Note.');
+
+const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec, pinSpec]);
 
 const signed = z.number().min(-1).max(1);
 

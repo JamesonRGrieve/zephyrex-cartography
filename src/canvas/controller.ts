@@ -36,6 +36,7 @@ import {
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { drawOrder } from '../tools/nesting';
 import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath, type PathKind, type RiverLook } from '../tools/path';
+import { makePin, NEW_PIN, type PinSettings, pinSettingsOf, withPinSettings } from '../tools/pin';
 import { NO_PLAN, type PlanContext, planDocuments } from '../tools/plan';
 import { makeRegion } from '../tools/region';
 import {
@@ -635,6 +636,29 @@ export class CartographyController {
         const feature = await this.withSilhouette(snapDoorToRooms(placed, this.features, placed.gridSize * DOOR_SNAP_SQUARES));
         await this.add(await this.withPile({ ...feature, level: feature.level ?? this.active }, stamp.name));
         return feature.id;
+    }
+
+    /** Put a map pin at `at` on the level being edited; returns its feature id. */
+    async placePin(at: Point, settings: PinSettings = NEW_PIN): Promise<string> {
+        const pin = makePin(this.makeId(), at, settings);
+        await this.add(pin);
+        return pin.id;
+    }
+
+    /** What a pin shows and opens, or null for anything else. */
+    pinSettings(id: string): PinSettings | null {
+        const f = this.getFeature(id);
+        return f?.type === 'pin' ? pinSettingsOf(f) : null;
+    }
+
+    /** Change what a pin shows and opens, re-syncing its Note; false if it is not a pin. */
+    async setPinSettings(id: string, settings: PinSettings): Promise<boolean> {
+        const f = this.getFeature(id);
+        if (f?.type !== 'pin') {
+            return false;
+        }
+        await this.replaceFeature(id, withPinSettings(f, settings));
+        return true;
     }
 
     /** Back a container stamp with an Item Piles container, when Item Piles is available. */
@@ -1312,8 +1336,8 @@ export class CartographyController {
     private async stageDocs(feature: Feature): Promise<void> {
         const plan = planDocuments(feature, this.planContext());
         const old = feature.docs;
-        const planned = plan.walls.length + plan.lights.length + plan.tiles.length + plan.regions.length + plan.sounds.length;
-        if (planned === 0 && !hasDocs(old)) {
+        const planned = [plan.walls, plan.lights, plan.tiles, plan.regions, plan.sounds, plan.notes].some((kind) => kind.length > 0);
+        if (!planned && !hasDocs(old)) {
             return;
         }
         // Tiles and walls whose count is unchanged are updated in place, keeping their ids:

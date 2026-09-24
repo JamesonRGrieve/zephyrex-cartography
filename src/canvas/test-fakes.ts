@@ -7,7 +7,17 @@
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, loadPacks } from '../stamps/catalog';
 import type { PileSpec } from '../tools/containers';
-import { hasDocs, type GeneratedDocs, type LightDoc, type RegionDoc, type SoundDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import {
+    allDocIds,
+    hasDocs,
+    type GeneratedDocs,
+    type LightDoc,
+    type NoteDoc,
+    type RegionDoc,
+    type SoundDoc,
+    type TileDoc,
+    type WallDoc,
+} from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
 import type { SceneSettings } from '../tools/scene-settings';
@@ -64,7 +74,7 @@ class FakeStore implements SceneStore {
 }
 
 /** Document-id prefix per kind, like a real scene's distinct collections. */
-const ID_PREFIX: Record<DocumentKind, string> = { walls: 'w', lights: 'L', tiles: 't', regions: 'r', sounds: 's' };
+const ID_PREFIX: Record<DocumentKind, string> = { walls: 'w', lights: 'L', tiles: 't', regions: 'r', sounds: 's', notes: 'n' };
 
 /**
  * Records every write, and the documents created per type (one entry per
@@ -83,10 +93,11 @@ class FakeSink implements DocumentSink {
     readonly regions: RegionDoc[][] = [];
     readonly regionUpdates: RegionDoc[][] = [];
     readonly sounds: SoundDoc[][] = [];
+    readonly notes: NoteDoc[][] = [];
     readonly deleted: GeneratedDocs[] = [];
     /** Reject every write, as Foundry rejects a batch it cannot apply. */
     rejecting = false;
-    private readonly counters: Record<DocumentKind, number> = { walls: 0, lights: 0, tiles: 0, regions: 0, sounds: 0 };
+    private readonly counters: Record<DocumentKind, number> = { walls: 0, lights: 0, tiles: 0, regions: 0, sounds: 0, notes: 0 };
 
     newId(kind: DocumentKind): string {
         const id = `${ID_PREFIX[kind]}${this.counters[kind]}`;
@@ -111,6 +122,7 @@ class FakeSink implements DocumentSink {
         record(this.lights, write.lights);
         record(this.tiles, write.tiles);
         record(this.sounds, write.sounds);
+        record(this.notes, write.notes);
         const regions = write.regions.flatMap((group) => group.regions.filter((_, i) => !group.cancelled.includes(group.ids[i] ?? '')));
         if (regions.length > 0) {
             this.regions.push(regions);
@@ -127,7 +139,7 @@ class FakeSink implements DocumentSink {
     }
     /** Every id deleted so far, flattened across document types. */
     deletedIds(): string[] {
-        return this.deleted.flatMap((d) => [...d.walls, ...d.lights, ...d.tiles, ...d.regions, ...d.sounds]);
+        return this.deleted.flatMap(allDocIds);
     }
 }
 

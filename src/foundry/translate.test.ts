@@ -5,6 +5,7 @@ import { DEFAULT_TRAVEL } from '../tools/submap';
 import {
     doorStateFromDs,
     lightCreateData,
+    noteCreateData,
     pxToDistance,
     regionCreateData,
     regionShape,
@@ -259,6 +260,24 @@ describe('sceneSettingsData', () => {
         });
         expect(sceneSettingsData({ fog: 'individual', fogColours: { explored: '#000000' } })).toEqual({ fog: { mode: 1, colors: { explored: '#000000' } } });
         expect(sceneSettingsData({ fogColours: {} })).toEqual({});
+    });
+});
+
+describe('noteCreateData', () => {
+    const note = { x: 10.4, y: 20.6, elevation: 5, level: 'lv1', text: 'The Sump', entry: 'je1', page: 'pg1', icon: null, global: true };
+
+    it('writes a Note at whole pixels, opening its journal page, with Foundry’s icon when it has none', () => {
+        expect(noteCreateData(note)).toEqual({ x: 10, y: 21, elevation: 5, text: 'The Sump', entryId: 'je1', pageId: 'pg1', global: true, levels: ['lv1'] });
+        expect(noteCreateData({ ...note, icon: 'icons/svg/tankard.svg', level: null, entry: null, page: null })).toEqual({
+            x: 10,
+            y: 21,
+            elevation: 5,
+            text: 'The Sump',
+            entryId: null,
+            pageId: null,
+            global: true,
+            texture: { src: 'icons/svg/tankard.svg' },
+        });
     });
 });
 

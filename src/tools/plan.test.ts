@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL } from './documents';
 import { LIQUID_LOOKS, makePath } from './path';
-import { planDocuments } from './plan';
+import { NO_PLAN, planDocuments } from './plan';
 import { makeRegion } from './region';
 import { makeRoom, NEW_DOOR, withRoomDoor } from './room';
 
@@ -55,7 +55,7 @@ describe('planDocuments', () => {
 
     it('plans nothing for terrain regions', () => {
         const region = makeRegion('g', 'grassland', square);
-        expect(region ? planDocuments(region) : null).toEqual({ walls: [], lights: [], tiles: [], regions: [], sounds: [] });
+        expect(region ? planDocuments(region) : null).toEqual(NO_PLAN);
     });
 
     it('gives painted ground with effects its region, the effects after any movement cost', () => {

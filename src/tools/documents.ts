@@ -249,6 +249,22 @@ export interface RegionDoc {
     readonly effects?: readonly AreaEffect[];
 }
 
+/** A native map Note (a pin): its text, the journal page it opens, and its icon. */
+export interface NoteDoc {
+    readonly x: number;
+    readonly y: number;
+    readonly elevation: number;
+    readonly level: string | null;
+    readonly text: string;
+    /** The JournalEntry it opens, by id, and the page within it; null for none. */
+    readonly entry: string | null;
+    readonly page: string | null;
+    /** The icon's image path; null for Foundry's own. */
+    readonly icon: string | null;
+    /** Shown to everyone whatever their tokens see (Foundry's `global`). */
+    readonly global: boolean;
+}
+
 /** The ids of every native document one feature generated, by document type. */
 export interface GeneratedDocs {
     readonly walls: readonly string[];
@@ -256,12 +272,18 @@ export interface GeneratedDocs {
     readonly tiles: readonly string[];
     readonly regions: readonly string[];
     readonly sounds: readonly string[];
+    readonly notes: readonly string[];
 }
 
-export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], regions: [], sounds: [] };
+export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [] };
+
+/** Every generated id, whatever its document type. */
+export function allDocIds(docs: GeneratedDocs): string[] {
+    return [...docs.walls, ...docs.lights, ...docs.tiles, ...docs.regions, ...docs.sounds, ...docs.notes];
+}
 
 export function hasDocs(docs: GeneratedDocs): boolean {
-    return docs.walls.length + docs.lights.length + docs.tiles.length + docs.regions.length + docs.sounds.length > 0;
+    return allDocIds(docs).length > 0;
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses the persisted generated-docs record of a scene-flag feature entry
@@ -274,7 +296,8 @@ export function parseGeneratedDocs(v: unknown): GeneratedDocs {
         lights: stringArray(v['lights']),
         tiles: stringArray(v['tiles']),
         regions: stringArray(v['regions']),
-        // Recorded since stamps emit sounds; an older record has none.
+        // Recorded since stamps emit sounds, and since pins make notes; an older record has none.
         sounds: stringArray(v['sounds']),
+        notes: stringArray(v['notes']),
     };
 }

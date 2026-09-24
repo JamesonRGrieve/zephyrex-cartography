@@ -66,6 +66,7 @@ const NATIVE_HOME: Readonly<Record<string, string>> = {
     stamp: 'tiles',
     link: 'lighting',
     effects: 'regions',
+    pin: 'notes',
 };
 
 async function activate(page: Page, control: string, tool: string): Promise<void> {
@@ -428,6 +429,40 @@ test('the effects tool, with the Regions tools, gives a room difficult ground an
         { type: 'modifyMovementCost', mode: null },
         { type: 'adjustDarknessLevel', mode: 2 },
     ]);
+});
+
+test('the pin tool, with the Notes tools, places a native Note that opens a journal page, and erase removes it', async ({ world }) => {
+    const journal = await world.evaluate(async () => {
+        const entry = await JournalEntry.create({ name: 'The Sump', pages: [{ name: 'The bar', type: 'text' }] });
+        return { entry: entry?.id ?? '', page: entry?.pages.contents[0]?.id ?? '' };
+    });
+    await useTool(world, 'pin');
+    await holdView(world);
+    await clickScene(world, { x: 700, y: 500 });
+    const panel = world.locator(`#${MODULE_ID}-pin`);
+    await expect(panel).toBeVisible();
+    // Named as Foundry's own Note sheet names them.
+    await panel.getByLabel('Text Label').fill('The Sump');
+    await panel.getByLabel('Text Label').press('Enter');
+    await panel.getByLabel('Journal Entry').selectOption({ label: 'The Sump' });
+    await panel.getByLabel('Page').selectOption({ label: 'The bar' });
+    await panel.getByLabel('Globally Visible').check();
+    const notes = async (): Promise<{ x: number; y: number; text: string; entry: string | null; page: string | null; global: boolean }[]> =>
+        world.evaluate(() =>
+            (canvas?.scene?.notes.contents ?? []).map((note) => ({
+                x: note.x,
+                y: note.y,
+                text: note.text ?? '',
+                entry: note.entryId ?? null,
+                page: note.pageId ?? null,
+                global: note.global,
+            })),
+        );
+    await expect.poll(notes).toEqual([{ x: 700, y: 500, text: 'The Sump', entry: journal.entry, page: journal.page, global: true }]);
+
+    await useTool(world, 'erase');
+    await clickScene(world, { x: 700, y: 500 });
+    await expect.poll(notes).toEqual([]);
 });
 
 test('the stamp tool places the stamp armed in the browser where the GM clicks', async ({ world }) => {

@@ -18,6 +18,7 @@
             "Levels": "Levels",
             "Materials": "Room materials (click a room to set its floor and walls)",
             "Effects": "Area effects (click painted ground or a room to set its movement cost and region behaviours)",
+            "Pin": "Map pin (click to place a note, or click a pin to set what it shows and opens)",
             "Generator": "Map builder (generate a floor plan, or build a scene spec)"
         },
         "Generator": {
@@ -70,6 +71,11 @@
                 "Poison": "Poison",
                 "Acid": "Acid"
             }
+        },
+        "Pins": {
+            "Title": "Map pin",
+            "None": "None",
+            "Browse": "Browse for the icon"
         },
         "Effects": {
             "Title": "Area effects",

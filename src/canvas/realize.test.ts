@@ -327,6 +327,35 @@ describe('realizeSpec', () => {
         expect(sand && 'effects' in sand ? sand.effects : undefined).toBeUndefined();
     });
 
+    it('puts map pins where the spec says, opening their journal page, and a lamp switch can be keyed beside them', async () => {
+        const h = makeHarness();
+        await realizeSpec(
+            h.c,
+            spec({
+                levels: [{ key: 'g', name: 'Ground' }],
+                features: [
+                    { type: 'pin', x: 2, y: 3, text: 'The Sump', entry: 'je1', page: 'pg1', global: true, level: 'g' },
+                    { type: 'pin', key: 'note', x: 0, y: 0, page: 'orphan' },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        const [sump, bare] = h.s.last();
+        expect(sump).toMatchObject({
+            type: 'pin',
+            points: [{ x: 1200, y: 800 }],
+            text: 'The Sump',
+            entry: 'je1',
+            page: 'pg1',
+            icon: null,
+            global: true,
+            level: 'lv1',
+        });
+        // A page with no entry to hold it is dropped.
+        expect(bare).toMatchObject({ type: 'pin', text: '', entry: null, page: null, level: null });
+        expect(h.d.notes.flat()).toHaveLength(2);
+    });
+
     it('links a light switch to the lamps and rooms it names by key, and the lights it names by id', async () => {
         const h = makeHarness(SWITCH_STAMPS);
         const square = [

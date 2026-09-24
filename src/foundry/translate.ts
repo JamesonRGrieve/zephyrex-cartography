@@ -14,6 +14,7 @@ import type {
     DoorState,
     DoorType,
     LightDoc,
+    NoteDoc,
     RegionBehaviour,
     RegionDoc,
     SenseLevel,
@@ -28,6 +29,7 @@ import { type Environment, FOG_MODE_IDS, type SceneSettings } from '../tools/sce
 import type {
     AreaEffectBehaviour,
     LightCreateData,
+    NoteCreateData,
     RegionCreateData,
     RegionShape,
     SceneSettingsUpdate,
@@ -146,6 +148,21 @@ function doorLookData(wall: WallDoc): Pick<WallCreateData, 'doorSound' | 'animat
     }
     const { sound, animation } = wall.look;
     return { ...(sound === null ? {} : { doorSound: sound }), ...(animation === null ? {} : { animation: { ...animation } }) };
+}
+
+/** A pin's Note; Foundry's own icon when the pin has none. Note positions are whole pixels. */
+export function noteCreateData(note: NoteDoc): NoteCreateData {
+    return {
+        x: Math.round(note.x),
+        y: Math.round(note.y),
+        elevation: note.elevation,
+        text: note.text,
+        entryId: note.entry,
+        pageId: note.page,
+        global: note.global,
+        ...(note.icon === null ? {} : { texture: { src: note.icon } }),
+        ...levelsField(note.level),
+    };
 }
 
 /** Scene px to scene distance units (a light's radius is measured in the scene's distance units). */

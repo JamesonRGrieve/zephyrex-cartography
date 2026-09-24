@@ -31,6 +31,7 @@ export const I18N = {
         levels: key('Tools.Levels'),
         materials: key('Tools.Materials'),
         effects: key('Tools.Effects'),
+        pin: key('Tools.Pin'),
         generator: key('Tools.Generator'),
     },
     generator: {
@@ -122,6 +123,11 @@ export const I18N = {
             poison: key('Paths.Liquids.Poison'),
             acid: key('Paths.Liquids.Acid'),
         },
+    },
+    pins: {
+        title: key('Pins.Title'),
+        none: key('Pins.None'),
+        browse: key('Pins.Browse'),
     },
     effects: {
         title: key('Effects.Title'),

@@ -8,6 +8,7 @@ import type { CartographyController } from '../canvas/controller';
 import { I18N } from '../i18n';
 import { levelPanel } from '../tools/levels';
 import { renderLevelPanel, type LevelPanelLabels } from '../ui/level-panel-view';
+import { pickImage } from './file-picker';
 import { format, localize } from './localize';
 import { createViewWindow } from './view-window';
 
@@ -62,12 +63,6 @@ function panelLabels(): LevelPanelLabels {
             visibleLevels: localize('SCENE_LEVEL.FIELDS.visibility.levels.label'),
         },
     };
-}
-
-/** Pick an image with Foundry's own file picker, starting from `current`. */
-async function pickImage(current: string | null, picked: (path: string) => void): Promise<void> {
-    const picker = new foundry.applications.apps.FilePicker.implementation({ type: 'image', current: current ?? '', callback: picked });
-    await picker.render({ force: true });
 }
 
 export function registerLevelRuntime(controller: () => CartographyController | null): LevelRuntime {

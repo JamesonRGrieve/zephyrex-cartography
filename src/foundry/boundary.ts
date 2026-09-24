@@ -244,9 +244,21 @@ export interface LevelUpdateData {
     readonly visibility?: { readonly levels: readonly string[] };
 }
 
-export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level';
+/** A map Note (14.359 `common/documents/note.mjs`): the journal entry and page by id; a texture left out takes Foundry's icon. */
+export interface NoteCreateData extends OnLevels {
+    readonly x: number;
+    readonly y: number;
+    readonly elevation: number;
+    readonly text: string;
+    readonly entryId: string | null;
+    readonly pageId: string | null;
+    readonly global: boolean;
+    readonly texture?: { readonly src: string };
+}
 
-type EmbeddedCreateData = WallCreateData | LightCreateData | SoundCreateData | TileCreateData | RegionCreateData | LevelCreateData;
+export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level' | 'Note';
+
+type EmbeddedCreateData = WallCreateData | LightCreateData | SoundCreateData | TileCreateData | RegionCreateData | LevelCreateData | NoteCreateData;
 
 /** Create data carrying the id the document will have. */
 export type IdentifiedCreateData = EmbeddedCreateData & { readonly _id: string };
@@ -352,6 +364,7 @@ export interface FoundryScene {
     readonly walls: EmbeddedCollection;
     readonly lights: EmbeddedCollection;
     readonly sounds: EmbeddedCollection;
+    readonly notes: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
     readonly regions: RegionCollection;
     readonly levels: { readonly contents: readonly NativeLevel[]; readonly size: number };

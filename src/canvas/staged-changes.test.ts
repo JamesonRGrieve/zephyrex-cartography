@@ -53,7 +53,7 @@ describe('StagedChanges', () => {
     it('assigns every created document its id up front, keeping a region id it is given', () => {
         const staged = staging();
         const ids = staged.stage(change({ create: { ...NO_PLAN, walls: [WALL, WALL], tiles: [TILE], regions: [region(null), region('fixed')] } }));
-        expect(ids).toEqual({ walls: ['walls-0', 'walls-1'], lights: [], tiles: ['tiles-0'], sounds: [], regions: ['regions-0', 'fixed'] });
+        expect(ids).toEqual({ ...NO_DOCS, walls: ['walls-0', 'walls-1'], tiles: ['tiles-0'], regions: ['regions-0', 'fixed'] });
         const write = staged.take();
         expect(write.walls).toEqual([
             { id: 'walls-0', doc: WALL },

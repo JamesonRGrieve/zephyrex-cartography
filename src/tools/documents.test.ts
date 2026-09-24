@@ -4,7 +4,8 @@ import { hasDocs, NO_DOCS, parseGeneratedDocs } from './documents';
 
 describe('generated docs', () => {
     it('parses a persisted record, dropping junk ids', () => {
-        expect(parseGeneratedDocs({ walls: ['a', 3], lights: ['b'], tiles: 'x' })).toEqual({ walls: ['a'], lights: ['b'], tiles: [], regions: [], sounds: [] });
+        expect(parseGeneratedDocs({ walls: ['a', 3], lights: ['b'], tiles: 'x' })).toEqual({ ...NO_DOCS, walls: ['a'], lights: ['b'] });
+        expect(parseGeneratedDocs({ notes: ['n0', 7] }).notes).toEqual(['n0']);
         expect(parseGeneratedDocs(null)).toEqual(NO_DOCS);
     });
 

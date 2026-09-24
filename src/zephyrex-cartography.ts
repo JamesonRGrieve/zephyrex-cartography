@@ -27,6 +27,7 @@ import { registerPackRuntime } from './foundry/pack-runtime';
 import { registerPaintRuntime } from './foundry/paint-runtime';
 import { withParticles } from './foundry/particles';
 import { type PathSettings, registerPathRuntime } from './foundry/path-runtime';
+import { registerPinRuntime } from './foundry/pin-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { activeScene, modifyBatch } from './foundry/scene-bridge';
 import { FoundrySceneStore } from './foundry/scene-store';
@@ -71,6 +72,8 @@ const doors = registerDoorRuntime(() => state?.controller ?? null);
 const materials = registerMaterialsRuntime(() => state?.controller ?? null, packs.textureRoles);
 
 const effects = registerEffectsRuntime(() => state?.controller ?? null);
+
+const pins = registerPinRuntime(() => state?.controller ?? null);
 
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
@@ -199,16 +202,9 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
                 packs.placeArmedAt(pt);
             }
             return;
-        case 'door': {
-            // A plain wall becomes a door; an existing door opens its panel (type, state, remove).
-            const seg = st.controller.pickWallSegment(pt, WALL_PICK_TOL);
-            if (seg && st.controller.roomDoor(seg.id, seg.index)) {
-                doors.edit(seg.id, seg.index);
-            } else if (seg) {
-                void st.controller.toggleDoor(seg.id, seg.index);
-            }
+        case 'door':
+            doorAt(st.controller, pt);
             return;
-        }
         case 'edit': {
             const hit = st.controller.pickVertex(pt, EDIT_PICK_TOL);
             const anchor = hit ? st.controller.getFeature(hit.id)?.points[hit.index] : undefined;
@@ -219,20 +215,15 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
             }
             return;
         }
-        case 'materials': {
-            const hit = st.controller.hitTest(pt);
-            if (hit !== null && st.controller.roomMaterials(hit)) {
-                materials.edit(hit);
-            }
+        case 'materials':
+            openOn(st.controller, pt, (id) => st.controller.roomMaterials(id) !== null, materials.edit);
             return;
-        }
-        case 'effects': {
-            const hit = st.controller.hitTest(pt);
-            if (hit !== null && st.controller.areaSettings(hit)) {
-                effects.edit(hit);
-            }
+        case 'effects':
+            openOn(st.controller, pt, (id) => st.controller.areaSettings(id) !== null, effects.edit);
             return;
-        }
+        case 'pin':
+            void pinAt(st.controller, pt);
+            return;
         case 'erase':
             void st.controller.erase(pt);
             return;
@@ -242,6 +233,31 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
         case 'brush':
             brushDown(st, mode.brush, pt, pointerEvent.button);
     }
+}
+
+/** Open a panel on the feature clicked, if it is one the panel is for. */
+function openOn(controller: CartographyController, pt: Point, isFor: (id: string) => boolean, openPanel: (id: string) => void): void {
+    const hit = controller.hitTest(pt);
+    if (hit !== null && isFor(hit)) {
+        openPanel(hit);
+    }
+}
+
+/** A click with the door tool: a plain wall becomes a door; an existing door opens its panel (type, state, remove). */
+function doorAt(controller: CartographyController, pt: Point): void {
+    const seg = controller.pickWallSegment(pt, WALL_PICK_TOL);
+    if (seg && controller.roomDoor(seg.id, seg.index)) {
+        doors.edit(seg.id, seg.index);
+    } else if (seg) {
+        void controller.toggleDoor(seg.id, seg.index);
+    }
+}
+
+/** A click with the pin tool: open the pin clicked, or place a new one there and open it. */
+async function pinAt(controller: CartographyController, pt: Point): Promise<void> {
+    const hit = controller.hitTest(pt);
+    const id = hit !== null && controller.pinSettings(hit) ? hit : await controller.placePin(pt);
+    pins.edit(id);
 }
 
 /** A press with a drawing brush in hand. */
@@ -495,6 +511,7 @@ const NATIVE_TOOL_LOOKS: Readonly<Record<NativeTool, ToolLook>> = {
     erase: { title: I18N.tools.erase, icon: 'fa-solid fa-eraser' },
     link: { title: I18N.tools.link, icon: 'fa-solid fa-link' },
     effects: { title: I18N.tools.effects, icon: 'fa-solid fa-wand-sparkles' },
+    pin: { title: I18N.tools.pin, icon: 'fa-solid fa-map-pin' },
 };
 
 /** Every pointer tool, by name, in toolbar order: paths, painting, then the tools native groups share. */

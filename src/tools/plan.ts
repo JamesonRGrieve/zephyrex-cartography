@@ -15,6 +15,7 @@ import { type Affected, effectsOf } from './area-effects';
 import {
     BLOCKS_ALL,
     type LightDoc,
+    type NoteDoc,
     type RegionDoc,
     type SenseBlock,
     senseLevel,
@@ -27,6 +28,7 @@ import { doorOpenings, OPENING_TOLERANCE, stampDoorState } from './doors';
 import type { Feature } from './feature';
 import { adjacentLevel, findLevel, levelElevation, type Level } from './levels';
 import type { CartographyPath } from './path';
+import { pinPoint, pinSettingsOf } from './pin';
 import { regionOutline, type RegionFeature } from './region';
 import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
@@ -41,10 +43,11 @@ export interface DocumentPlan {
     readonly tiles: readonly TileDoc[];
     readonly regions: readonly RegionDoc[];
     readonly sounds: readonly SoundDoc[];
+    readonly notes: readonly NoteDoc[];
 }
 
 /** A plan with no documents. */
-export const NO_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [], sounds: [] };
+export const NO_PLAN: DocumentPlan = { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [] };
 
 /** What a feature's plan may depend on besides the feature itself. */
 export interface PlanContext {
@@ -384,6 +387,7 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
     const sound = stampSound(stamp, floor);
     const door = stampDoorWall(stamp, floor);
     return {
+        ...NO_PLAN,
         walls: [...(door ? [door] : []), ...stampWalls(stamp, floor)],
         tiles: [stampTile(stamp, floor)],
         lights: light ? [light] : [],
@@ -484,6 +488,7 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
         return laterDoors.find((w) => distanceToSegment(mid, w.a, w.b) <= OPENING_TOLERANCE)?.door ?? null;
     };
     return {
+        ...NO_PLAN,
         walls: roomWalls(room).flatMap((wall) =>
             cutSegment(wall, cuts, OPENING_TOLERANCE).flatMap((piece) =>
                 splitSegment(piece, laterDoors, OPENING_TOLERANCE).map((part) =>
@@ -509,6 +514,10 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
     }
     if (feature.type === 'stamp') {
         return stampPlan(feature, context);
+    }
+    if (feature.type === 'pin') {
+        const { elevation, level } = floorOf(feature, context);
+        return { ...NO_PLAN, notes: [{ ...pinPoint(feature), elevation, level, ...pinSettingsOf(feature) }] };
     }
     if (feature.type === 'path' && feature.walls !== null) {
         return { ...NO_PLAN, walls: pathWalls(feature, feature.walls, floorOf(feature, context)) };

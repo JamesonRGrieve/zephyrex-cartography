@@ -13,6 +13,7 @@ import { parseCssHex } from '../tools/colour';
 import type { Feature } from '../tools/feature';
 import type { LevelArt } from '../tools/levels';
 import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath } from '../tools/path';
+import { makePin, withPinSettings } from '../tools/pin';
 import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
 import type { StampPlacement } from '../tools/stamp';
@@ -56,6 +57,11 @@ function scaleOf(spec: SceneSpec, options: RealizeOptions): Scale {
 
 /** The plain (non-stamp) feature a spec describes, on `level`, or null if it is malformed. */
 function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string, level: string | null, scale: Scale): Feature | null {
+    if (spec.type === 'pin') {
+        // A page with no entry is dropped, as the panel drops it.
+        const settings = { text: spec.text, entry: spec.entry, page: spec.page, icon: spec.icon, global: spec.global };
+        return { ...withPinSettings(makePin(id, scale.point(spec)), settings), level };
+    }
     const points = spec.points.map(scale.point);
     let feature: Feature | null;
     if (spec.type === 'region') {

@@ -205,7 +205,7 @@ plus a link flag. It never rewrites content the plugin did not create.
 that type's own control group, after Foundry's tools
 (`canvas/tool-placement.ts`).
 - **Walls:** room, door and materials. **Tiles:** stamp. **Lighting:**
-  link. **Regions:** effects. Edit and erase appear in the Walls and Tiles
+  link. **Regions:** effects. **Notes:** pin, with edit and erase. Edit and erase appear in the Walls and Tiles
   groups too, so what a group draws can be reshaped there.
 - **The module's own group** keeps what has no native home: roads, rivers,
   the paint tool, edit, erase, undo/redo, levels and the generator.
@@ -719,8 +719,19 @@ These make everything after them cheaper and safer, so they come first.
   behaviour or macro could trigger it if a use appears.
 
 ### Priority 7: other documents, scene settings and assets
-- **Notes** (map pins), with their `author` field [14.353], and
-  **drawings**.
+- **[done] Notes: map pins.** A `pin` feature (`tools/pin.ts`) is one
+  point realised as a native Note on its level. It has text, the journal
+  entry and page it opens (by id), an icon (null for Foundry's) and `global`.
+  - Notes are a generated document kind like the rest (`GeneratedDocs.notes`),
+    so moving, undoing and erasing follow the lifecycle rule.
+  - The **pin tool** sits with Foundry's Notes tools, beside edit and erase.
+    Clicking places a pin, or opens the one clicked, in a panel named with
+    Foundry's Note sheet strings. The panel offers the world's journal
+    entries and their pages, and an icon path or Foundry's file picker.
+  - The scene spec takes `pin` entries.
+  - Foundry stamps a Note's `author` [14.353] with the user who creates it.
+  - Proven in `tests/e2e/pointer.spec.ts`.
+- **Drawings** (text labels and shapes): still open.
 - **[done] Scene settings.** A scene spec's `scene` block sets the scene's
   own settings, only those given (`tools/scene-settings.ts`):
   - darkness, its lock, global light and token vision;

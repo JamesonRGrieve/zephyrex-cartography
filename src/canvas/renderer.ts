@@ -177,7 +177,8 @@ function underlays(feature: Feature, resolve: TextureResolver): Filled[] {
 const NOT_DRAWN: Filled = { outline: [], fill: 0, alpha: 0, texture: null, tint: NO_TINT, feather: false };
 
 function outlineAndStyle(feature: Feature, resolve: TextureResolver): Filled {
-    if (feature.type === 'stamp') {
+    // A stamp is its Tile, and a pin its Note.
+    if (feature.type === 'stamp' || feature.type === 'pin') {
         return NOT_DRAWN;
     }
     if (feature.type === 'region') {
