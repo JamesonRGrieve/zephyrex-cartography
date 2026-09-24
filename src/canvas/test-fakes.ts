@@ -11,6 +11,7 @@ import { hasDocs, type GeneratedDocs, type LightDoc, type RegionDoc, type SoundD
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
 import type { SceneSettings } from '../tools/scene-settings';
+import type { MaskRect, SplatLayer } from '../tools/splat';
 import type { SceneFrame } from '../tools/submap';
 import {
     CartographyController,
@@ -18,6 +19,8 @@ import {
     type DocumentSink,
     type LevelStore,
     type SceneStore,
+    type SplatRenderer,
+    type SplatStore,
     type TileUpdate,
     type WorldScenes,
 } from './controller';
@@ -232,6 +235,8 @@ export interface Harness {
     readonly l: FakeLevels;
     readonly w: FakeScenes;
     readonly k: FakeContainers;
+    readonly sp: FakeSplats;
+    readonly spr: FakeSplatRenderer;
 }
 
 /** A unit square traced from any image: the silhouette every fake stamp gets. */
@@ -252,9 +257,13 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
     const l = new FakeLevels();
     const w = new FakeScenes();
     const k = new FakeContainers();
+    const sp = new FakeSplats();
+    const spr = new FakeSplatRenderer();
     let counter = 0;
     const c = new CartographyController({
         renderer: r,
+        splats: sp,
+        splatRenderer: spr,
         store: s,
         sink: d,
         levels: l,
@@ -267,7 +276,48 @@ export function makeHarness(stamps: readonly CatalogStamp[] = [], traced: Point[
             return `p${counter}`;
         },
     });
-    return { c, r, s, d, l, w, k };
+    return { c, r, s, d, l, w, k, sp, spr };
+}
+
+/** Splat maps in memory: layers and masks as last saved, with every write recorded. */
+class FakeSplats implements SplatStore {
+    layers: SplatLayer[] = [];
+    readonly masks = new Map<string, Uint8ClampedArray<ArrayBuffer>>();
+    readonly maskWrites: string[] = [];
+    load(): SplatLayer[] {
+        return [...this.layers];
+    }
+    async save(layers: readonly SplatLayer[]): Promise<void> {
+        this.layers = [...layers];
+        await Promise.resolve();
+    }
+    async readMask(layer: SplatLayer): Promise<Uint8ClampedArray<ArrayBuffer> | null> {
+        await Promise.resolve();
+        return this.masks.get(layer.path)?.slice() ?? null;
+    }
+    async writeMask(layer: SplatLayer, mask: Uint8ClampedArray<ArrayBuffer>): Promise<void> {
+        this.masks.set(layer.path, mask.slice());
+        this.maskWrites.push(layer.path);
+        await Promise.resolve();
+    }
+    pathFor(level: string | null): string {
+        return `splats/${level ?? 'all'}.png`;
+    }
+}
+
+/** Records what splat maps are drawn: key → the roles shown, and each partial update. */
+class FakeSplatRenderer implements SplatRenderer {
+    readonly shown = new Map<string, SplatLayer['roles']>();
+    readonly updates: { key: string; rect: MaskRect }[] = [];
+    set(key: string, layer: SplatLayer): void {
+        this.shown.set(key, layer.roles);
+    }
+    update(key: string, rect: MaskRect): void {
+        this.updates.push({ key, rect });
+    }
+    remove(key: string): void {
+        this.shown.delete(key);
+    }
 }
 
 /** One catalog stamp per definition, loaded through the real pack parser from module `pack`. */

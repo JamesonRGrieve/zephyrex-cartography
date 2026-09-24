@@ -117,16 +117,22 @@ interface Filled {
 }
 
 /** Fill descriptor for a biome area (region, brush stroke, or room floor) — textured, tinted. */
-function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean, resolve: TextureResolver): Filled {
+/**
+ * How a biome is drawn: water and ocean translucent, in a water texture or
+ * rippling; land in its texture, or grain in its colour. Shared by painted
+ * areas and splat-map blending.
+ */
+export function biomeLook(biome: BiomeKind, resolve: TextureResolver): Texturing & { readonly alpha: number } {
     const style = BIOME_STYLES[biome];
     const role = BIOME_TEXTURE[biome];
-    // Water and ocean stay translucent, rippling; land is its texture, or grain in its colour.
     if (role === null) {
-        const water = texturing(resolve, OPEN_WATER_ROLES[biome] ?? [], NO_TINT, 'ripple', style.fill);
-        return { outline, fill: style.fill, alpha: style.alpha, texture: water.texture, tint: water.tint, feather };
+        return { ...texturing(resolve, OPEN_WATER_ROLES[biome] ?? [], NO_TINT, 'ripple', style.fill), alpha: style.alpha };
     }
-    const land = texturing(resolve, [role], BIOME_TINT[biome], 'grain', style.fill);
-    return { outline, fill: style.fill, alpha: TEXTURE_ALPHA, texture: land.texture, tint: land.tint, feather };
+    return { ...texturing(resolve, [role], BIOME_TINT[biome], 'grain', style.fill), alpha: TEXTURE_ALPHA };
+}
+
+function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean, resolve: TextureResolver): Filled {
+    return { outline, fill: BIOME_STYLES[biome].fill, feather, ...biomeLook(biome, resolve) };
 }
 
 /** Fill descriptor for a texture role: a biome as a biome, any other role (a pack material) by its texture, or grain. */

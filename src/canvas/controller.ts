@@ -50,6 +50,7 @@ import {
     withRoomMaterials,
 } from '../tools/room';
 import { hasSceneSettings, type SceneSettings } from '../tools/scene-settings';
+import { blankMask, channelFor, type MaskRect, maskLength, maskPoint, newSplatLayer, paintDab, type SplatLayer } from '../tools/splat';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { DEFAULT_TRAVEL, exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
@@ -109,9 +110,56 @@ export interface ContainerService {
     remove: (pile: string) => Promise<void>;
 }
 
+/** The scene's splat maps: their layers (in the scene flag) and each one's mask pixels (a PNG in the world's data). */
+export interface SplatStore {
+    load: () => SplatLayer[];
+    save: (layers: readonly SplatLayer[]) => Promise<void>;
+    /** A layer's saved mask, or null when it has none yet or it cannot be read. */
+    readMask: (layer: SplatLayer) => Promise<Uint8ClampedArray<ArrayBuffer> | null>;
+    writeMask: (layer: SplatLayer, mask: Uint8ClampedArray<ArrayBuffer>) => Promise<void>;
+    /** Where a new splat map for `level` saves its mask. */
+    pathFor: (level: string | null) => string;
+}
+
+/** Draws splat maps, one per key (a level, or "" for every level). */
+export interface SplatRenderer {
+    set: (key: string, layer: SplatLayer, mask: Uint8ClampedArray) => void;
+    /** Redraw the part of `key`'s mask a brush just changed. */
+    update: (key: string, rect: MaskRect) => void;
+    remove: (key: string) => void;
+}
+
+/** A level's splat map: its layer and its mask's pixels. */
+interface Splat {
+    readonly layer: SplatLayer;
+    readonly mask: Uint8ClampedArray<ArrayBuffer>;
+}
+
+/** A step undo can take back: the feature list as it was, or a level's splat map before a blend stroke. */
+type HistoryEntry = { readonly kind: 'features'; readonly features: readonly Feature[] } | ({ readonly kind: 'blend'; readonly key: string } & Splat);
+
+/** A splat map's key: its level, or "" for one on every level. */
+function splatKey(level: string | null): string {
+    return level ?? '';
+}
+
+/** A blend brush dab, in scene terms. */
+export interface BlendDab {
+    readonly at: Point;
+    /** The texture role painted. */
+    readonly role: string;
+    /** Scene px. */
+    readonly radius: number;
+    /** 0–1 per dab. */
+    readonly strength: number;
+    readonly erase: boolean;
+}
+
 /** Everything the controller is injected with: rendering, persistence, document creation, levels, scenes, containers, packs, ids. */
 export interface ControllerPorts {
     readonly renderer: FeatureRenderer;
+    readonly splats: SplatStore;
+    readonly splatRenderer: SplatRenderer;
     readonly store: SceneStore;
     readonly sink: DocumentSink;
     readonly levels: LevelStore;
@@ -189,8 +237,12 @@ export class CartographyController {
     private features: Feature[] = [];
     private session: DrawSession | null = null;
     private brush: Brush | null = null;
-    private readonly history: Feature[][] = [];
-    private future: Feature[][] = [];
+    private readonly history: HistoryEntry[] = [];
+    private future: HistoryEntry[] = [];
+    /** Each level's splat map, by key. */
+    private readonly splats = new Map<string, Splat>();
+    /** The splat map as the blend stroke under way found it, for undo; null between strokes. */
+    private blendStart: (Splat & { readonly key: string }) | null = null;
     /** Inside {@link batch}: edits share the batch's one undo snapshot. */
     private batching = false;
     /** Document changes waiting for the current transaction to end. */
@@ -218,6 +270,8 @@ export class CartographyController {
     gridDistance = 0;
 
     private readonly renderer: FeatureRenderer;
+    private readonly splatStore: SplatStore;
+    private readonly splatRenderer: SplatRenderer;
     private readonly store: SceneStore;
     private readonly sink: DocumentSink;
     private readonly levelStore: LevelStore;
@@ -234,6 +288,8 @@ export class CartographyController {
 
     constructor(ports: ControllerPorts) {
         this.renderer = ports.renderer;
+        this.splatStore = ports.splats;
+        this.splatRenderer = ports.splatRenderer;
         this.store = ports.store;
         this.sink = ports.sink;
         this.levelStore = ports.levels;
@@ -513,9 +569,16 @@ export class CartographyController {
         for (const f of orphans) {
             this.renderer.remove(f.id);
         }
-        const prune = (snapshot: Feature[]): Feature[] => snapshot.filter((f) => !orphaned(f));
-        this.history.splice(0, this.history.length, ...this.history.map(prune));
-        this.future = this.future.map(prune);
+        // A blend on a level that is gone has nothing left to undo onto.
+        const prune = (entries: readonly HistoryEntry[]): HistoryEntry[] =>
+            entries.flatMap((entry): HistoryEntry[] => {
+                if (entry.kind === 'features') {
+                    return [{ kind: 'features', features: entry.features.filter((f) => !orphaned(f)) }];
+                }
+                return entry.layer.level !== null && findLevel(this.levelList, entry.layer.level) === null ? [] : [entry];
+            });
+        this.history.splice(0, this.history.length, ...prune(this.history));
+        this.future = prune(this.future);
         await this.store.save(this.features);
         await Promise.all(orphans.map(async (f) => this.discard(f)));
         await this.resyncDependents(before, orphans);
@@ -1101,15 +1164,14 @@ export class CartographyController {
         return true;
     }
 
-    /** Step back one edit, bringing the scene's generated documents back with it. */
+    /** Step back one edit, bringing the scene's generated documents (or a blend's mask) back with it. */
     async undo(): Promise<void> {
         const prev = this.history.pop();
         if (!prev) {
             return;
         }
-        this.future.push([...this.features]);
-        // One transaction: an undo lands whole or not at all.
-        await this.transaction(async () => this.restore(prev));
+        this.future.push(this.present(prev));
+        await this.revert(prev);
     }
 
     /** Re-apply an undone edit, documents included. */
@@ -1118,8 +1180,29 @@ export class CartographyController {
         if (!next) {
             return;
         }
-        this.history.push([...this.features]);
-        await this.transaction(async () => this.restore(next));
+        this.history.push(this.present(next));
+        await this.revert(next);
+    }
+
+    /** The present state of what `entry` records, to step back to it again. */
+    private present(entry: HistoryEntry): HistoryEntry {
+        if (entry.kind === 'features') {
+            return { kind: 'features', features: [...this.features] };
+        }
+        const now = this.splats.get(entry.key);
+        return now ? { kind: 'blend', key: entry.key, layer: now.layer, mask: now.mask.slice() } : entry;
+    }
+
+    /** Make what `entry` records the present. */
+    private async revert(entry: HistoryEntry): Promise<void> {
+        if (entry.kind === 'features') {
+            // One transaction: an undo lands whole or not at all.
+            await this.transaction(async () => this.restore(entry.features));
+            return;
+        }
+        this.splats.set(entry.key, { layer: entry.layer, mask: entry.mask.slice() });
+        this.redrawSplats();
+        await this.saveSplat(entry.key);
     }
 
     async toFront(id: string): Promise<void> {
@@ -1294,11 +1377,104 @@ export class CartographyController {
         if (this.batching) {
             return;
         }
-        this.history.push([...this.features]);
+        this.record({ kind: 'features', features: [...this.features] });
+    }
+
+    /** Push an undo step, capped, and drop the redo stack. */
+    private record(entry: HistoryEntry): void {
+        this.history.push(entry);
         if (this.history.length > MAX_HISTORY) {
             this.history.shift();
         }
         this.future = [];
+    }
+
+    /** Read every level's splat map in from the scene; a mask that cannot be read starts blank. */
+    async loadSplats(): Promise<void> {
+        const layers = this.splatStore.load();
+        const loaded = await Promise.all(layers.map(async (layer) => ({ layer, mask: (await this.splatStore.readMask(layer)) ?? blankMask(layer) })));
+        this.splats.clear();
+        for (const splat of loaded) {
+            this.splats.set(splatKey(splat.layer.level), splat);
+        }
+        this.redrawSplats();
+    }
+
+    /** The splat map of the level being edited, if it has one. */
+    splatLayer(): SplatLayer | null {
+        return this.splats.get(splatKey(this.active))?.layer ?? null;
+    }
+
+    /**
+     * One dab of the blend brush on the level being edited: its splat map,
+     * made to cover the scene if it has none yet, takes the role into a
+     * channel of its own (false once all four hold other roles, or with no
+     * scene to cover). The stroke ends, as one undo step, with `endBlend`.
+     */
+    blend(dab: BlendDab): boolean {
+        const key = splatKey(this.active);
+        const splat = this.splats.get(key) ?? this.newSplat();
+        const assigned = splat && channelFor(splat.layer, dab.role);
+        if (!splat || !assigned) {
+            return false;
+        }
+        this.blendStart ??= { key, layer: splat.layer, mask: splat.mask.slice() };
+        const rect = paintDab(splat.mask, assigned.layer, {
+            at: maskPoint(assigned.layer, dab.at),
+            radius: maskLength(assigned.layer, dab.radius),
+            channel: assigned.channel,
+            strength: dab.strength,
+            erase: dab.erase,
+        });
+        if (assigned.layer === this.splats.get(key)?.layer) {
+            this.splatRenderer.update(key, rect);
+        } else {
+            this.splats.set(key, { layer: assigned.layer, mask: splat.mask });
+            this.splatRenderer.set(key, assigned.layer, splat.mask);
+        }
+        return true;
+    }
+
+    /** End the blend stroke under way: one undo step, and its mask saved. */
+    async endBlend(): Promise<void> {
+        const start = this.blendStart;
+        if (!start) {
+            return;
+        }
+        this.blendStart = null;
+        this.record({ kind: 'blend', ...start });
+        await this.saveSplat(start.key);
+    }
+
+    /** A blank splat map over the scene for the level being edited, or null with no scene frame to cover. */
+    private newSplat(): Splat | null {
+        const here = this.scenes.current();
+        const frame = here ? this.scenes.frame(here.id) : null;
+        if (!frame) {
+            return null;
+        }
+        const layer = newSplatLayer(this.active, this.splatStore.pathFor(this.active), frame, frame.gridSize);
+        return { layer, mask: blankMask(layer) };
+    }
+
+    /** Draw the splat maps shown while editing the active level, and no others. */
+    private redrawSplats(): void {
+        for (const [key, splat] of this.splats) {
+            if (onLevel(splat.layer.level, this.active)) {
+                this.splatRenderer.set(key, splat.layer, splat.mask);
+            } else {
+                this.splatRenderer.remove(key);
+            }
+        }
+    }
+
+    /** Save one splat map's mask, and every layer's record. */
+    private async saveSplat(key: string): Promise<void> {
+        const splat = this.splats.get(key);
+        if (splat) {
+            await this.splatStore.writeMask(splat.layer, splat.mask);
+        }
+        await this.splatStore.save([...this.splats.values()].map((s) => s.layer));
     }
 
     /** Apply an in-place reordering `move` to a copy, persisting + redrawing if it changed. */
@@ -1344,5 +1520,6 @@ export class CartographyController {
                 this.renderer.set(f.id, f);
             }
         }
+        this.redrawSplats();
     }
 }

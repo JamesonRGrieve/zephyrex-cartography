@@ -9,6 +9,8 @@ function mount(story: { readonly args?: Partial<stories.PaintArgs> }): HTMLEleme
         biome: story.args?.biome ?? base?.biome ?? 'grassland',
         radius: story.args?.radius ?? base?.radius ?? 25,
         movementCost: story.args?.movementCost ?? base?.movementCost ?? 1,
+        mode: story.args?.mode ?? base?.mode ?? 'shapes',
+        strength: story.args?.strength ?? base?.strength ?? 0.3,
     });
     document.body.replaceChildren(el);
     return el;
@@ -77,8 +79,29 @@ describe('paint panel', () => {
         expect(cost().value).toBe('3');
     });
 
+    it('switches between laying ground and blending texture, blending with a strength in place of a cost', () => {
+        const root = mount(stories.Grassland);
+        const mode = root.querySelector<HTMLSelectElement>('#zc-paint-mode');
+        expect([...(mode?.options ?? [])].map((o) => o.textContent)).toEqual(['Areas and strokes', 'Blend', 'Unblend']);
+        const labels = (): (string | null)[] => [...root.querySelectorAll('label')].map((label) => label.textContent);
+        expect(labels()).toContain('Movement cost (×)');
+        if (mode) {
+            mode.value = 'blend';
+            mode.dispatchEvent(new Event('change'));
+        }
+        expect(root.querySelector<HTMLSelectElement>('#zc-paint-mode')?.value).toBe('blend');
+        expect(labels()).toContain('Strength (0.05–1)');
+        expect(labels()).not.toContain('Movement cost (×)');
+        const strength = [...root.querySelectorAll<HTMLInputElement>('input[type="number"]')].at(-1);
+        if (strength) {
+            strength.value = '2';
+            strength.dispatchEvent(new Event('change'));
+        }
+        expect([...root.querySelectorAll<HTMLInputElement>('input[type="number"]')].at(-1)?.value).toBe('0.3');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.NoTextureSet]) {
+        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.BlendingSand, stories.NoTextureSet]) {
             expect(mount(story).querySelectorAll('button')).toHaveLength(6);
         }
     });

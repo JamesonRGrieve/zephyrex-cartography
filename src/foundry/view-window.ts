@@ -61,6 +61,17 @@ export function createViewWindow(options: ViewWindowOptions): ViewWindow {
     };
 }
 
+/** A typed-input handler: `parse` what was typed and `apply` it, or refuse it (the input reverts). */
+export function acceptTyped<T>(parse: (typed: string) => T | null, apply: (value: T) => void): (typed: string) => boolean {
+    return (typed) => {
+        const value = parse(typed);
+        if (value !== null) {
+            apply(value);
+        }
+        return value !== null;
+    };
+}
+
 export interface SettingsWindowOptions<S> extends Omit<ViewWindowOptions, 'render'> {
     readonly initial: S;
     /** Runs after every choice, to put it in the tool's hand. */

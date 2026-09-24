@@ -31,11 +31,14 @@ import { activeScene, modifyBatch } from './foundry/scene-bridge';
 import { FoundrySceneStore } from './foundry/scene-store';
 import { createWorldScenes } from './foundry/scenes';
 import { createSilhouetteSource } from './foundry/silhouette';
+import { createSplatRenderer } from './foundry/splat-renderer';
+import { createSplatStore } from './foundry/splat-store';
 import { registerSubmapRuntime } from './foundry/submap-runtime';
 import { createSwitchLinker, type SwitchLinker } from './foundry/switch-linker';
 import { distance, type Point } from './geometry/spline';
 import { I18N } from './i18n';
 import { MODULE_ID } from './module-id';
+import type { BiomeKind } from './tools/biome';
 
 interface DrawState {
     controller: CartographyController;
@@ -47,6 +50,8 @@ interface DrawState {
     drag: { id: string; index: number; kind: 'move' | 'width'; anchor: Point } | null;
     down: Point | null;
     painting: boolean;
+    /** A blend stroke is under way (the pointer is down with the paint tool blending). */
+    blending: boolean;
     /** The link tool: the switch picked and its drawn links. */
     linker: SwitchLinker;
 }
@@ -153,6 +158,11 @@ function enterMode(st: DrawState, mode: Mode): void {
     st.drag = null;
     st.down = null;
     st.painting = false;
+    // A blend stroke cut short by a tool change still lands as one undo step.
+    if (st.blending) {
+        st.blending = false;
+        void st.controller.endBlend();
+    }
     st.controller.cancel();
     if (mode.kind === 'brush') {
         st.controller.begin(mode.brush, 'click');
@@ -219,22 +229,43 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
             void st.linker.click(pt);
             return;
         case 'brush':
-            if (pointerEvent.button === SECONDARY_BUTTON) {
-                void commitAndContinue(st, mode.brush);
-                return;
-            }
-            if (mode.brush.type === 'region') {
-                // A click drops a region vertex; a drag paints a freehand stroke (decided on move).
-                st.down = pt;
-                st.painting = false;
-                return;
-            }
-            st.controller.addPoint(pt);
+            brushDown(st, mode.brush, pt, pointerEvent.button);
     }
+}
+
+/** A press with a drawing brush in hand. */
+function brushDown(st: DrawState, brush: Brush, pt: Point, button: number): void {
+    if (button === SECONDARY_BUTTON) {
+        void commitAndContinue(st, brush);
+        return;
+    }
+    if (brush.type === 'region' && paint.current().mode !== 'shapes') {
+        // Blending: the whole press is one stroke into the level's splat map.
+        st.blending = true;
+        blendAt(st, brush.biome, pt);
+        return;
+    }
+    if (brush.type === 'region') {
+        // A click drops a region vertex; a drag paints a freehand stroke (decided on move).
+        st.down = pt;
+        st.painting = false;
+        return;
+    }
+    st.controller.addPoint(pt);
+}
+
+/** One dab of the blend brush at `pt`, as the paint panel sets it. */
+function blendAt(st: DrawState, biome: BiomeKind, pt: Point): void {
+    const { radius, strength, mode } = paint.current();
+    st.controller.blend({ at: pt, role: biome, radius, strength, erase: mode === 'unblend' });
 }
 
 function onPointerMove(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent): void {
     const pt = localPoint(pointerEvent, st.container);
+    if (st.blending && st.mode.kind === 'brush' && st.mode.brush.type === 'region') {
+        blendAt(st, st.mode.brush.biome, pt);
+        return;
+    }
     if (st.drag?.kind === 'width') {
         st.controller.previewPathWidth(st.drag.id, st.drag.index, distance(st.drag.anchor, pt));
         return;
@@ -260,6 +291,11 @@ function onPointerMove(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
 
 function onPointerUp(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent): void {
     const pt = localPoint(pointerEvent, st.container);
+    if (st.blending) {
+        st.blending = false;
+        void st.controller.endBlend();
+        return;
+    }
     if (st.drag) {
         const { id, index, kind, anchor } = st.drag;
         st.drag = null;
@@ -305,6 +341,8 @@ function setupDrawLayer(): void {
     const makeId = (): string => foundry.utils.randomID();
     const controller = new CartographyController({
         renderer,
+        splats: createSplatStore(activeScene),
+        splatRenderer: createSplatRenderer(container, packs.textures()),
         store: new FoundrySceneStore(activeScene),
         sink: new FoundryDocumentSink(activeScene, { makeId, modifyBatch, regionName, lightName, soundName }),
         levels: createLevelStore(activeScene),
@@ -322,6 +360,7 @@ function setupDrawLayer(): void {
     applyPathSettings(controller, paths.current());
     built = controller;
     controller.load();
+    void controller.loadSplats();
     levels.refresh();
     // The scene may have been edited under the other terrain setting; only the active GM writes documents.
     if (game.users?.activeGM?.isSelf === true) {
@@ -336,6 +375,7 @@ function setupDrawLayer(): void {
         drag: null,
         down: null,
         painting: false,
+        blending: false,
         linker: createSwitchLinker(controller, container),
     };
     state = st;

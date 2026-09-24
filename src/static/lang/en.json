@@ -44,7 +44,14 @@
             "Title": "Paint terrain",
             "Texture": "Texture",
             "Size": "Brush size (px)",
-            "MovementCost": "Movement cost (×)"
+            "MovementCost": "Movement cost (×)",
+            "Mode": "Brush",
+            "Modes": {
+                "Shapes": "Areas and strokes",
+                "Blend": "Blend",
+                "Unblend": "Unblend"
+            },
+            "Strength": "Strength (0.05–1)"
         },
         "Paths": {
             "Title": "Roads and rivers",

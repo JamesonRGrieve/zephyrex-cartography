@@ -73,6 +73,13 @@ export const I18N = {
         texture: key('Paint.Texture'),
         size: key('Paint.Size'),
         movementCost: key('Paint.MovementCost'),
+        mode: key('Paint.Mode'),
+        modes: {
+            shapes: key('Paint.Modes.Shapes'),
+            blend: key('Paint.Modes.Blend'),
+            unblend: key('Paint.Modes.Unblend'),
+        },
+        strength: key('Paint.Strength'),
     },
     paths: {
         title: key('Paths.Title'),

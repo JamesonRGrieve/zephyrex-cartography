@@ -12,7 +12,7 @@ import type { WallPreset } from '../tools/wall-presets';
 import { renderPathPanel } from '../ui/path-panel-view';
 import { localize } from './localize';
 import { materialLabel, wallKindNames } from './materials-runtime';
-import { createSettingsWindow } from './view-window';
+import { acceptTyped, createSettingsWindow } from './view-window';
 
 const PANEL_WIDTH = 300;
 const PANEL_HEIGHT = 200;
@@ -63,13 +63,9 @@ export function registerPathRuntime(textureRoles: () => string[], onChange: (set
                     wallKinds: wallKindNames(),
                 },
                 {
-                    setWidth: (typed) => {
-                        const width = parseSizePx(typed);
-                        if (width !== null) {
-                            choose({ ...settings, width });
-                        }
-                        return width !== null;
-                    },
+                    setWidth: acceptTyped(parseSizePx, (width) => {
+                        choose({ ...settings, width });
+                    }),
                     setRiver: (river) => {
                         choose({ ...settings, river });
                     },

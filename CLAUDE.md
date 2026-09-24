@@ -710,6 +710,28 @@ option**: a splat map, as in Dungeondraft and Inkarnate.
   so it renders without the module.
 - **Everything else as today.** Undo, levels, the scene spec (a mask can be
   given as a file path) and the e2e suite all apply.
+- **[done] Blend painting.** The paint panel's Brush picks shapes, blend or
+  unblend, and blending takes a strength (0.05–1) instead of a cost.
+  - A level's first blend makes its `SplatLayer` (`tools/splat.ts`): the
+    scene's bounds at 8 mask px per grid square, and channel roles filled
+    as textures are first blended. A fifth texture on a full layer is
+    refused.
+  - A dab is a soft round brush into one channel. It takes the same weight
+    from the others, and unblend just takes.
+  - The mask is an exact PNG (`tools/png.ts`, which encodes and decodes
+    itself: a canvas would premultiply the unused alpha channel away). It
+    is saved at the stroke's end to
+    `worlds/<world>/zephyrex-cartography/splat-<scene>-<level|all>.png`,
+    and the scene's `splats` flag keeps each layer's path, bounds, size,
+    roles and level (`foundry/splat-store.ts`).
+  - A whole stroke is one undo step, which restores the mask as it was.
+  - `foundry/splat-renderer.ts` draws each layer as one quad beneath the
+    painted terrain. Its shader blends the four channel textures, each
+    tiled by repeat wrap at its own size and tinted like its biome.
+  - `tests/e2e/pointer.spec.ts` reads the saved PNG back in Foundry and
+    screenshots the blend.
+  - **Still open:** baking to a native Tile or Level background, masks in
+    the scene spec, and layering more than one mask per level.
 
 ---
 

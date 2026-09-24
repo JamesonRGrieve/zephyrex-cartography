@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * The paint tool's window: opened with the tool, it picks the texture the
- * tool paints and its brush size. A click-drawn area and a dragged stroke
- * both take the texture; the size is a stroke's radius.
+ * The paint tool's window: opened with the tool, it sets what the tool does
+ * (lay areas and strokes, or blend texture into the level's splat map, or
+ * take it out), the texture, the brush size, and then the ground's movement
+ * cost or the blend's strength.
  */
 import { BIOME_TITLE_KEYS, I18N } from '../i18n';
 import type { BiomeKind } from '../tools/biome';
 import { parseSizePx } from '../tools/size-input';
+import { DEFAULT_STRENGTH, type PaintMode, parseStrength } from '../tools/splat';
 import { DEFAULT_BRUSH_RADIUS } from '../tools/stroke';
 import { NORMAL_COST, parseCostInput } from '../tools/terrain-cost';
 import { biomeSwatches, type TextureResolver } from '../tools/texture';
 import { renderPaintPanel } from '../ui/paint-panel-view';
 import { localize } from './localize';
-import { createSettingsWindow, type SettingsWindow } from './view-window';
+import { acceptTyped, createSettingsWindow, type SettingsWindow } from './view-window';
 
 const PANEL_WIDTH = 340;
-const PANEL_HEIGHT = 380;
+const PANEL_HEIGHT = 420;
 
 /** The texture a fresh session paints. */
 const DEFAULT_PAINT: BiomeKind = 'grassland';
@@ -26,6 +28,9 @@ export interface PaintSettings {
     readonly radius: number;
     /** What crossing painted ground costs on foot (1: ordinary ground). */
     readonly movementCost: number;
+    readonly mode: PaintMode;
+    /** 0.05–1: how much one blend dab lays down. */
+    readonly strength: number;
 }
 
 /** `onChange` runs after every choice, to put it in the tool's hand. */
@@ -35,32 +40,38 @@ export function registerPaintRuntime(textures: () => TextureResolver, onChange: 
         title: () => localize(I18N.paint.title),
         width: PANEL_WIDTH,
         height: PANEL_HEIGHT,
-        initial: { biome: DEFAULT_PAINT, radius: DEFAULT_BRUSH_RADIUS, movementCost: NORMAL_COST },
+        initial: { biome: DEFAULT_PAINT, radius: DEFAULT_BRUSH_RADIUS, movementCost: NORMAL_COST, mode: 'shapes', strength: DEFAULT_STRENGTH },
         onChange,
         render: (root, settings, choose) => {
             const choices = biomeSwatches(textures()).map((swatch) => ({ ...swatch, label: localize(BIOME_TITLE_KEYS[swatch.biome]) }));
+            const p = I18N.paint;
             renderPaintPanel(
                 root,
                 { choices, ...settings },
-                { texture: localize(I18N.paint.texture), size: localize(I18N.paint.size), movementCost: localize(I18N.paint.movementCost) },
+                {
+                    texture: localize(p.texture),
+                    size: localize(p.size),
+                    movementCost: localize(p.movementCost),
+                    mode: localize(p.mode),
+                    modes: { shapes: localize(p.modes.shapes), blend: localize(p.modes.blend), unblend: localize(p.modes.unblend) },
+                    strength: localize(p.strength),
+                },
                 {
                     pick: (biome) => {
                         choose({ ...settings, biome });
                     },
-                    setSize: (typed) => {
-                        const radius = parseSizePx(typed);
-                        if (radius !== null) {
-                            choose({ ...settings, radius });
-                        }
-                        return radius !== null;
+                    setSize: acceptTyped(parseSizePx, (radius) => {
+                        choose({ ...settings, radius });
+                    }),
+                    setMovementCost: acceptTyped(parseCostInput, (movementCost) => {
+                        choose({ ...settings, movementCost });
+                    }),
+                    setMode: (mode) => {
+                        choose({ ...settings, mode });
                     },
-                    setMovementCost: (typed) => {
-                        const movementCost = parseCostInput(typed);
-                        if (movementCost !== null) {
-                            choose({ ...settings, movementCost });
-                        }
-                        return movementCost !== null;
-                    },
+                    setStrength: acceptTyped(parseStrength, (strength) => {
+                        choose({ ...settings, strength });
+                    }),
                 },
             );
         },

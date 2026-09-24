@@ -252,6 +252,62 @@ test('the paint tool paints the texture and brush size picked in its panel: an a
     await expect.poll(async () => featureAt(world, { x: 1100, y: 320 })).toMatchObject({ type: 'stroke', biome: 'forest', radius: 60 });
 });
 
+test('the paint tool blends texture into the level’s splat map, saved as an exact mask and undone as one stroke', async ({ world }) => {
+    await useTool(world, 'paint', { panel: true });
+    const panel = world.locator(`#${MODULE_ID}-paint`);
+    await panel.getByLabel('Brush', { exact: true }).selectOption('blend');
+    await panel.getByRole('button', { name: 'Sand' }).click();
+    await panel.getByLabel('Brush size (px)').fill('150');
+    await panel.getByLabel('Brush size (px)').press('Enter');
+    await panel.getByLabel('Strength (0.05–1)').fill('1');
+    await panel.getByLabel('Strength (0.05–1)').press('Enter');
+    await tuckPanels(world);
+    await holdView(world);
+    await dragScene(world, { x: 500, y: 700 }, [
+        { x: 800, y: 720 },
+        { x: 1100, y: 700 },
+        { x: 1400, y: 740 },
+    ]);
+    // The stroke is saved as it ends: the layer on the scene, the mask in the world's data.
+    const saved = async (): Promise<{ roles: readonly (string | null)[]; weight: number } | null> =>
+        world.evaluate(async () => {
+            const layer = game.modules?.get('zephyrex-cartography').api.controller()?.splatLayer();
+            if (!layer) {
+                return null;
+            }
+            const response = await fetch(layer.path, { cache: 'no-store' });
+            // The upload may still be on its way.
+            if (!response.ok || response.headers.get('content-type') !== 'image/png') {
+                return null;
+            }
+            const bytes = new Uint8Array(await response.arrayBuffer());
+            // Read the saved PNG back with the browser's own decoder: the red channel of the pixel under the stroke's middle.
+            // Through WebGL, unpremultiplied: a 2D canvas would zero every channel where the unused fourth one (alpha) is 0.
+            const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+            const gl = new OffscreenCanvas(1, 1).getContext('webgl2');
+            if (!gl) {
+                return null;
+            }
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, gl.createFramebuffer());
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+            const scale = bitmap.width / layer.bounds.width;
+            const pixel = new Uint8Array(4);
+            gl.readPixels(Math.floor((1100 - layer.bounds.x) * scale), Math.floor((700 - layer.bounds.y) * scale), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+            return { roles: layer.roles, weight: pixel[0] ?? -1 };
+        });
+    await expect.poll(saved).toMatchObject({ roles: ['sand', null, null, null] });
+    expect((await saved())?.weight).toBeGreaterThan(150);
+    await frameScene(world);
+    await expect(world.locator('#board')).toHaveScreenshot('sand-blend.png');
+
+    await world.evaluate(async () => game.modules?.get('zephyrex-cartography').api.controller()?.undo());
+    await expect.poll(async () => (await saved())?.weight).toBe(0);
+});
+
 test('the river tool draws the liquid, shade, bed and width picked in its panel', async ({ world }) => {
     await useTool(world, 'river', { panel: true });
     const panel = world.locator(`#${MODULE_ID}-paths`);
