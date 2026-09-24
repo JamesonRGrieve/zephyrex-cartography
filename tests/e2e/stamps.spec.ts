@@ -47,6 +47,33 @@ test('a stamp’s terrain and surface become native Modify Movement Cost and Def
     });
 });
 
+test('a stamp’s particles run as native particle generators, following its variant', async ({ world }) => {
+    /** The particle containers Foundry's generators put on the primary canvas, with their elevation and particles. */
+    const running = async (): Promise<{ elevation: number; particles: number }[]> =>
+        world.evaluate(() =>
+            (canvas?.primary?.children ?? [])
+                .filter((child) => child instanceof foundry.canvas.primary.PrimaryCanvasParticleContainer)
+                .map((child) => ({ elevation: child.elevation, particles: child.children.length })),
+        );
+    const crate = await world.evaluate(
+        async () => (await game.modules?.get('zephyrex-cartography').api.controller()?.placeStamp({ stamp: 'zc-e2e-pack:crate', x: 400, y: 400 })) ?? '',
+    );
+    expect(await running()).toEqual([]);
+    const setVariant = async (variant: number): Promise<void> => {
+        await world.evaluate(async ({ id, index }) => game.modules?.get('zephyrex-cartography').api.controller()?.setStampVariant(id, index), {
+            id: crate,
+            index: variant,
+        });
+    };
+    // Smashed, it smokes: one emitter at the stamp's base, spawning its particles.
+    await setVariant(1);
+    await expect.poll(running).toEqual([{ elevation: 0, particles: expect.any(Number) }]);
+    await expect.poll(async () => (await running())[0]?.particles ?? 0).toBeGreaterThan(0);
+    // Back to whole, the smoke stops and its container goes.
+    await setVariant(0);
+    await expect.poll(running).toEqual([]);
+});
+
 test('a placed stamp is a native tile centred on its point, with its light', async ({ world }) => {
     const placed = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();

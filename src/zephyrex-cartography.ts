@@ -11,7 +11,7 @@
 import './styles/entry.css';
 import { type Brush, CartographyController } from './canvas/controller';
 import { IDLE, type Mode, modeForTool } from './canvas/modes';
-import { GraphicsFeatureRenderer } from './canvas/renderer';
+import { type FeatureRenderer, GraphicsFeatureRenderer } from './canvas/renderer';
 import { inOwnGroup, moduleTool, NATIVE_GROUPS, NATIVE_TOOLS, type NativeTool, nativeToolName } from './canvas/tool-placement';
 import { registerApi } from './foundry/api';
 import { lightName, regionName, soundName } from './foundry/document-names';
@@ -24,6 +24,7 @@ import { createLevelStore } from './foundry/levels';
 import { registerMaterialsRuntime } from './foundry/materials-runtime';
 import { registerPackRuntime } from './foundry/pack-runtime';
 import { registerPaintRuntime } from './foundry/paint-runtime';
+import { withParticles } from './foundry/particles';
 import { type PathSettings, registerPathRuntime } from './foundry/path-runtime';
 import { createPixiSurface } from './foundry/pixi-surface';
 import { activeScene, modifyBatch } from './foundry/scene-bridge';
@@ -38,6 +39,8 @@ import { MODULE_ID } from './module-id';
 
 interface DrawState {
     controller: CartographyController;
+    /** What draws the features, and runs their particles. */
+    renderer: FeatureRenderer;
     container: PIXI.Container;
     mode: Mode;
     /** A control point being dragged: moved, or (Shift) its path width set by distance from `anchor`. */
@@ -118,6 +121,8 @@ function localPoint(pointerEvent: PIXI.FederatedPointerEvent, container: PIXI.Co
 
 function teardown(): void {
     if (state) {
+        // Particles run outside the layer's container, so a rebuild without a canvas redraw would leave them going.
+        state.renderer.clear();
         state.container.destroy({ children: true });
         state = null;
     }
@@ -290,7 +295,11 @@ function setupDrawLayer(): void {
     capturePointer(container, false);
     canvas.stage.addChild(container);
 
-    const renderer = new GraphicsFeatureRenderer(createPixiSurface(container), packs.textures());
+    // Particles need the scene's levels and grid, which the controller they draw for holds.
+    let built: CartographyController | null = null;
+    const renderer = withParticles(new GraphicsFeatureRenderer(createPixiSurface(container), packs.textures()), canvas.level?.id ?? null, () =>
+        built ? { levels: built.levels, gridDistance: built.gridDistance } : null,
+    );
     const makeId = (): string => foundry.utils.randomID();
     const controller = new CartographyController({
         renderer,
@@ -308,6 +317,7 @@ function setupDrawLayer(): void {
     controller.gridDistance = canvas.scene?.grid.distance ?? 0;
     controller.brushRadius = paint.current().radius;
     applyPathSettings(controller, paths.current());
+    built = controller;
     controller.load();
     levels.refresh();
     // The scene may have been edited under the other terrain setting; only the active GM writes documents.
@@ -315,7 +325,16 @@ function setupDrawLayer(): void {
         void controller.setTerrainRegions(terrainRegionsEnabled());
     }
 
-    const st: DrawState = { controller, container, mode: IDLE, drag: null, down: null, painting: false, linker: createSwitchLinker(controller, container) };
+    const st: DrawState = {
+        controller,
+        renderer,
+        container,
+        mode: IDLE,
+        drag: null,
+        down: null,
+        painting: false,
+        linker: createSwitchLinker(controller, container),
+    };
     state = st;
     // A redraw keeps Foundry's control group and tool (it re-activates the layer that was active), so a module tool
     // selected in Walls or Tiles is still in hand: pick it straight back up.

@@ -614,10 +614,19 @@ These make everything after them cheaper and safer, so they come first.
 ### Priority 6: sounds, particles and effects
 - **Ambient sounds**, as stamp emitters (a generator's hum, a fountain), at
   the right elevation (Priority 1).
-- **Particle emitters.** v14's `ParticleGenerator` [14.355] and the VFX
-  module [14.356, built on animejs] draw native canvas particles. Stamps
-  declare emitters (smoke, embers, sparks, dripping water) as an additive
-  pack-schema field.
+- **[done] Particle emitters.** Each emitter a stamp's variant declares
+  (smoke, embers, sparks, dripping water) runs as v14's native
+  `ParticleGenerator` [14.355] in effect mode, keeping its count alive
+  (`manual: false`; effect mode otherwise spawns only on request).
+  - `tools/particles.ts` plans them in scene terms: the spawn point or
+    footprint box, speed in px per second, the stamp's rotation added to the
+    angle, and elevation as the stamp's floor plus its own height.
+  - Particles are per client, not documents, so `foundry/particles.ts` wraps
+    the feature renderer: a drawn stamp starts its emitters, a changed one
+    restarts them, a removed one stops them hard. Only emitters on the
+    viewed level run; viewing another level redraws the canvas.
+  - `tests/e2e/stamps.spec.ts` proves them in Foundry. The VFX module
+    [14.356] is not used.
 - **Canvas shake** (`CanvasShakeEffect` [14.355]) is for scripted moments
   such as explosions, not authored scene content. It is last: a region
   behaviour or macro could trigger it if a use appears.
@@ -724,7 +733,8 @@ imports).
     level, removed by a variant with `sound: null`. `tile`, the new light
     and door fields, `surface` and `terrain` are realised too (see their
     priorities).
-  - Not yet realised: particles, transition movement, and pile `states`. The engine takes each one up as its roadmap priority lands.
+  - Particles run as native particle generators (Priority 6).
+  - Not yet realised: transition movement, and pile `states`. The engine takes each one up as its roadmap priority lands.
     Packs may author them now; they are validated and snapshotted on placed
     stamps, so they take effect as soon as that priority ships.
 - **Evolution:** v1 changes are **additive only**. A breaking change becomes a new
