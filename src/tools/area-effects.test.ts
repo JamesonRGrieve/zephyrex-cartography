@@ -101,6 +101,7 @@ describe('area region display', () => {
             { visibility: 'always' },
             { highlight: 'coverage' },
             { measurements: true },
+            { observed: true },
             { restriction: { type: 'move', priority: 0 } },
         ] as const) {
             const display = { ...DEFAULT_AREA_DISPLAY, ...change };
@@ -110,10 +111,19 @@ describe('area region display', () => {
     });
 
     it('reads each persisted field, or its default, and a restriction only of a type Foundry has', () => {
-        expect(parseAreaDisplay({ visibility: 'observer', highlight: 'coverage', measurements: true, restriction: { type: 'light', priority: 2 } })).toEqual({
+        expect(
+            parseAreaDisplay({
+                visibility: 'observer',
+                highlight: 'coverage',
+                measurements: true,
+                observed: true,
+                restriction: { type: 'light', priority: 2 },
+            }),
+        ).toEqual({
             visibility: 'observer',
             highlight: 'coverage',
             measurements: true,
+            observed: true,
             restriction: { type: 'light', priority: 2 },
         });
         expect(parseAreaDisplay({ visibility: 'nobody', restriction: { type: 'smell' } })).toBeUndefined();

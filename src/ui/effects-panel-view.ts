@@ -78,6 +78,8 @@ export interface RegionDisplayLabels {
     readonly highlight: string;
     readonly highlights: Readonly<Record<HighlightMode, string>>;
     readonly measurements: string;
+    /** Players are the region's observers. */
+    readonly observed: string;
     readonly restriction: string;
     /** The "not restricted" choice. */
     readonly unrestricted: string;
@@ -122,6 +124,9 @@ function displaySection(display: AreaDisplay, labels: RegionDisplayLabels, setDi
         ),
         labelledCheckbox(labels.measurements, display.measurements, 'area-measurements', (measurements) => {
             setDisplay({ ...display, measurements });
+        }),
+        labelledCheckbox(labels.observed, display.observed, 'area-observed', (observed) => {
+            setDisplay({ ...display, observed });
         }),
         choice(
             'zc-area-restriction',

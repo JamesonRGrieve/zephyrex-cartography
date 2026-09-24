@@ -475,6 +475,9 @@ export function regionCreateData(regions: readonly RegionDoc[], ids: readonly st
     }));
 }
 
+/** `CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER`. */
+const OWNERSHIP_OBSERVER = 2;
+
 /** `CONST.REGION_VISIBILITY` values. */
 const VISIBILITY_IDS: Readonly<Record<RegionVisibility, number>> = { layer: REGION_VISIBILITY_LAYER, gamemaster: 1, always: 2, observer: 3 };
 
@@ -483,7 +486,7 @@ const VISIBILITY_IDS: Readonly<Record<RegionVisibility, number>> = { layer: REGI
  * exactly one level (and refuses the create otherwise), so a region on every
  * level, or spanning several, is left unrestricted.
  */
-function displayData(region: RegionDoc): Pick<RegionCreateData, 'visibility' | 'highlightMode' | 'displayMeasurements' | 'restriction'> {
+function displayData(region: RegionDoc): Pick<RegionCreateData, 'visibility' | 'highlightMode' | 'displayMeasurements' | 'restriction' | 'ownership'> {
     const display = region.display;
     if (display === undefined) {
         return { visibility: REGION_VISIBILITY_LAYER };
@@ -495,5 +498,6 @@ function displayData(region: RegionDoc): Pick<RegionCreateData, 'visibility' | '
         highlightMode: display.highlight,
         displayMeasurements: display.measurements,
         ...(restriction !== null && onOneLevel ? { restriction: { enabled: true, ...restriction } } : {}),
+        ...(display.observed ? { ownership: { default: OWNERSHIP_OBSERVER } } : {}),
     };
 }

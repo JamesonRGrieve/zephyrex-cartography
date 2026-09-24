@@ -199,6 +199,8 @@ export interface RegionCreateData extends OnLevels {
     readonly displayMeasurements?: boolean;
     /** Its shapes clipped to walls of `type` (a `CONST.EDGE_RESTRICTION_TYPES` value) and sources past `priority`; left out, unrestricted. */
     readonly restriction?: { readonly enabled: boolean; readonly type: string; readonly priority: number };
+    /** `CONST.DOCUMENT_OWNERSHIP_LEVELS` for every user; left out, Foundry's (the GM's alone). */
+    readonly ownership?: { readonly default: number };
 }
 
 /** A region redrawn in place: everything but its behaviours, which are embedded documents of their own. */

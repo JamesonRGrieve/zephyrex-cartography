@@ -128,7 +128,7 @@ test('an area’s region shows as the spec says, and is shaped by walls only on 
             { x: x + 4, y: 5 },
             { x, y: 5 },
         ];
-        const display = { visibility: 'always', highlight: 'coverage', measurements: true, restriction: { type: 'sight', priority: 2 } };
+        const display = { visibility: 'always', highlight: 'coverage', measurements: true, observed: true, restriction: { type: 'sight', priority: 2 } };
         const outcome = await game.modules?.get('zephyrex-cartography').api.buildSpec({
             schemaVersion: 1,
             levels: [{ key: 'g', name: 'Ground' }],
@@ -147,13 +147,14 @@ test('an area’s region shows as the spec says, and is shaped by walls only on 
                     visibility: r.visibility,
                     highlightMode: r.highlightMode,
                     displayMeasurements: r.displayMeasurements,
+                    playersObserve: r.ownership['default'] === CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER,
                     restriction: { enabled: r.restriction.enabled, type: r.restriction.type, priority: r.restriction.priority },
                 })),
         };
     });
     expect(regions.problems).toEqual([]);
     // Foundry's ALWAYS visibility is 2; the marsh shows on every level, which Foundry cannot restrict.
-    const shown = { visibility: 2, highlightMode: 'coverage', displayMeasurements: true };
+    const shown = { visibility: 2, highlightMode: 'coverage', displayMeasurements: true, playersObserve: true };
     expect(regions.regions).toEqual([
         { name: 'Room', ...shown, restriction: { enabled: true, type: 'sight', priority: 2 } },
         { name: 'Marsh', ...shown, restriction: expect.objectContaining({ enabled: false }) },

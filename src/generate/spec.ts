@@ -94,6 +94,10 @@ const areaDisplay = z
         visibility: z.enum(REGION_VISIBILITIES).default(DEFAULT_AREA_DISPLAY.visibility).describe("Who sees the region, as Foundry's Region visibility."),
         highlight: z.enum(HIGHLIGHT_MODES).default(DEFAULT_AREA_DISPLAY.highlight).describe('Highlight its true shapes, or the grid spaces it covers.'),
         measurements: z.boolean().default(DEFAULT_AREA_DISPLAY.measurements).describe('Show its measurements.'),
+        observed: z
+            .boolean()
+            .default(DEFAULT_AREA_DISPLAY.observed)
+            .describe('Make every player an observer of the region, so the "observer" visibility shows it to them.'),
         restriction: z
             .object({ type: z.enum(RESTRICTION_TYPES), priority: z.number().int().min(0).default(0) })
             .strict()

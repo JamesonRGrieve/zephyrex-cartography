@@ -732,6 +732,7 @@
                                     "visibility": "layer",
                                     "highlight": "shapes",
                                     "measurements": false,
+                                    "observed": false,
                                     "restriction": null
                                 },
                                 "description": "How the area's Scene Region shows, and whether walls shape it.",
@@ -760,6 +761,11 @@
                                     "measurements": {
                                         "default": false,
                                         "description": "Show its measurements.",
+                                        "type": "boolean"
+                                    },
+                                    "observed": {
+                                        "default": false,
+                                        "description": "Make every player an observer of the region, so the \"observer\" visibility shows it to them.",
                                         "type": "boolean"
                                     },
                                     "restriction": {
@@ -1122,6 +1128,7 @@
                                     "visibility": "layer",
                                     "highlight": "shapes",
                                     "measurements": false,
+                                    "observed": false,
                                     "restriction": null
                                 },
                                 "description": "How the area's Scene Region shows, and whether walls shape it.",
@@ -1150,6 +1157,11 @@
                                     "measurements": {
                                         "default": false,
                                         "description": "Show its measurements.",
+                                        "type": "boolean"
+                                    },
+                                    "observed": {
+                                        "default": false,
+                                        "description": "Make every player an observer of the region, so the \"observer\" visibility shows it to them.",
                                         "type": "boolean"
                                     },
                                     "restriction": {
@@ -1651,6 +1663,7 @@
                                     "visibility": "layer",
                                     "highlight": "shapes",
                                     "measurements": false,
+                                    "observed": false,
                                     "restriction": null
                                 },
                                 "description": "How the area's Scene Region shows, and whether walls shape it.",
@@ -1679,6 +1692,11 @@
                                     "measurements": {
                                         "default": false,
                                         "description": "Show its measurements.",
+                                        "type": "boolean"
+                                    },
+                                    "observed": {
+                                        "default": false,
+                                        "description": "Make every player an observer of the region, so the \"observer\" visibility shows it to them.",
                                         "type": "boolean"
                                     },
                                     "restriction": {

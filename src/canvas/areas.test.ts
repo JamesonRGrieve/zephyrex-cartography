@@ -58,7 +58,13 @@ describe('area settings', () => {
 
     it('give an area a region of its own for a display of its own alone', async () => {
         const { c, d } = await scene();
-        const display = { visibility: 'always', highlight: 'coverage', measurements: true, restriction: { type: 'light', priority: 2 } } as const;
+        const display = {
+            visibility: 'always',
+            highlight: 'coverage',
+            measurements: true,
+            observed: false,
+            restriction: { type: 'light', priority: 2 },
+        } as const;
         expect(await c.setAreaSettings('p2', { ...PLAIN, display })).toBe(true);
         expect(d.regions.flat()).toEqual([expect.objectContaining({ label: { kind: 'terrain', biome: 'marsh' }, behaviour: null, display })]);
     });

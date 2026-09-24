@@ -648,6 +648,11 @@ These make everything after them cheaper and safer, so they come first.
     shapes or covered grid spaces), `displayMeasurements`, and
     `restriction`: the region shaped by walls of one type (light, darkness,
     sight, sound or move) with a `priority`, so an effect stops at walls.
+    - **[done] `ownership`.** `observed` makes every player an observer of
+      the region (default ownership OBSERVER), which is what Foundry's
+      "Always for Observers" visibility tests. A generated region is
+      recreated on re-sync, so ownership lives on the feature, not the
+      document.
     - Foundry restricts only a region on exactly one level and refuses the
       create otherwise, so a restriction is sent only then.
     - An area with a display other than the default gets its region.
@@ -656,7 +661,6 @@ These make everything after them cheaper and safer, so they come first.
       `tests/e2e/structures.spec.ts` checks the real Region.
   - `hidden` [14.360]: GM-only, with behaviours off. Blocked: not in the
     14.359 schema;
-  - `ownership`;
   - `attachment.token`: a region that moves with a token [14.353, renamed
     14.356].
 - **Region behaviours** on terrain regions and rooms. Generated today:

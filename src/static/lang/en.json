@@ -99,7 +99,8 @@
             "Remove": "Remove",
             "ActiveEffects": "Active Effect UUIDs, one per line",
             "Region": "Region",
-            "Unrestricted": "Not shaped by walls"
+            "Unrestricted": "Not shaped by walls",
+            "Observed": "Players observe it"
         },
         "Materials": {
             "Title": "Room materials",

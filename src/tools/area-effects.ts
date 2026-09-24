@@ -124,21 +124,23 @@ export const RESTRICTION_TYPES = ['light', 'darkness', 'sight', 'sound', 'move']
 export type RestrictionType = (typeof RESTRICTION_TYPES)[number];
 
 /**
- * How an area's region shows and whether it is shaped by walls. A
- * restriction does not bar anything: Foundry clips the region's shapes to
- * walls of its type (and, for light, darkness and sight, sources at or past
- * its priority), cast from each shape's origin like a light, so an effect
- * stops at walls.
+ * How an area's region shows and whether it is shaped by walls. `observed`
+ * makes every player an observer of the region (its default ownership), so
+ * the `observer` visibility shows it to them. A restriction does not bar
+ * anything: Foundry clips the region's shapes to walls of its type (and, for
+ * light, darkness and sight, sources at or past its priority), cast from each
+ * shape's origin like a light, so an effect stops at walls.
  */
 export interface AreaDisplay {
     readonly visibility: RegionVisibility;
     readonly highlight: HighlightMode;
     readonly measurements: boolean;
+    readonly observed: boolean;
     readonly restriction: { readonly type: RestrictionType; readonly priority: number } | null;
 }
 
-/** A region as the engine makes one: on the Regions layer, its true shapes, no measurements, unrestricted. */
-export const DEFAULT_AREA_DISPLAY: AreaDisplay = { visibility: 'layer', highlight: 'shapes', measurements: false, restriction: null };
+/** A region as the engine makes one: on the Regions layer, its true shapes, no measurements, the GM's alone, unrestricted. */
+export const DEFAULT_AREA_DISPLAY: AreaDisplay = { visibility: 'layer', highlight: 'shapes', measurements: false, observed: false, restriction: null };
 
 /** What an area carries: its effects and its region's display, each left out of the stored JSON while it has none. */
 export interface Affected {
@@ -153,8 +155,14 @@ export function displayOf(feature: Affected): AreaDisplay {
 
 /** Whether `display` is anything but the default. */
 export function customDisplay(display: AreaDisplay): boolean {
-    const { visibility, highlight, measurements, restriction } = DEFAULT_AREA_DISPLAY;
-    return display.visibility !== visibility || display.highlight !== highlight || display.measurements !== measurements || display.restriction !== restriction;
+    const { visibility, highlight, measurements, observed, restriction } = DEFAULT_AREA_DISPLAY;
+    return (
+        display.visibility !== visibility ||
+        display.highlight !== highlight ||
+        display.measurements !== measurements ||
+        display.observed !== observed ||
+        display.restriction !== restriction
+    );
 }
 
 /** A display as stored: undefined for the default. */
@@ -187,6 +195,7 @@ export function parseAreaDisplay(v: unknown): AreaDisplay | undefined {
         visibility: oneOf(REGION_VISIBILITIES, v['visibility'], DEFAULT_AREA_DISPLAY.visibility),
         highlight: oneOf(HIGHLIGHT_MODES, v['highlight'], DEFAULT_AREA_DISPLAY.highlight),
         measurements: v['measurements'] === true,
+        observed: v['observed'] === true,
         restriction: type === undefined ? null : { type, priority: priority ?? 0 },
     });
 }
