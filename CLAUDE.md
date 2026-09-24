@@ -582,9 +582,15 @@ These make everything after them cheaper and safer, so they come first.
   where they are rectangles, and terrain painted on the grid becomes exact
   grid cells.
 - **Region fields**:
-  - `color`;
-  - `restriction` (a region acting as a barrier of type light, darkness,
-    sight, sound or move) with its `priority`;
+  - **[done]** `color`: every generated region is coloured by what it is
+    (`tools/region-colours.ts`), terrain in its biome's colour, instead of
+    Foundry's random pick;
+  - **[done]** `restriction` for movement: a stamp whose `physical` says
+    `blocksMovement` gets a "<stamp> (impassable)" region barring movement.
+    Foundry restricts only a region on exactly one level (14.359
+    `_computeShapeConstraints`), and a batch rejects the create otherwise, so
+    a stamp on every level gets one per level. **Still open:** the light,
+    darkness, sight and sound restrictions, and `priority`;
   - `hidden` [14.360]: GM-only, with behaviours off;
   - `highlightMode` (covered grid spaces) and `displayMeasurements`;
   - `ownership`;

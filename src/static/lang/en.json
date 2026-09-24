@@ -144,6 +144,7 @@
             "Floor": "Floor of {level}",
             "Terrain": "{name} terrain",
             "Surface": "{name} surface",
+            "Body": "{name} (impassable)",
             "Transition": "{kind}: {from} → {to}",
             "Kinds": {
                 "Stairs": "Stairs",

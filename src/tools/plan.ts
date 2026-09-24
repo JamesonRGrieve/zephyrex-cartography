@@ -279,6 +279,30 @@ function stampTerrainRegion(stamp: StampFeature, levels: readonly Level[]): Regi
 }
 
 /**
+ * A stamp whose body tokens cannot pass (a boulder, a pillar): a region over
+ * its footprint barring movement. Foundry restricts only a region on exactly
+ * one level (14.359), so there is one per level the stamp stands on: its own,
+ * or each of the scene's for a stamp on every level.
+ */
+function stampBodyRegions(stamp: StampFeature, levels: readonly Level[]): RegionDoc[] {
+    if (stamp.behaviour.physical?.blocksMovement !== true) {
+        return [];
+    }
+    const own = findLevel(levels, stamp.level);
+    return (stamp.level === null ? levels : own ? [own] : []).map((level) => ({
+        id: null,
+        label: { kind: 'stamp-body', name: stamp.name },
+        polygon: stampCorners(stamp),
+        bottom: level.bottom,
+        top: level.top,
+        level: level.id,
+        spans: [],
+        behaviour: null,
+        restriction: 'move',
+    }));
+}
+
+/**
  * A stamp's Define Surface (a roof, a balcony, a raised floor) over its
  * footprint. Its band runs from the stamp's base up its physical height, so
  * a `top` surface is its roof; a stamp of unknown height takes its level's
@@ -345,6 +369,7 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
                 stampTerrainRegion(stamp, context.levels),
                 stampSurfaceRegion(stamp, context.levels, context.gridDistance, floor),
             ].filter((r): r is RegionDoc => r !== null),
+            ...stampBodyRegions(stamp, context.levels),
         ],
         sounds: sound ? [sound] : [],
     };

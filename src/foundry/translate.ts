@@ -21,6 +21,7 @@ import type {
     WallDoc,
     WallThreshold,
 } from '../tools/documents';
+import { regionColour } from '../tools/region-colours';
 import { FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
 import type { LightCreateData, RegionCreateData, SceneSettingsUpdate, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
 
@@ -337,7 +338,9 @@ export function regionCreateData(regions: readonly RegionDoc[], ids: readonly st
     return regions.map((region, i) => ({
         _id: ids[i] ?? '',
         name: nameOf(region),
+        color: regionColour(region),
         shapes: [{ type: 'polygon', points: flatten(region.polygon), hole: false }],
+        ...(region.restriction === undefined ? {} : { restriction: { enabled: true, type: region.restriction, priority: 0 } }),
         elevation: { bottom: region.bottom, top: region.top },
         behaviors: behaviourData(region.behaviour),
         // A region drawn from a feature is edited through the feature, so it is locked and

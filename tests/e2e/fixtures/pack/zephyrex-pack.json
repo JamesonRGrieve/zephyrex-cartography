@@ -271,6 +271,24 @@
             ]
         },
         {
+            "id": "boulder",
+            "name": "Boulder",
+            "category": "Terrain",
+            "scale": "exterior",
+            "perspective": "top-down",
+            "physical": {
+                "blocksMovement": true
+            },
+            "variants": [
+                {
+                    "state": "whole",
+                    "image": "stamps/crate.svg",
+                    "width": 100,
+                    "height": 100
+                }
+            ]
+        },
+        {
             "id": "canopy",
             "name": "Canopy",
             "category": "Structures",

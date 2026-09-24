@@ -308,6 +308,7 @@ describe('regionCreateData', () => {
             {
                 _id: 'r0',
                 name: 'stairs A',
+                color: '#4a90d9',
                 shapes: [{ type: 'polygon', points: [0, 0, 10, 0, 10, 10], hole: false }],
                 elevation: { bottom: -10, top: 20 },
                 behaviors: [{ type: 'changeLevel', system: {} }],
@@ -316,6 +317,24 @@ describe('regionCreateData', () => {
                 levels: ['A', 'B', 'C'],
             },
         ]);
+    });
+
+    it('makes an impassable stamp body a region barring movement, and leaves other regions unrestricted', () => {
+        const body: RegionDoc = {
+            id: null,
+            label: { kind: 'stamp-body', name: 'Boulder' },
+            polygon: square,
+            bottom: null,
+            top: null,
+            level: null,
+            spans: [],
+            behaviour: null,
+            restriction: 'move',
+        };
+        const { restriction: _none, ...passable } = body;
+        const [barrier, unbarred] = regionCreateData([body, passable], ['r1', 'r2'], nameOf);
+        expect(barrier?.restriction).toEqual({ enabled: true, type: 'move', priority: 0 });
+        expect(unbarred).not.toHaveProperty('restriction');
     });
 
     it('gives a region without a behaviour none, on its own level', () => {

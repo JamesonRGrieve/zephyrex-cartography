@@ -122,6 +122,7 @@ export const I18N = {
         floor: key('Regions.Floor'),
         terrain: key('Regions.Terrain'),
         surface: key('Regions.Surface'),
+        body: key('Regions.Body'),
     },
     submap: {
         title: key('Submap.Title'),

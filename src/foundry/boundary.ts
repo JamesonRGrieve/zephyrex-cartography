@@ -135,6 +135,10 @@ interface SurfaceSystem {
 export interface RegionCreateData extends OnLevels {
     readonly _id: string;
     readonly name: string;
+    /** `#rrggbb` on the Regions layer. */
+    readonly color: string;
+    /** A barrier to tokens (`move`), lights, sight or sound; absent for none. */
+    readonly restriction?: { readonly enabled: boolean; readonly type: 'move'; readonly priority: number };
     readonly shapes: readonly { readonly type: 'polygon'; readonly points: readonly number[]; readonly hole: boolean }[];
     /** A null bound is open-ended. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };

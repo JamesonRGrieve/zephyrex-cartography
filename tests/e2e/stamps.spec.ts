@@ -53,6 +53,18 @@ test('a stamp’s terrain and surface become native Modify Movement Cost and Def
     });
 });
 
+test('an impassable stamp bars movement with a native region restriction, coloured by what it is', async ({ world }) => {
+    const regions = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.controller()?.placeStamp({ stamp: 'zc-e2e-pack:boulder', x: 400, y: 400 });
+        return (canvas?.scene?.regions.contents ?? []).map((r) => ({
+            name: r.name,
+            color: r.color.css,
+            restriction: { enabled: r.restriction.enabled, type: r.restriction.type },
+        }));
+    });
+    expect(regions).toEqual([{ name: 'Boulder (impassable)', color: '#c0392b', restriction: { enabled: true, type: 'move' } }]);
+});
+
 test('a stamp’s particles run as native particle generators, following its variant', async ({ world }) => {
     /** The particle containers Foundry's generators put on the primary canvas, with their elevation and particles. */
     const running = async (): Promise<{ elevation: number; particles: number }[]> =>
