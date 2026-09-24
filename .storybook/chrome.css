@@ -31,6 +31,12 @@ body {
     border-radius: 3px;
 }
 
+/* Foundry dims a disabled control; without this the inherited colour hides the state. */
+.zc-story-window :disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .zc-story-window button[aria-pressed='true'] {
     border-color: #ff6400;
 }

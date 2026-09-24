@@ -11,8 +11,8 @@
  * such a tile updates its pending create instead. Pure and unit-tested; the
  * Foundry sink turns what it takes into create, update and delete operations.
  */
-import type { DrawingDoc, GeneratedDocs, LightDoc, NoteDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
-import { NO_DOCS } from '../tools/documents';
+import type { DrawingDoc, LightDoc, NoteDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
+import { NO_DOCS, type GeneratedDocs } from '../tools/generated-docs';
 import type { DocumentPlan } from '../tools/plan';
 
 /**

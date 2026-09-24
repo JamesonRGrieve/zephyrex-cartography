@@ -24,7 +24,7 @@ export const TEXTURE_FITS = ['fill', 'contain', 'cover', 'width', 'height'] as c
 export type TextureFit = (typeof TEXTURE_FITS)[number];
 
 /** Where a level's images sit on the scene: the native Level's `textures`. */
-export interface LevelPlacement {
+interface LevelPlacement {
     readonly anchorX: number;
     readonly anchorY: number;
     /** Whole pixels. */
@@ -149,7 +149,7 @@ export function planningLevels(levels: readonly Level[]): string {
 }
 
 /** Height given to a new level when the scene's grid is unknown, in scene distance units; editable afterwards. */
-export const DEFAULT_LEVEL_HEIGHT = 10;
+const DEFAULT_LEVEL_HEIGHT = 10;
 
 /** Levels ordered bottom to top. */
 export function sortLevels(levels: readonly Level[]): Level[] {

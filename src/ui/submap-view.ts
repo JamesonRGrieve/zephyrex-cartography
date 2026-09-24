@@ -31,7 +31,7 @@ export interface SubmapPanel {
     readonly floors: readonly string[];
 }
 
-export interface FloorLabels {
+interface FloorLabels {
     readonly heading: string;
     readonly count: string;
     readonly add: string;
@@ -40,7 +40,7 @@ export interface FloorLabels {
     readonly list: (floors: string) => string;
 }
 
-export interface TravelLabels {
+interface TravelLabels {
     readonly heading: string;
     readonly placement: string;
     readonly placements: Readonly<Record<TravelPlacement, string>>;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { NO_DOCS } from './documents';
 import { NEW_FEATURE, parseFeatureCommon } from './feature-common';
+import { NO_DOCS } from './generated-docs';
 
 describe('feature common fields', () => {
     it('start with no documents and no level', () => {

@@ -18,7 +18,7 @@ import { stampCorners, stampPoint, type StampFeature } from './stamp';
 export type ParticleRange = number | readonly [number, number];
 
 /** Where particles spawn, in scene px: around a point, or anywhere in a rectangle. */
-export type EmitterArea =
+type EmitterArea =
     | { readonly x: number; readonly y: number; readonly radius: number }
     | { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 

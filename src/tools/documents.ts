@@ -4,14 +4,12 @@
  * data in scene pixels. The pure core builds them, and the Foundry boundary
  * translates them into document create data: CONST enums, distance units and
  * version differences. Every generated document's id is recorded on the
- * feature that produced it, in a {@link GeneratedDocs} record, so that feature
- * can re-sync or delete exactly its own documents (the lifecycle rule).
+ * feature that produced it (see `generated-docs.ts`).
  */
 import type { Point } from '../geometry/spline';
 import type { PlacedBehaviour, StampLight, StampTile } from '../stamps/schema';
 import type { AreaDisplay, AreaEffect } from './area-effects';
 import type { BiomeKind } from './biome';
-import { isRecord, stringArray } from './guards';
 import type { ShapeBox, ShapeStyle } from './shape';
 import type { ZoneShape } from './zone';
 
@@ -61,7 +59,7 @@ export const DOOR_ANIMATIONS = ['ascend', 'descend', 'slide', 'swing', 'swivel']
 export type DoorAnimationType = (typeof DOOR_ANIMATIONS)[number];
 
 /** A door's animation; options left out (or undefined, as a pack parses them) take Foundry's defaults. */
-export interface DoorAnimation {
+interface DoorAnimation {
     readonly type: DoorAnimationType;
     readonly direction?: 1 | -1 | undefined;
     readonly double?: boolean | undefined;
@@ -129,7 +127,7 @@ export interface LightDoc {
 }
 
 /** A stamp light's rendering and reach, beyond its radii, colour and animation (v14 AmbientLight). */
-export type LightTechnique = Pick<
+type LightTechnique = Pick<
     StampLight,
     'negative' | 'priority' | 'coloration' | 'luminosity' | 'attenuation' | 'saturation' | 'contrast' | 'shadows' | 'walls' | 'vision' | 'darkness' | 'hidden'
 >;
@@ -280,7 +278,7 @@ export interface NoteDoc {
 export type DrawingDoc = TextDrawingDoc | ShapeDrawingDoc;
 
 /** A native Drawing that is a drawn shape: its box (centred on `x`, `y`), Foundry's shape type and points, and its stroke and fill. */
-export interface ShapeDrawingDoc extends ShapeBox {
+interface ShapeDrawingDoc extends ShapeBox {
     readonly kind: 'shape';
     readonly elevation: number;
     readonly level: string | null;
@@ -288,7 +286,7 @@ export interface ShapeDrawingDoc extends ShapeBox {
 }
 
 /** A native text Drawing (a map label): its box, centred on `x`, `y` and turned about its centre, holds the text. */
-export interface TextDrawingDoc {
+interface TextDrawingDoc {
     readonly kind: 'text';
     readonly x: number;
     readonly y: number;
@@ -306,43 +304,4 @@ export interface TextDrawingDoc {
     readonly fontFamily: string;
     /** Seen by the GM alone. */
     readonly hidden: boolean;
-}
-
-/** The ids of every native document one feature generated, by document type. */
-export interface GeneratedDocs {
-    readonly walls: readonly string[];
-    readonly lights: readonly string[];
-    readonly tiles: readonly string[];
-    readonly regions: readonly string[];
-    readonly sounds: readonly string[];
-    readonly notes: readonly string[];
-    readonly drawings: readonly string[];
-}
-
-export const NO_DOCS: GeneratedDocs = { walls: [], lights: [], tiles: [], regions: [], sounds: [], notes: [], drawings: [] };
-
-/** Every generated id, whatever its document type. */
-export function allDocIds(docs: GeneratedDocs): string[] {
-    return [...docs.walls, ...docs.lights, ...docs.tiles, ...docs.regions, ...docs.sounds, ...docs.notes, ...docs.drawings];
-}
-
-export function hasDocs(docs: GeneratedDocs): boolean {
-    return allDocIds(docs).length > 0;
-}
-
-// eslint-disable-next-line no-restricted-syntax -- boundary: parses the persisted generated-docs record of a scene-flag feature entry
-export function parseGeneratedDocs(v: unknown): GeneratedDocs {
-    if (!isRecord(v)) {
-        return NO_DOCS;
-    }
-    return {
-        walls: stringArray(v['walls']),
-        lights: stringArray(v['lights']),
-        tiles: stringArray(v['tiles']),
-        regions: stringArray(v['regions']),
-        // Recorded since stamps emit sounds, pins make notes and labels drawings; an older record has none.
-        sounds: stringArray(v['sounds']),
-        notes: stringArray(v['notes']),
-        drawings: stringArray(v['drawings']),
-    };
 }

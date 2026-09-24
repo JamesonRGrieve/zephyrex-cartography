@@ -45,7 +45,7 @@ export const TEXT_EVENTS = [
     'tokenRoundEnd',
 ] as const satisfies readonly RegionEvent[];
 
-export type TextEvent = (typeof TEXT_EVENTS)[number];
+type TextEvent = (typeof TEXT_EVENTS)[number];
 
 /** Adjust Darkness Level's `MODES`, in their numeric order (OVERRIDE 0, BRIGHTEN 1, DARKEN 2). */
 export const DARKNESS_MODES = ['override', 'brighten', 'darken'] as const;
@@ -69,7 +69,7 @@ export const TOGGLE_EVENTS = [
     'tokenRoundEnd',
 ] as const satisfies readonly RegionEvent[];
 
-export type ToggleEvent = (typeof TOGGLE_EVENTS)[number];
+type ToggleEvent = (typeof TOGGLE_EVENTS)[number];
 
 /** What a toggle can do to another behaviour of its area. */
 export const TOGGLE_ACTIONS = ['enable', 'disable'] as const;

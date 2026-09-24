@@ -1,5 +1,7 @@
 {
-  "strict": [],
+  "strict": [
+    "no-circular"
+  ],
   "totals": {
     "totalViolations": 0
   },

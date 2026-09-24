@@ -15,11 +15,12 @@ import { storedDisplay, storedEffects } from '../tools/area-effects';
 import { type AreaFeature, type AreaSettings, areaSettingsOf, isArea } from '../tools/areas';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec, type PileState, pileStateLabel } from '../tools/containers';
-import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type RegionDoc, type SubmapTravel, type TileDoc } from '../tools/documents';
+import type { DoorState, RegionDoc, SubmapTravel, TileDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
+import { hasDocs, NO_DOCS, type GeneratedDocs } from '../tools/generated-docs';
 import { featureHit } from '../tools/hit';
 import { type LabelSettings, labelSettingsOf, makeLabel, NEW_LABEL, validFontSize } from '../tools/label';
 import {

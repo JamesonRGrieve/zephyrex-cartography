@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { NO_DOCS } from './documents';
 import { deletePoint, movePoint } from './edit';
+import { NO_DOCS } from './generated-docs';
 import { featureHit } from './hit';
 import { labelBox, labelCorners, labelSettingsOf, makeLabel, NEW_LABEL, parseLabel, validFontSize } from './label';
 import { NO_PLAN, planDocuments } from './plan';

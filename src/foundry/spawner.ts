@@ -13,6 +13,12 @@ export interface SpawnResult {
     readonly missing: readonly string[];
 }
 
+/** Whether `found` is an Actor, as the configured implementation (a bare `instanceof` leaves its subtype `any`). */
+// eslint-disable-next-line no-restricted-syntax -- boundary: fromUuid resolves any document; narrowed here
+function isActor(found: unknown): found is Actor.Implementation {
+    return found instanceof Actor;
+}
+
 /**
  * Spawn `spawn`'s actors into region `regionId` on the viewed scene. A region
  * on one level spawns there; one on several, or on every level, spawns on the
@@ -29,7 +35,7 @@ export async function spawnInto(regionId: string, spawn: AreaSpawn): Promise<Spa
     for (const entry of spawn.actors) {
         // eslint-disable-next-line no-await-in-loop -- each actor is looked up once, in the order the GM listed them
         const actor = await foundry.utils.fromUuid(entry.uuid);
-        if (!(actor instanceof Actor)) {
+        if (!isActor(actor)) {
             missing.push(entry.uuid);
             continue;
         }

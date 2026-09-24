@@ -17,7 +17,7 @@ import { isPoint, isRecord, numberOr } from './guards';
 
 export const SHAPE_KINDS = ['rectangle', 'ellipse', 'polygon', 'line'] as const;
 
-export type ShapeKind = (typeof SHAPE_KINDS)[number];
+type ShapeKind = (typeof SHAPE_KINDS)[number];
 
 /** What a shape is: a box by its size and rotation, or the vertices its points are. */
 export type ShapeGeometry = BoxGeometry | { readonly kind: 'polygon' | 'line' };

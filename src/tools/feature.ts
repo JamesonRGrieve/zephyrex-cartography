@@ -5,7 +5,7 @@
  * pins, map labels, zones and drawn shapes, discriminated by `type`. `parseFeatures` validates the mixed
  * scene-flag blob.
  */
-import type { GeneratedDocs } from './documents';
+import type { GeneratedDocs } from './generated-docs';
 import { parseLabel, type LabelFeature } from './label';
 import { parsePath, type CartographyPath } from './path';
 import { parsePin, type PinFeature } from './pin';

@@ -84,7 +84,7 @@ export interface EffectsLabels {
 }
 
 /** The spawn section's fields. */
-export interface SpawnLabels {
+interface SpawnLabels {
     readonly title: string;
     /** The actors, one per line, each a UUID or a count then a UUID. */
     readonly actors: string;
@@ -129,7 +129,7 @@ const UNRESTRICTED = '';
 
 /** How the area's region shows, and whether walls shape it; its priority only while it is restricted. */
 function displaySection(display: AreaDisplay, labels: RegionDisplayLabels, setDisplay: (display: AreaDisplay) => void): HTMLElement {
-    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-box-border tw-w-full tw-mx-0');
     const restriction = display.restriction;
     section.append(
         el('legend', 'tw-text-xs tw-font-bold', labels.title),
@@ -189,7 +189,7 @@ function eventChecks<T extends RegionEvent>(
     key: string,
     onChange: (events: readonly T[]) => void,
 ): HTMLElement {
-    const group = el('fieldset', 'tw-flex tw-flex-wrap tw-gap-2 tw-w-full');
+    const group = el('fieldset', 'tw-flex tw-flex-wrap tw-gap-2 tw-box-border tw-w-full tw-mx-0');
     group.append(
         el('legend', 'tw-text-xs', labels.events),
         ...order.map((regionEvent) =>
@@ -343,7 +343,7 @@ function onceCheck(once: boolean, labels: EffectsLabels, key: string, onChange: 
 
 /** Effect `index` of `effects`: its kind as a legend, its fields, and a button to remove it. */
 function effectSection(effect: AreaEffect, index: number, effects: readonly AreaEffect[], labels: EffectsLabels, handlers: EffectsHandlers): HTMLElement {
-    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-box-border tw-w-full tw-mx-0');
     const key = `effect-${index}`;
     const replace = (next: AreaEffect): void => {
         handlers.setEffects(effects.map((e, i) => (i === index ? next : e)));
@@ -401,7 +401,7 @@ const SPAWN_ROWS = 3;
 
 /** What the area spawns and how Foundry places it, and the button that spawns it now (only while there is something to spawn). */
 function spawnSection(spawn: AreaSpawn, labels: SpawnLabels, handlers: EffectsHandlers): HTMLElement {
-    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-box-border tw-w-full tw-mx-0');
     const now = button('tw-text-xs', labels.spawnNow, 'spawn-now', handlers.spawnNow);
     now.disabled = spawnCount(spawn) === 0;
     section.append(

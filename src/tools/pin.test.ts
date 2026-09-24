@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { NO_DOCS } from './documents';
 import { deletePoint, movePoint } from './edit';
+import { NO_DOCS } from './generated-docs';
 import { featureHit } from './hit';
 import { NO_LEVEL_ART } from './levels';
 import { makePin, NEW_PIN, parsePin, PIN_HIT_RADIUS, pinPoint, pinSettingsOf, withPinSettings } from './pin';

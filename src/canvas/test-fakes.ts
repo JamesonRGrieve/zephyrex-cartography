@@ -7,19 +7,9 @@
 import type { Point } from '../geometry/spline';
 import { type CatalogStamp, loadPacks } from '../stamps/catalog';
 import type { PileSpec } from '../tools/containers';
-import {
-    allDocIds,
-    type DrawingDoc,
-    hasDocs,
-    type GeneratedDocs,
-    type LightDoc,
-    type NoteDoc,
-    type RegionDoc,
-    type SoundDoc,
-    type TileDoc,
-    type WallDoc,
-} from '../tools/documents';
+import type { DrawingDoc, LightDoc, NoteDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
+import { allDocIds, hasDocs, type GeneratedDocs } from '../tools/generated-docs';
 import type { Level } from '../tools/levels';
 import type { RgbaImage } from '../tools/png';
 import type { SceneSettings } from '../tools/scene-settings';

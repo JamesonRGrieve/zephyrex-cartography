@@ -78,7 +78,7 @@ export interface ZoneFeature extends FeatureCommon, ZoneSettings, Costed, Affect
 }
 
 /** A new zone's size (px): a circle this wide across three grid squares at Foundry's default 100 px grid. */
-export const NEW_ZONE_SIZE = 150;
+const NEW_ZONE_SIZE = 150;
 
 export const NEW_ZONE: ZoneSettings = { name: '', shape: { kind: 'circle', radius: NEW_ZONE_SIZE }, rotation: 0, gridBased: false, attachedTo: null };
 

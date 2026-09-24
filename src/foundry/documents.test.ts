@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import type { StagedWrite } from '../canvas/staged-changes';
-import { BLOCKS_ALL, NO_DOCS, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { BLOCKS_ALL, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { NO_DOCS } from '../tools/generated-docs';
 import { DEFAULT_TRAVEL } from '../tools/submap';
 import type { BatchOperation, FoundryScene } from './boundary';
 import { FoundryDocumentSink } from './documents';

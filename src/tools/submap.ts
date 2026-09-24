@@ -31,7 +31,7 @@ const MIN_TRANSITION_MS = 500;
 const MAX_TRANSITION_MS = 10000;
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: narrows a persisted travel placement or a select's value
-export function isTravelPlacement(v: unknown): v is TravelPlacement {
+function isTravelPlacement(v: unknown): v is TravelPlacement {
     return TRAVEL_PLACEMENTS.some((placement) => placement === v);
 }
 

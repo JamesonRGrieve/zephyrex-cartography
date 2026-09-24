@@ -58,7 +58,7 @@ export interface ZoneLabels {
 }
 
 /** The hazard presets section's fields. */
-export interface PresetLabels {
+interface PresetLabels {
     readonly title: string;
     readonly preset: string;
     readonly apply: string;
@@ -80,7 +80,7 @@ export interface ZoneHandlers {
 
 /** The world's presets to apply or forget, and the zone saved as one under a name (its own, to start). */
 function presetSection(panel: ZonePanel, labels: PresetLabels, handlers: ZoneHandlers): HTMLElement {
-    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-box-border tw-w-full tw-mx-0');
     section.append(el('legend', 'tw-text-xs tw-font-bold', labels.title));
     const [first] = panel.presets;
     if (first === undefined) {

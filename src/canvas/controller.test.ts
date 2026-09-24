@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { NO_DOCS } from '../tools/documents';
+import { NO_DOCS } from '../tools/generated-docs';
 import { NEW_DOOR } from '../tools/room';
 import { makeHarness as make } from './test-fakes';
 

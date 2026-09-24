@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { BLOCKS_ALL, NO_DOCS, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { BLOCKS_ALL, type RegionDoc, type TileDoc, type WallDoc } from '../tools/documents';
+import { NO_DOCS } from '../tools/generated-docs';
 import { NO_PLAN } from '../tools/plan';
 import { type DocumentChange, type DocumentKind, StagedChanges } from './staged-changes';
 

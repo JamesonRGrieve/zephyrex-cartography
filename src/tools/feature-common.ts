@@ -5,7 +5,7 @@
  * {@link NEW_FEATURE}, and parsers spread {@link parseFeatureCommon}.
  */
 import type { Point } from '../geometry/spline';
-import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './documents';
+import { NO_DOCS, parseGeneratedDocs, type GeneratedDocs } from './generated-docs';
 import { stringOrNull } from './guards';
 
 export interface FeatureCommon {

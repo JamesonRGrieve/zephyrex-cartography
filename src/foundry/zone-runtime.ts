@@ -98,15 +98,19 @@ function cellSize(): number | null {
  */
 function shapePlace(shape: RegionDocument['shapes'][number]): { readonly point: Point; readonly rotation: number } | null {
     if ('base' in shape) {
-        const centre = footprintCentre(shape.base, canvas?.grid?.size ?? 0);
+        const centre = footprintCentre(shape, canvas?.grid?.size ?? 0);
         return centre && { point: centre, rotation: 0 };
     }
     return 'x' in shape && 'y' in shape ? { point: { x: shape.x, y: shape.y }, rotation: 'rotation' in shape ? shape.rotation : 0 } : null;
 }
 
-/** The centre of a token footprint (top-left px, size in grid spaces of `cell` px), or null when it is not one. */
+/**
+ * The centre of an emanation's token footprint (its base: top-left px, size in
+ * grid spaces of `cell` px), or null when it has none.
+ */
 // eslint-disable-next-line no-restricted-syntax -- boundary: fvtt-types leaves an emanation's base untyped; it is narrowed here
-function footprintCentre(base: unknown, cell: number): Point | null {
+function footprintCentre(emanation: unknown, cell: number): Point | null {
+    const base = isRecord(emanation) ? emanation['base'] : null;
     if (!isRecord(base)) {
         return null;
     }

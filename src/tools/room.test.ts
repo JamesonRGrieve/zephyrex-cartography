@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { NO_DOCS } from './documents';
 import { withDocs } from './feature';
+import { NO_DOCS } from './generated-docs';
 import { DEFAULT_FLOOR, doorOn, makeRoom, NEW_DOOR, parseRoom, roomLight, roomWalls, withRoomDoor, withRoomMaterials, withRoomPoints } from './room';
 
 const pts = [

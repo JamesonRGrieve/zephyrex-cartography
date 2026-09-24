@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { catalogStamps } from '../canvas/test-fakes';
-import { NO_DOCS } from './documents';
 import { deletePoint, movePoint } from './edit';
+import { NO_DOCS } from './generated-docs';
 import { featureHit } from './hit';
 import { planDocuments } from './plan';
 import { behaviourOf, makeStamp, parseStamp, stampCorners, stampPoint, withStampFrame, withStampVariant } from './stamp';

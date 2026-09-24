@@ -26,7 +26,7 @@ import {
 import { button, choice, disclosure, el, labelledCheckbox, labelledInput, pressable, replacePreservingFocus } from './dom';
 
 /** Labels for how Foundry draws a level: named as Foundry's own Level sheet names them where it has a name. */
-export interface LevelLookLabels {
+interface LevelLookLabels {
     /** The section's summary. */
     readonly title: string;
     readonly backgroundColor: string;
@@ -132,7 +132,7 @@ function lookSection(level: Level, others: readonly Level[], labels: LevelLookLa
 
 /** The other levels, each checked when it is seen from `level`. */
 function visibleLevels(level: Level, others: readonly Level[], labels: LevelLookLabels, edit: (change: LevelArtEdit) => boolean): HTMLElement {
-    const group = el('fieldset', 'tw-flex tw-flex-wrap tw-gap-2 tw-w-full');
+    const group = el('fieldset', 'tw-flex tw-flex-wrap tw-gap-2 tw-box-border tw-w-full tw-mx-0');
     group.append(
         el('legend', 'tw-text-xs', labels.visibleLevels),
         ...others.map((other) =>

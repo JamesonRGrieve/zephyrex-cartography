@@ -332,7 +332,7 @@ export interface DrawingCreateData extends OnLevels {
 }
 
 /** A splat map baked into a Tile: centre-anchored over its scene area, beneath other tiles by `sort`. */
-export interface BakedTileCreateData extends OnLevels {
+interface BakedTileCreateData extends OnLevels {
     readonly name: string;
     readonly texture: { readonly src: string; readonly anchorX: number; readonly anchorY: number };
     readonly x: number;
@@ -403,7 +403,7 @@ export interface EmbeddedCollection {
 
 /* eslint-disable @typescript-eslint/method-signature-style -- see FoundryScene: the live document's methods must stay methods to be assignable */
 /** One of a region's behaviours, as far as updating its settings in place goes. */
-export interface FoundryRegionBehavior {
+interface FoundryRegionBehavior {
     readonly id: string | null;
     readonly type: string;
     update(data: { readonly system: RegionBehaviorSystem }): Promise<unknown>;
@@ -411,17 +411,17 @@ export interface FoundryRegionBehavior {
 /* eslint-enable @typescript-eslint/method-signature-style */
 
 /** A live Region, with its behaviours. */
-export interface FoundryRegion {
+interface FoundryRegion {
     readonly behaviors: { readonly contents: readonly FoundryRegionBehavior[] };
 }
 
 /** A scene's regions: whether one exists, and the live one by id. */
-export interface RegionCollection extends EmbeddedCollection {
+interface RegionCollection extends EmbeddedCollection {
     readonly get: (id: string) => FoundryRegion | undefined;
 }
 
 /** A generated behaviour's settings. */
-export type RegionBehaviorSystem = RegionCreateData['behaviors'][number]['system'];
+type RegionBehaviorSystem = RegionCreateData['behaviors'][number]['system'];
 
 /** A native Level document, as far as the level store reads it. */
 export interface NativeLevel {
@@ -435,7 +435,7 @@ export interface NativeLevel {
     readonly fog: { readonly src: string | null; readonly tint?: PreparedColour };
     readonly textures: LevelTextures;
     /** The other levels seen from this one (a `SceneLevelsSetField`: a Set once prepared). */
-    readonly visibility: { readonly levels: Iterable<string> };
+    readonly visibility: { readonly levels: ReadonlySet<string> };
 }
 
 /*

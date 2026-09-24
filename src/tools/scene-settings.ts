@@ -55,5 +55,6 @@ export interface SceneSettings {
 
 /** Whether `settings` changes anything. */
 export function hasSceneSettings(settings: SceneSettings): boolean {
-    return Object.values(settings).some((value) => value !== undefined);
+    const values: readonly unknown[] = Object.values(settings);
+    return values.some((value) => value !== undefined);
 }

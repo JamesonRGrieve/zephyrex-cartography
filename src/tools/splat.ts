@@ -100,7 +100,7 @@ export function parseStrength(typed: string): number | null {
 }
 
 /** Mask pixels per grid square: fine enough for soft edges, small enough to save quickly. */
-export const MASK_PX_PER_SQUARE = 8;
+const MASK_PX_PER_SQUARE = 8;
 
 /** Largest mask side, in pixels, however big the scene. */
 const MAX_MASK_SIDE = 2048;
