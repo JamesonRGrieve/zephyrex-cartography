@@ -230,6 +230,32 @@ test('a zone attached to a token moves with it, and the zone follows its region'
     await expect.poll(where).toEqual({ region: [650, 450], zone: [650, 450] });
 });
 
+test('an emanation zone rounds its token’s own footprint, and follows the token as Foundry refits it', async ({ world }) => {
+    const placed = await world.evaluate(async () => {
+        const [token] = (await canvas?.scene?.createEmbeddedDocuments('Token', [{ name: 'Pariah', x: 400, y: 400 }])) ?? [];
+        const outcome = await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            units: 'px',
+            features: [{ type: 'zone', x: 450, y: 450, name: 'Null field', shape: { kind: 'emanation', radius: 200 }, attachedTo: token?.id ?? null }],
+        });
+        await token?.update({ x: 700, y: 400 });
+        return { zoneId: outcome?.ok === true ? outcome.report.features[0] ?? '' : '' };
+    });
+    const where = async (): Promise<{ type: string | undefined; covers: boolean[]; zone: number[] }> =>
+        world.evaluate((zoneId) => {
+            const region = canvas?.scene?.regions.contents.find((r) => r.name === 'Null field');
+            const point = game.modules?.get('zephyrex-cartography').api.controller()?.getFeature(zoneId)?.points[0];
+            return {
+                type: region?.shapes[0]?.type,
+                // Foundry's own geometry: beside the moved token, and not where it stood.
+                covers: region ? [region.polygonTree.testPoint({ x: 950, y: 450 }), region.polygonTree.testPoint({ x: 250, y: 450 })] : [],
+                zone: point ? [point.x, point.y] : [],
+            };
+        }, placed.zoneId);
+    // Foundry refits the emanation to the moved token (a 1×1 token on a 100 px grid), and the zone follows its centre.
+    await expect.poll(where).toEqual({ type: 'emanation', covers: [true, false], zone: [750, 450] });
+});
+
 test('a zone of grid spaces becomes Foundry’s own grid-spaces shape, on the spaces from the one its point is in', async ({ world }) => {
     const region = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

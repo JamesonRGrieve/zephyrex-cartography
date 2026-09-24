@@ -45,7 +45,8 @@ export function createWorldScenes(options: WorldScenesOptions): WorldScenes {
             if (scene?.id == null || scene.id === '' || region.id === null) {
                 return false;
             }
-            const [data] = regionCreateData([region], [region.id], options.regionName, scene.id);
+            // An interior exit is attached to no token.
+            const [data] = regionCreateData([region], [region.id], { nameOf: options.regionName, scene: scene.id, tokenOf: () => null });
             if (!data) {
                 return false;
             }

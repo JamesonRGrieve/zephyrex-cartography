@@ -412,6 +412,9 @@ describe('regionCreateData', () => {
     ];
     const nameOf = (r: RegionDoc): string => `${r.label.kind} ${r.level ?? ''}`;
     const SCENE = 'sceneAAAAAAAAAAA';
+    /** A 2×1 token standing at (300, 200), the one token on the scene. */
+    const FOOTPRINT = { x: 300, y: 200, width: 2, height: 1, shape: 4 };
+    const CONTEXT = { nameOf, scene: SCENE, tokenOf: (id: string) => (id === 'tk1' ? FOOTPRINT : null) };
 
     it('makes a stair a native changeLevel region on every level it joins', () => {
         const stair: RegionDoc = {
@@ -424,7 +427,7 @@ describe('regionCreateData', () => {
             spans: ['B', 'C'],
             behaviour: { kind: 'changeLevel' },
         };
-        expect(regionCreateData([stair], ['r0'], nameOf, SCENE)).toEqual([
+        expect(regionCreateData([stair], ['r0'], CONTEXT)).toEqual([
             {
                 _id: 'r0',
                 name: 'stairs A',
@@ -460,7 +463,7 @@ describe('regionCreateData', () => {
             ],
         };
         const id = (i: number): string => `roomRegion00Bh0${i}`;
-        expect(regionCreateData([room], ['roomRegion000001'], nameOf, SCENE)[0]?.behaviors).toEqual([
+        expect(regionCreateData([room], ['roomRegion000001'], CONTEXT)[0]?.behaviors).toEqual([
             { type: 'modifyMovementCost', system: { difficulties: { walk: 2 } } },
             { _id: id(0), type: 'adjustDarknessLevel', system: { mode: 2, modifier: 0.5 } },
             { _id: id(1), type: 'suppressWeather', system: {} },
@@ -528,7 +531,7 @@ describe('regionCreateData', () => {
             { kind: 'line', length: 8, width: 2 },
             { kind: 'rectangle', width: 8, height: 4 },
         ];
-        expect(shapes.map((shape) => geometryShape({ ...shape, ...placed }))).toEqual([
+        expect(shapes.map((shape) => geometryShape({ ...shape, ...placed }, null))).toEqual([
             { type: 'circle', ...on, radius: 5 },
             { type: 'ellipse', ...on, radiusX: 5, radiusY: 3, rotation: 30 },
             { type: 'ring', ...on, radius: 5, innerWidth: 1, outerWidth: 2 },
@@ -545,7 +548,7 @@ describe('regionCreateData', () => {
                 { i: 0, j: 1 },
             ],
         } as const;
-        expect(geometryShape({ ...cells, ...placed })).toEqual({
+        expect(geometryShape({ ...cells, ...placed }, null)).toEqual({
             type: 'grid',
             offsets: [
                 { i: 2, j: 1 },
@@ -566,7 +569,13 @@ describe('regionCreateData', () => {
             geometry: { kind: 'circle', radius: 5, ...placed },
             attachedTo: 'tk1',
         };
-        expect(regionCreateData([zone], ['z1'], nameOf, SCENE)[0]).toMatchObject({ shapes: [{ type: 'circle', radius: 5 }], attachment: { token: 'tk1' } });
+        expect(regionCreateData([zone], ['z1'], CONTEXT)[0]).toMatchObject({ shapes: [{ type: 'circle', radius: 5 }], attachment: { token: 'tk1' } });
+        // An emanation rounds its token's own footprint, read off the live token; a circle while it has none there.
+        const aura: RegionDoc = { ...zone, geometry: { kind: 'emanation', radius: 150, ...placed } };
+        expect(regionCreateData([aura], ['z2'], CONTEXT)[0]?.shapes).toEqual([
+            { type: 'emanation', base: { type: 'token', ...FOOTPRINT, hole: false }, radius: 150, gridBased: true, hole: false },
+        ]);
+        expect(regionCreateData([{ ...aura, attachedTo: 'gone' }], ['z3'], CONTEXT)[0]?.shapes).toEqual([{ type: 'circle', ...on, radius: 150 }]);
     });
 
     it('gives a region without a behaviour none, on its own level', () => {
@@ -580,7 +589,7 @@ describe('regionCreateData', () => {
             spans: [],
             behaviour: null,
         };
-        const [data] = regionCreateData([plain], ['r2'], nameOf, SCENE);
+        const [data] = regionCreateData([plain], ['r2'], CONTEXT);
         expect(data?.behaviors).toEqual([]);
         expect(data?.levels).toEqual(['C']);
     });
@@ -594,7 +603,7 @@ describe('regionCreateData', () => {
             restriction: { type: 'sight', priority: 3 },
         } as const;
         const area: RegionDoc = { id: null, label: { kind: 'room' }, polygon: square, bottom: 0, top: 10, level: 'C', spans: [], behaviour: null, display };
-        const [one, everywhere, spanning] = regionCreateData([area, { ...area, level: null }, { ...area, spans: ['D'] }], ['r1', 'r2', 'r3'], nameOf, SCENE);
+        const [one, everywhere, spanning] = regionCreateData([area, { ...area, level: null }, { ...area, spans: ['D'] }], ['r1', 'r2', 'r3'], CONTEXT);
         expect(one).toMatchObject({
             visibility: 3,
             highlightMode: 'coverage',
@@ -606,7 +615,7 @@ describe('regionCreateData', () => {
         expect(everywhere).not.toHaveProperty('restriction');
         expect(spanning).not.toHaveProperty('restriction');
         const { display: _shown, ...undisplayed } = area;
-        const [plain] = regionCreateData([undisplayed], ['r4'], nameOf, SCENE);
+        const [plain] = regionCreateData([undisplayed], ['r4'], CONTEXT);
         expect(plain).toMatchObject({ visibility: 0 });
         expect(plain).not.toHaveProperty('highlightMode');
         expect(plain).not.toHaveProperty('ownership');
@@ -623,7 +632,7 @@ describe('regionCreateData', () => {
             spans: ['A', 'B'],
             behaviour: { kind: 'surface', placement: 'bottom', reveal: false },
         };
-        const [data] = regionCreateData([floor], ['r4'], nameOf, SCENE);
+        const [data] = regionCreateData([floor], ['r4'], CONTEXT);
         expect(data?.behaviors).toEqual([
             {
                 type: 'defineSurface',
@@ -653,7 +662,7 @@ describe('regionCreateData', () => {
                 travel: { placement: 'center', transition: 'swirl', duration: 2000, prompt: 'Enter {scene}?' },
             },
         };
-        expect(regionCreateData([many], ['r3'], nameOf, SCENE)[0]?.behaviors).toEqual([
+        expect(regionCreateData([many], ['r3'], CONTEXT)[0]?.behaviors).toEqual([
             {
                 type: 'teleportToken',
                 system: {
@@ -678,7 +687,7 @@ describe('regionCreateData', () => {
             spans: [],
             behaviour: { kind: 'teleport', targets: [{ scene: 'hab', region: 'out1' }], travel: DEFAULT_TRAVEL },
         };
-        const [data] = regionCreateData([entrance], ['in1'], nameOf, SCENE);
+        const [data] = regionCreateData([entrance], ['in1'], CONTEXT);
         expect(data?.elevation).toEqual({ bottom: null, top: null });
         expect(data?.behaviors[0]?.system).toEqual({
             destinations: ['Scene.hab.Region.out1'],
@@ -701,7 +710,7 @@ describe('regionCreateData', () => {
             spans: [],
             behaviour: null,
         };
-        const [entrance, back] = regionCreateData([{ ...exit, id: 'in1', label: { kind: 'entrance', scene: 'Hab' } }, exit], ['in1', 'out1'], nameOf, SCENE);
+        const [entrance, back] = regionCreateData([{ ...exit, id: 'in1', label: { kind: 'entrance', scene: 'Hab' } }, exit], ['in1', 'out1'], CONTEXT);
         expect([entrance?.locked, back?.locked]).toEqual([true, false]);
         expect([entrance?.visibility, back?.visibility]).toEqual([0, 0]);
     });

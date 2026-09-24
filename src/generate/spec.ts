@@ -383,6 +383,10 @@ const zoneShapeSpec = z
         z.object({ kind: z.literal('line'), length: positive, width: positive }).strict(),
         z.object({ kind: z.literal('rectangle'), width: positive, height: positive }).strict(),
         z
+            .object({ kind: z.literal('emanation'), radius: positive })
+            .strict()
+            .describe("A reach round the attached token's own footprint, kept fitted to it by Foundry; a circle while no token is attached."),
+        z
             .object({
                 kind: z.literal('cells'),
                 cells: z.array(z.object({ i: z.number().int().describe('Rows down.'), j: z.number().int().describe('Columns across.') }).strict()).min(1),

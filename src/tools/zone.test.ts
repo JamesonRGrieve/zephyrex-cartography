@@ -71,6 +71,7 @@ describe('zones', () => {
             { kind: 'line', length: 200, width: 25 },
             { kind: 'rectangle', width: 200, height: 200 },
             { kind: 'cells', size: 100, cells: cellBlock(2, 2) },
+            { kind: 'emanation', radius: 100 },
         ]);
         expect(reshapedZone('circle', { kind: 'rectangle', width: 40, height: 80 }, null)).toEqual({ kind: 'circle', radius: 40 });
         expect(reshapedZone('circle', { kind: 'line', length: 60, width: 2 }, null)).toEqual({ kind: 'circle', radius: 30 });
@@ -169,6 +170,15 @@ describe('zones', () => {
         expect([zoneHit(line, off(50, 4)), zoneHit(line, off(-5, 0)), zoneHit(line, off(50, 6))]).toEqual([true, false, false]);
         const rectangle = at({ shape: { kind: 'rectangle', width: 100, height: 20 } });
         expect([zoneHit(rectangle, off(-45, 9)), zoneHit(rectangle, off(0, 11))]).toEqual([true, false]);
+    });
+
+    it('take an emanation’s radius about their point, and scale and read it back', () => {
+        const aura = { ...makeZone('z', AT), shape: { kind: 'emanation', radius: 120 } } as const;
+        expect([zoneHit(aura, { x: AT.x + 119, y: AT.y }), zoneHit(aura, { x: AT.x + 121, y: AT.y })]).toEqual([true, false]);
+        expect(scaledZoneShape(aura.shape, 2)).toEqual({ kind: 'emanation', radius: 240 });
+        expect(shapeSizes(aura.shape)).toEqual({ radius: 120 });
+        expect(reshapedZone('circle', aura.shape, null)).toEqual({ kind: 'circle', radius: 120 });
+        expect(parseZone(JSON.parse(JSON.stringify(aura)))?.shape).toEqual(aura.shape);
     });
 
     it('move with their token, keeping everything else', () => {

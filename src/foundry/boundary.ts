@@ -155,7 +155,24 @@ export type RegionShape =
       }
     /** `GridShapeData`: grid spaces by row `i` and column `j`; `origin` null for the first space's centre. */
     | { readonly type: 'grid'; readonly offsets: readonly { readonly i: number; readonly j: number }[]; readonly origin: null; readonly hole: boolean }
+    /** `EmanationShapeData` round a token's own footprint (`TokenShapeData`). */
+    | {
+          readonly type: 'emanation';
+          readonly base: TokenFootprint & { readonly type: 'token'; readonly hole: boolean };
+          readonly radius: number;
+          readonly gridBased: boolean;
+          readonly hole: boolean;
+      }
     | ZoneShapeData;
+
+/** A token's footprint as `TokenShapeData` holds it: its top-left (px), its size in grid spaces, and its `CONST.TOKEN_SHAPES` shape. */
+export interface TokenFootprint {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly shape: number;
+}
 
 /** A zone's shape, as 14.359's `CircleShapeData` … `LineShapeData` hold it: at `x`, `y`, sizes in px. */
 type ZoneShapeData = { readonly hole: boolean; readonly gridBased: boolean; readonly x: number; readonly y: number } & (
@@ -446,8 +463,8 @@ export interface FoundryScene {
     readonly notes: EmbeddedCollection;
     readonly drawings: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
-    /** Read only, for the tokens a zone can attach to. */
-    readonly tokens: EmbeddedCollection;
+    /** Read only: the tokens a zone can attach to, and their footprints for an emanation round one. */
+    readonly tokens: EmbeddedCollection & { readonly get: (id: string) => TokenFootprint | undefined };
     readonly regions: RegionCollection;
     readonly levels: { readonly contents: readonly NativeLevel[]; readonly size: number };
     // eslint-disable-next-line no-restricted-syntax -- boundary: a Foundry flag value is arbitrary serialised JSON; getFlag returns unknown by contract and is narrowed at the parse boundary

@@ -54,7 +54,8 @@ function scene(present: readonly string[], id: string | null = 'sc'): FoundrySce
         notes: collection,
         drawings: collection,
         tiles: collection,
-        tokens: collection,
+        // Each token present stands 1×1 at the origin.
+        tokens: { ...collection, get: (tokenId) => (present.includes(tokenId) ? { x: 0, y: 0, width: 1, height: 1, shape: 0 } : undefined) },
         // Each live region holds one teleport behaviour, `b-<region id>`.
         regions: {
             ...collection,

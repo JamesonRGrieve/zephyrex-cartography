@@ -11,7 +11,16 @@ import type { DocumentSink } from '../canvas/controller';
 import type { DocumentKind, StagedWrite } from '../canvas/staged-changes';
 import type { LightSource, RegionDoc } from '../tools/documents';
 import type { BatchOperation, EmbeddedCollection, EmbeddedName, FoundryScene, IdentifiedCreateData, ModifyBatch, RegionCreateData } from './boundary';
-import { drawingCreateData, lightCreateData, noteCreateData, regionCreateData, soundCreateData, tileCreateData, wallCreateData } from './translate';
+import {
+    drawingCreateData,
+    lightCreateData,
+    noteCreateData,
+    type RegionContext,
+    regionCreateData,
+    soundCreateData,
+    tileCreateData,
+    wallCreateData,
+} from './translate';
 
 export interface SinkOptions {
     /** A new document id; every document is created with an id chosen up front. */
@@ -54,7 +63,8 @@ export class FoundryDocumentSink implements DocumentSink {
         // A GM may have deleted a document by hand, and updating a missing one fails the whole batch: a missing tile is
         // left to its feature's next sync, a missing kept-id region is created afresh.
         const tileUpdates = write.tileUpdates.filter(({ id }) => scene.tiles.has(id)).map(({ id, doc }) => ({ _id: id, ...tileCreateData(doc) }));
-        const replaced = write.regionUpdates.flatMap(({ id, doc }) => regionCreateData([doc], [id], this.options.regionName, sceneId));
+        const context = regionContext(scene, sceneId, this.options.regionName);
+        const replaced = write.regionUpdates.flatMap(({ id, doc }) => regionCreateData([doc], [id], context));
         const regionUpdates = replaced.filter((region) => scene.regions.has(region._id)).map(({ behaviors: _behaviors, ...region }) => region);
         const recreated = replaced.filter((region) => !scene.regions.has(region._id));
         const operations = [...deleteOperations(scene, write), ...this.createOperations(scene, sceneId, write, recreated)];
@@ -85,7 +95,9 @@ export class FoundryDocumentSink implements DocumentSink {
         const { grid } = scene;
         const regions = [
             ...write.regions.flatMap((group) =>
-                regionCreateData(group.regions, group.ids, this.options.regionName, sceneId).filter((region) => !group.cancelled.includes(region._id)),
+                regionCreateData(group.regions, group.ids, regionContext(scene, sceneId, this.options.regionName)).filter(
+                    (region) => !group.cancelled.includes(region._id),
+                ),
             ),
             ...recreated,
         ];
@@ -114,6 +126,18 @@ function behaviourUpdates(scene: FoundryScene, regions: readonly RegionCreateDat
         });
         return live && updates.length > 0 ? [{ action: 'update' as const, documentName: 'RegionBehavior' as const, parent: live, updates }] : [];
     });
+}
+
+/** Where the scene's regions are written: named as the options name them, their tokens' footprints read off the live tokens. */
+function regionContext(scene: FoundryScene, sceneId: string, nameOf: (region: RegionDoc) => string): RegionContext {
+    return {
+        nameOf,
+        scene: sceneId,
+        tokenOf: (id) => {
+            const token = scene.tokens.get(id);
+            return token ? { x: token.x, y: token.y, width: token.width, height: token.height, shape: token.shape } : null;
+        },
+    };
 }
 
 /** A region attached only to a token still on the scene: a zone's token may since have been deleted, and Foundry would refuse the whole batch over it. */

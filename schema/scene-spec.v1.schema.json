@@ -2665,6 +2665,25 @@
                                         "properties": {
                                             "kind": {
                                                 "type": "string",
+                                                "const": "emanation"
+                                            },
+                                            "radius": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "radius"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "A reach round the attached token's own footprint, kept fitted to it by Foundry; a circle while no token is attached."
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
                                                 "const": "cells"
                                             },
                                             "cells": {

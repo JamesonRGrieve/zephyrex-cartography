@@ -8,8 +8,10 @@
  * followed back into the zone here.
  */
 import type { CartographyController } from '../canvas/controller';
+import type { Point } from '../geometry/spline';
 import { I18N } from '../i18n';
 import { MODULE_ID } from '../module-id';
+import { isRecord } from '../tools/guards';
 import type { ZoneShapeKind } from '../tools/zone';
 import { parseZonePresets, presetOf, serializeZonePresets, withoutPreset, withPreset, type ZonePreset } from '../tools/zone-presets';
 import { renderZonePanel, type TokenChoice, type ZoneLabels } from '../ui/zone-panel-view';
@@ -34,6 +36,7 @@ function labels(): ZoneLabels {
             rectangle: shape('rectangle'),
             // Foundry's own name for its grid-spaces shape.
             cells: localize('SHAPE.TYPES.grid.name'),
+            emanation: shape('emanation'),
         },
         rows: localize(I18N.zones.rows),
         columns: localize(I18N.zones.columns),
@@ -86,6 +89,31 @@ function tokens(): TokenChoice[] {
 function cellSize(): number | null {
     const grid = canvas?.grid;
     return grid?.type === CONST.GRID_TYPES.SQUARE ? grid.size : null;
+}
+
+/**
+ * Where a zone's region shape now stands: every shape but an emanation at its
+ * x, y (turned by its rotation), an emanation at the centre of the token
+ * footprint it rounds.
+ */
+function shapePlace(shape: RegionDocument['shapes'][number]): { readonly point: Point; readonly rotation: number } | null {
+    if ('base' in shape) {
+        const centre = footprintCentre(shape.base, canvas?.grid?.size ?? 0);
+        return centre && { point: centre, rotation: 0 };
+    }
+    return 'x' in shape && 'y' in shape ? { point: { x: shape.x, y: shape.y }, rotation: 'rotation' in shape ? shape.rotation : 0 } : null;
+}
+
+/** The centre of a token footprint (top-left px, size in grid spaces of `cell` px), or null when it is not one. */
+// eslint-disable-next-line no-restricted-syntax -- boundary: fvtt-types leaves an emanation's base untyped; it is narrowed here
+function footprintCentre(base: unknown, cell: number): Point | null {
+    if (!isRecord(base)) {
+        return null;
+    }
+    const { x, y, width, height } = base;
+    return typeof x === 'number' && typeof y === 'number' && typeof width === 'number' && typeof height === 'number'
+        ? { x: x + (width * cell) / 2, y: y + (height * cell) / 2 }
+        : null;
 }
 
 export interface ZoneRuntime {
@@ -150,12 +178,11 @@ export function registerZoneRuntime(controller: () => CartographyController | nu
     Hooks.on('updateRegion', (region, changed) => {
         const active = controller();
         const [shape] = region.shapes;
-        // Every shape a zone takes is placed at its x, y.
-        const placed = shape !== undefined && 'x' in shape && 'y' in shape ? shape : null;
-        if (!active || !('shapes' in changed) || game.users?.activeGM?.isSelf !== true || region.id === null || placed === null) {
+        const at = shape === undefined ? null : shapePlace(shape);
+        if (!active || !('shapes' in changed) || game.users?.activeGM?.isSelf !== true || region.id === null || at === null) {
             return;
         }
-        void active.followZone(region.id, { x: placed.x, y: placed.y }, 'rotation' in placed ? placed.rotation : 0);
+        void active.followZone(region.id, at.point, at.rotation);
     });
 
     return {

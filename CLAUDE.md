@@ -659,8 +659,17 @@ These make everything after them cheaper and safer, so they come first.
       region geometry.
     - This is how ground difficult square by square is drawn. Smoothed
       painted terrain has no cell outline to give.
-  - **Still open:** the emanation and token shapes (a token's own
-    footprint, which Foundry builds with `createTokenEmanation`).
+  - **[done] Emanations.** A zone's `emanation` shape is a radius round its
+    attached token's own footprint: Foundry's `EmanationShapeData` on a
+    `TokenShapeData` base, as `createTokenEmanation` makes.
+    - The footprint is read off the live token when the region is written
+      (`RegionContext.tokenOf`). Foundry refits the shape as the token
+      moves, and the zone follows the footprint's centre.
+    - Without a token it is a circle at the zone's point.
+    - `tests/e2e/structures.spec.ts` moves the token and checks Foundry's
+      own geometry.
+    - The bare token shape is the footprint alone, which an emanation of
+      the smallest radius already covers. It is not a separate kind.
 - **Region fields**:
   - **[done]** `color`: every generated region is coloured by what it is
     (`tools/region-colours.ts`), terrain in its biome's colour, instead of

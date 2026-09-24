@@ -17,7 +17,7 @@ import { isPoint, isRecord, numberOr, stringOrNull } from './guards';
 import type { Costed } from './terrain-cost';
 
 /** Foundry's region shape types a zone can take (`BaseShapeData.TYPES`); `cells` is its grid-spaces shape. */
-export const ZONE_SHAPES = ['circle', 'ellipse', 'ring', 'cone', 'line', 'rectangle', 'cells'] as const;
+export const ZONE_SHAPES = ['circle', 'ellipse', 'ring', 'cone', 'line', 'rectangle', 'cells', 'emanation'] as const;
 
 export type ZoneShapeKind = (typeof ZONE_SHAPES)[number];
 
@@ -51,7 +51,13 @@ export type ZoneShape =
      * the zone's point is in, so moving the zone moves them by whole cells.
      * `size` is the grid's cell size (px) it was made on.
      */
-    | { readonly kind: 'cells'; readonly size: number; readonly cells: readonly CellOffset[] };
+    | { readonly kind: 'cells'; readonly size: number; readonly cells: readonly CellOffset[] }
+    /**
+     * `radius` px round the attached token's own footprint (Foundry's
+     * emanation), which Foundry keeps fitted to the token as it moves; a
+     * circle at the zone's point while no token is attached.
+     */
+    | { readonly kind: 'emanation'; readonly radius: number };
 
 /** What the zone panel edits. */
 export interface ZoneSettings {
@@ -160,6 +166,8 @@ export function scaledZoneShape(shape: ZoneShape, factor: number): ZoneShape {
         case 'cells':
             // Grid spaces stay the spaces they are; only the cell size is a length.
             return { ...shape, size: s(shape.size) };
+        case 'emanation':
+            return { ...shape, radius: s(shape.radius) };
         case 'rectangle':
             break;
     }
@@ -224,6 +232,7 @@ function reach(shape: ZoneShape): number {
         case 'circle':
         case 'ring':
         case 'cone':
+        case 'emanation':
             break;
     }
     return shape.radius;
@@ -254,6 +263,8 @@ export function reshapedZone(kind: ZoneShapeKind, from: ZoneShape, cellSize: num
             return { kind, length: size * 2, width: size * LINE_WIDTH_SHARE };
         case 'rectangle':
             return { kind, width: size * 2, height: size * 2 };
+        case 'emanation':
+            return { kind, radius: size };
         case 'circle':
             break;
     }
@@ -270,7 +281,9 @@ export function zoneHit(zone: ZoneFeature, pt: Point): boolean {
     const { x, y } = localPoint(zonePoint(zone), zone.rotation, pt);
     const d = Math.hypot(x, y);
     switch (shape.kind) {
+        // An emanation is picked by the circle its radius makes about the zone's point, the token's centre it follows.
         case 'circle':
+        case 'emanation':
             return d <= shape.radius;
         case 'ellipse':
             return (x / shape.radiusX) ** 2 + (y / shape.radiusY) ** 2 <= 1;
@@ -312,6 +325,7 @@ export function parseZoneShape(v: unknown): ZoneShape | null {
         line: () => ({ kind: 'line', length: size('length'), width: size('width') }),
         rectangle: () => ({ kind: 'rectangle', width: size('width'), height: size('height') }),
         cells: () => ({ kind: 'cells', size: size('size'), cells: parseCells(v['cells']) }),
+        emanation: () => ({ kind: 'emanation', radius: size('radius') }),
     };
     const shape = shapes[kind]();
     return validZoneShape(shape) ? shape : null;

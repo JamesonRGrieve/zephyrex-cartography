@@ -19,6 +19,7 @@ const SHAPE_NAMES: Readonly<Record<ZoneShapeKind, string>> = {
     line: 'Line',
     rectangle: 'Rectangle',
     cells: 'Grid Spaces',
+    emanation: 'Emanation',
 };
 
 /** Foundry's field names for each shape's sizes, where they differ from the plain name. */

@@ -40,6 +40,7 @@ import type {
     SceneSettingsUpdate,
     SoundCreateData,
     TileCreateData,
+    TokenFootprint,
     WallCreateData,
 } from './boundary';
 
@@ -386,10 +387,15 @@ export function regionShape(polygon: readonly Point[]): RegionShape {
 const CENTRE_ANCHOR = 0.5;
 
 /** A zone's shape as Foundry's own shape data; a rectangle is centred on the zone's point. */
-export function geometryShape(geometry: RegionGeometry): RegionShape {
+export function geometryShape(geometry: RegionGeometry, token: TokenFootprint | null): RegionShape {
     const { x, y, rotation, gridBased } = geometry;
     const placed = { x, y, gridBased, hole: false };
     switch (geometry.kind) {
+        case 'emanation':
+            // Round the token's own footprint, which Foundry keeps fitted to the token; a circle while it has none.
+            return token
+                ? { type: 'emanation', base: { type: 'token', ...token, hole: false }, radius: geometry.radius, gridBased, hole: false }
+                : { type: 'circle', ...placed, radius: geometry.radius };
         case 'circle':
             return { type: 'circle', ...placed, radius: geometry.radius };
         case 'ellipse':
@@ -536,21 +542,28 @@ function regionLevels(region: RegionDoc): { readonly levels?: readonly string[] 
     return { levels: [...new Set([region.level, ...region.spans])] };
 }
 
+/** Where regions are written: how each is named, the scene they are on, and the footprints of its tokens (null for one not there). */
+export interface RegionContext {
+    readonly nameOf: (region: RegionDoc) => string;
+    readonly scene: string;
+    readonly tokenOf: (id: string) => TokenFootprint | null;
+}
+
 /**
- * Create data for the regions of one plan on scene `scene`, whose ids are
- * chosen up front (`ids[i]` for `regions[i]`).
+ * Create data for the regions of one plan, whose ids are chosen up front
+ * (`ids[i]` for `regions[i]`).
  */
-export function regionCreateData(
-    regions: readonly RegionDoc[],
-    ids: readonly string[],
-    nameOf: (region: RegionDoc) => string,
-    scene: string,
-): RegionCreateData[] {
+export function regionCreateData(regions: readonly RegionDoc[], ids: readonly string[], context: RegionContext): RegionCreateData[] {
+    const { nameOf, scene, tokenOf } = context;
     return regions.map((region, i) => ({
         _id: ids[i] ?? '',
         name: nameOf(region),
         color: regionColour(region),
-        shapes: [region.geometry === undefined ? regionShape(region.polygon) : geometryShape(region.geometry)],
+        shapes: [
+            region.geometry === undefined
+                ? regionShape(region.polygon)
+                : geometryShape(region.geometry, region.attachedTo === undefined ? null : tokenOf(region.attachedTo)),
+        ],
         ...(region.attachedTo === undefined ? {} : { attachment: { token: region.attachedTo } }),
         elevation: { bottom: region.bottom, top: region.top },
         behaviors: [...behaviourData(region.behaviour), ...effectBehaviours(region.effects ?? [], { scene, region: ids[i] ?? '' })],
