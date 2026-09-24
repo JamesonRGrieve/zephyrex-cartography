@@ -230,6 +230,49 @@ test('a zone attached to a token moves with it, and the zone follows its region'
     await expect.poll(where).toEqual({ region: [650, 450], zone: [650, 450] });
 });
 
+test('a zone of grid spaces becomes Foundry’s own grid-spaces shape, on the spaces from the one its point is in', async ({ world }) => {
+    const region = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            features: [
+                {
+                    type: 'zone',
+                    x: 4.5,
+                    y: 2.5,
+                    name: 'Rubble',
+                    movementCost: 2,
+                    shape: {
+                        kind: 'cells',
+                        cells: [
+                            { i: 0, j: 0 },
+                            { i: 0, j: 1 },
+                            { i: 1, j: 0 },
+                        ],
+                    },
+                },
+            ],
+        });
+        const rubble = canvas?.scene?.regions.contents.find((r) => r.name === 'Rubble');
+        const [shape] = rubble?.shapes ?? [];
+        return {
+            type: shape?.type,
+            offsets: shape && 'offsets' in shape ? [...shape.offsets].map((o) => ({ i: o.i, j: o.j })) : [],
+            // Foundry's own region geometry covers the spaces: the middle of the first one, not the space beside the third.
+            covers: rubble ? [rubble.polygonTree.testPoint({ x: 450, y: 250 }), rubble.polygonTree.testPoint({ x: 550, y: 350 })] : [],
+        };
+    });
+    // The point (450, 250) is in row 2, column 4 of the 100 px grid.
+    expect(region).toEqual({
+        type: 'grid',
+        offsets: [
+            { i: 2, j: 4 },
+            { i: 2, j: 5 },
+            { i: 3, j: 4 },
+        ],
+        covers: [true, false],
+    });
+});
+
 test('a spawn zone spawns its actors’ tokens inside its region, snapped and apart', async ({ world }) => {
     // The e2e system's Actor type is not one fvtt-types knows, so the Actor is made from plain script.
     const actorUuid = await world.evaluate<string>("Actor.create({ name: 'Cultist', type: 'npc' }).then((actor) => actor.uuid)");

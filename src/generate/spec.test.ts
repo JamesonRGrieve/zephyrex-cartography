@@ -101,6 +101,17 @@ describe('parseSceneSpec', () => {
         expect(issues({ kind: 'ring', radius: 2, innerWidth: 3, outerWidth: 1 })).toEqual(['features.0.shape']);
         expect(issues({ kind: 'cone', radius: 2, angle: 120, curvature: 'flat' })).toEqual(['features.0.shape']);
         expect(issues({ kind: 'circle', radius: 0 })).toEqual(['features.0.shape.radius']);
+        expect(issues({ kind: 'cells', cells: [{ i: 0, j: 0 }] })).toEqual([]);
+        expect(issues({ kind: 'cells', cells: [] })).toEqual(['features.0.shape.cells']);
+        expect(
+            issues({
+                kind: 'cells',
+                cells: [
+                    { i: 1, j: 1 },
+                    { i: 1, j: 1 },
+                ],
+            }),
+        ).toEqual(['features.0.shape']);
     });
 
     it('takes drawn shapes, and reports one missing what its kind stands on', () => {

@@ -9,6 +9,7 @@ function mount(story: { readonly args?: Partial<stories.ZonePanelArgs> }): HTMLE
         settings: story.args?.settings ?? base?.settings ?? NEW_ZONE,
         tokens: story.args?.tokens ?? base?.tokens ?? [],
         presets: story.args?.presets ?? base?.presets ?? [],
+        cellSize: story.args?.cellSize === undefined ? base?.cellSize ?? null : story.args.cellSize,
     });
     document.body.replaceChildren(el);
     return el;
@@ -115,8 +116,22 @@ describe('zone panel', () => {
         expect([...select(root, 'zc-zone-preset').options].map((o) => o.value)).toEqual(['Choking gas', 'Rubble', 'Gas, heavy']);
     });
 
+    it('make grid spaces a block of rows by columns, offered on a square grid alone', () => {
+        const root = mount(stories.NewZone);
+        change(select(root, 'zc-zone-shape'), 'cells');
+        // A 150 px circle across a 100 px grid: a block three spaces a side.
+        expect([input(root, 'zone-rows').value, input(root, 'zone-columns').value]).toEqual(['3', '3']);
+        const rubble = mount(stories.RubbleSquares);
+        change(input(rubble, 'zone-rows'), '2');
+        expect([input(rubble, 'zone-rows').value, input(rubble, 'zone-columns').value]).toEqual(['2', '4']);
+        change(input(rubble, 'zone-columns'), '0');
+        expect(input(rubble, 'zone-columns').value).toBe('4');
+        const hex = mount(stories.NoSquareGrid);
+        expect([...select(hex, 'zc-zone-shape').options].map((o) => o.value)).not.toContain('cells');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.NewZone, stories.FlamerCone, stories.Ring]) {
+        for (const story of [stories.NewZone, stories.FlamerCone, stories.Ring, stories.RubbleSquares, stories.NoSquareGrid]) {
             expect(mount(story).querySelector('#zc-zone-shape')).not.toBeNull();
         }
     });

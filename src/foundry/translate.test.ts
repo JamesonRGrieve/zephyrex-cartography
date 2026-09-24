@@ -536,6 +536,24 @@ describe('regionCreateData', () => {
             { type: 'line', ...on, length: 8, width: 2, rotation: 30 },
             { type: 'rectangle', ...on, width: 8, height: 4, anchorX: 0.5, anchorY: 0.5, rotation: 30 },
         ]);
+        // Grid spaces go by row and column from the cell the zone's point (10, 20) is in, on a 10 px grid: row 2, column 1.
+        const cells = {
+            kind: 'cells',
+            size: 10,
+            cells: [
+                { i: 0, j: 0 },
+                { i: 0, j: 1 },
+            ],
+        } as const;
+        expect(geometryShape({ ...cells, ...placed })).toEqual({
+            type: 'grid',
+            offsets: [
+                { i: 2, j: 1 },
+                { i: 2, j: 2 },
+            ],
+            origin: null,
+            hole: false,
+        });
         const zone: RegionDoc = {
             id: null,
             label: { kind: 'zone', title: '' },

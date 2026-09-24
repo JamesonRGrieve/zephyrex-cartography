@@ -2,6 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import { parseFeatures } from './feature';
 import {
+    absoluteCells,
+    cellBlock,
+    cellExtent,
     makeZone,
     NEW_ZONE,
     parseZone,
@@ -60,17 +63,72 @@ describe('zones', () => {
 
     it('keep about the same size when the GM picks another kind', () => {
         const circle: ZoneShape = { kind: 'circle', radius: 100 };
-        expect(ZONE_SHAPES.map((kind) => reshapedZone(kind, circle))).toEqual([
+        expect(ZONE_SHAPES.map((kind) => reshapedZone(kind, circle, 100))).toEqual([
             circle,
             { kind: 'ellipse', radiusX: 100, radiusY: 50 },
             { kind: 'ring', radius: 100, innerWidth: 25, outerWidth: 25 },
             { kind: 'cone', radius: 100, angle: 90, curvature: 'round' },
             { kind: 'line', length: 200, width: 25 },
             { kind: 'rectangle', width: 200, height: 200 },
+            { kind: 'cells', size: 100, cells: cellBlock(2, 2) },
         ]);
-        expect(reshapedZone('circle', { kind: 'rectangle', width: 40, height: 80 })).toEqual({ kind: 'circle', radius: 40 });
-        expect(reshapedZone('circle', { kind: 'line', length: 60, width: 2 })).toEqual({ kind: 'circle', radius: 30 });
-        expect(reshapedZone('circle', { kind: 'ellipse', radiusX: 5, radiusY: 9 })).toEqual({ kind: 'circle', radius: 9 });
+        expect(reshapedZone('circle', { kind: 'rectangle', width: 40, height: 80 }, null)).toEqual({ kind: 'circle', radius: 40 });
+        expect(reshapedZone('circle', { kind: 'line', length: 60, width: 2 }, null)).toEqual({ kind: 'circle', radius: 30 });
+        expect(reshapedZone('circle', { kind: 'ellipse', radiusX: 5, radiusY: 9 }, null)).toEqual({ kind: 'circle', radius: 9 });
+        // Grid spaces want a square grid; back from them, a circle as wide as their block.
+        expect(reshapedZone('cells', circle, null)).toEqual(circle);
+        expect(reshapedZone('circle', { kind: 'cells', size: 50, cells: cellBlock(1, 3) }, null)).toEqual({ kind: 'circle', radius: 75 });
+    });
+
+    it('hold whole grid spaces from their own cell, each once, and move by whole cells', () => {
+        expect(cellBlock(2, 3)).toEqual([
+            { i: 0, j: 0 },
+            { i: 0, j: 1 },
+            { i: 0, j: 2 },
+            { i: 1, j: 0 },
+            { i: 1, j: 1 },
+            { i: 1, j: 2 },
+        ]);
+        expect(
+            cellExtent([
+                { i: -1, j: 2 },
+                { i: 1, j: 2 },
+            ]),
+        ).toEqual({ rows: 3, columns: 1 });
+        expect(cellExtent([])).toEqual({ rows: 0, columns: 0 });
+        const cells = {
+            kind: 'cells',
+            size: 100,
+            cells: [
+                { i: 0, j: 0 },
+                { i: 1, j: 1 },
+            ],
+        } as const;
+        expect(validZoneShape(cells)).toBe(true);
+        expect(validZoneShape({ ...cells, cells: [] })).toBe(false);
+        expect(
+            validZoneShape({
+                ...cells,
+                cells: [
+                    { i: 0, j: 0 },
+                    { i: 0, j: 0 },
+                ],
+            }),
+        ).toBe(false);
+        expect(validZoneShape({ ...cells, cells: [{ i: 0.5, j: 0 }] })).toBe(false);
+        expect(validZoneShape({ ...cells, size: 0 })).toBe(false);
+        expect(shapeSizes(cells)).toEqual({});
+        expect(withShapeSize(cells, 'size', 50)).toBeNull();
+        expect(scaledZoneShape(cells, 2)).toEqual({ ...cells, size: 200 });
+        // At (250, 130): row 1, column 2.
+        expect(absoluteCells({ x: 250, y: 130 }, cells)).toEqual([
+            { i: 1, j: 2 },
+            { i: 2, j: 3 },
+        ]);
+        const zone = { ...makeZone('z', { x: 250, y: 130 }), shape: cells };
+        expect([zoneHit(zone, { x: 299, y: 199 }), zoneHit(zone, { x: 350, y: 250 }), zoneHit(zone, { x: 350, y: 150 })]).toEqual([true, true, false]);
+        expect(parseZone(JSON.parse(JSON.stringify(zone)))?.shape).toEqual(cells);
+        expect(parseZone({ ...zone, shape: { ...cells, cells: [{ i: 'a', j: 0 }] } })).toBeNull();
     });
 
     it('scale every length, but not a cone’s angle', () => {

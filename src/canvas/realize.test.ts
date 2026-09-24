@@ -404,6 +404,15 @@ describe('realizeSpec', () => {
         ]);
     });
 
+    it('gives a zone of grid spaces the scene’s own cell size, whatever the spec’s units', async () => {
+        const h = makeHarness();
+        await realizeSpec(h.c, spec({ units: 'px', features: [{ type: 'zone', x: 150, y: 150, shape: { kind: 'cells', cells: [{ i: 0, j: 1 }] } }] }), {
+            origin: { x: 0, y: 0 },
+            gridSize: GRID,
+        });
+        expect(h.s.last()[0]).toMatchObject({ shape: { kind: 'cells', size: GRID, cells: [{ i: 0, j: 1 }] } });
+    });
+
     it('puts zones where the spec says, sized in its units, with their area settings', async () => {
         const h = makeHarness();
         await realizeSpec(

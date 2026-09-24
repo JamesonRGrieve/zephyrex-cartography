@@ -8,6 +8,8 @@
  * preset names to elements; unit-tested under happy-dom.
  */
 import {
+    cellBlock,
+    cellExtent,
     CONE_CURVATURES,
     type ConeCurvature,
     reshapedZone,
@@ -16,6 +18,7 @@ import {
     withShapeSize,
     ZONE_SHAPES,
     type ZoneSettings,
+    type ZoneShape,
     type ZoneShapeKind,
 } from '../tools/zone';
 import { button, choice, el, labelledCheckbox, labelledInput, replacePreservingFocus } from './dom';
@@ -31,6 +34,8 @@ export interface ZonePanel {
     readonly tokens: readonly TokenChoice[];
     /** The world's hazard presets, by name. */
     readonly presets: readonly string[];
+    /** The scene's cell size (px) on a square grid, for zones of grid spaces; null where there are none. */
+    readonly cellSize: number | null;
 }
 
 export interface ZoneLabels {
@@ -41,6 +46,9 @@ export interface ZoneLabels {
     readonly size: (kind: ZoneShapeKind, field: string) => string;
     readonly curvature: string;
     readonly curvatures: Readonly<Record<ConeCurvature, string>>;
+    /** A block of grid spaces' rows and columns. */
+    readonly rows: string;
+    readonly columns: string;
     readonly rotation: string;
     readonly gridBased: string;
     readonly token: string;
@@ -119,9 +127,37 @@ function typedNumber(typed: string): number | null {
     return Number.isFinite(value) ? value : null;
 }
 
+/** Most rows or columns of grid spaces the panel makes a block of. */
+const MAX_BLOCK_SIDE = 50;
+
+/** A typed count of rows or columns: a whole number from 1, or null. */
+function typedSide(typed: string): number | null {
+    const value = typedNumber(typed);
+    return value !== null && Number.isInteger(value) && value >= 1 && value <= MAX_BLOCK_SIDE ? value : null;
+}
+
+/** Grid spaces as a block of rows by columns (a spec's own spaces become a block of their span when either is changed). */
+function cellFields(shape: Extract<ZoneShape, { kind: 'cells' }>, labels: ZoneLabels, set: (change: Partial<ZoneSettings>) => boolean): HTMLElement[] {
+    const { rows, columns } = cellExtent(shape.cells);
+    const block = (r: number, c: number): boolean => set({ shape: { ...shape, cells: cellBlock(r, c) } });
+    return [
+        labelledInput(labels.rows, 'number', String(rows), 'zone-rows', (typed) => {
+            const side = typedSide(typed);
+            return side !== null && block(side, columns);
+        }),
+        labelledInput(labels.columns, 'number', String(columns), 'zone-columns', (typed) => {
+            const side = typedSide(typed);
+            return side !== null && block(rows, side);
+        }),
+    ];
+}
+
 /** The size inputs of the zone's shape, each rejected (and reverted) when Foundry would not take it. */
 function sizeFields(settings: ZoneSettings, labels: ZoneLabels, set: (change: Partial<ZoneSettings>) => boolean): HTMLElement[] {
     const { shape } = settings;
+    if (shape.kind === 'cells') {
+        return cellFields(shape, labels, set);
+    }
     return Object.entries(shapeSizes(shape)).map(([field, value]) =>
         labelledInput(labels.size(shape.kind, field), 'number', String(value), `zone-${field}`, (typed) => {
             const number = typedNumber(typed);
@@ -145,10 +181,13 @@ export function renderZonePanel(root: HTMLElement, panel: ZonePanel, labels: Zon
         choice(
             'zc-zone-shape',
             labels.shape,
-            ZONE_SHAPES.map((kind) => [kind, labels.shapes[kind]] as const),
+            // Grid spaces only where the grid is square (or the zone already is some).
+            ZONE_SHAPES.filter((kind) => kind !== 'cells' || panel.cellSize !== null || shape.kind === 'cells').map(
+                (kind) => [kind, labels.shapes[kind]] as const,
+            ),
             shape.kind,
             (kind) => {
-                set({ shape: reshapedZone(kind, shape) });
+                set({ shape: reshapedZone(kind, shape, panel.cellSize) });
             },
         ),
         ...sizeFields(settings, labels, set),

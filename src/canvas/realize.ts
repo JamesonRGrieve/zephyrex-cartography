@@ -50,6 +50,8 @@ export interface RealizeReport {
 interface Scale {
     readonly point: (p: Point) => Point;
     readonly length: (v: number) => number;
+    /** Scene px per grid square, whatever the spec's units: a zone's grid spaces are the scene's own. */
+    readonly gridSize: number;
 }
 
 function scaleOf(spec: SceneSpec, options: RealizeOptions): Scale {
@@ -57,6 +59,7 @@ function scaleOf(spec: SceneSpec, options: RealizeOptions): Scale {
     return {
         point: (p) => ({ x: options.origin.x + p.x * unit, y: options.origin.y + p.y * unit }),
         length: (v) => v * unit,
+        gridSize: options.gridSize,
     };
 }
 
@@ -78,7 +81,7 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
     if (spec.type === 'zone') {
         const zone = withZoneSettings(makeZone(id, scale.point(spec)), {
             name: spec.name,
-            shape: scaledZoneShape(spec.shape, scale.length(1)),
+            shape: spec.shape.kind === 'cells' ? { ...spec.shape, size: scale.gridSize } : scaledZoneShape(spec.shape, scale.length(1)),
             rotation: spec.rotation,
             gridBased: spec.gridBased,
             attachedTo: spec.attachedTo,

@@ -147,6 +147,8 @@ export const I18N = {
     zones: {
         title: key('Zones.Title'),
         none: key('Zones.None'),
+        rows: key('Zones.Rows'),
+        columns: key('Zones.Columns'),
         presets: {
             title: key('Zones.Presets.Title'),
             preset: key('Zones.Presets.Preset'),

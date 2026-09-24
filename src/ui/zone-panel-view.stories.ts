@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Stories for the zone panel; each keeps its own zone, so the controls work in Storybook. */
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import { NEW_ZONE, type ZoneSettings, type ZoneShapeKind } from '../tools/zone';
+import { cellBlock, NEW_ZONE, type ZoneSettings, type ZoneShapeKind } from '../tools/zone';
 import { renderZonePanel, type TokenChoice, type ZoneLabels } from './zone-panel-view';
 
 export interface ZonePanelArgs {
     readonly settings: ZoneSettings;
     readonly tokens: readonly TokenChoice[];
     readonly presets: readonly string[];
+    readonly cellSize: number | null;
 }
 
 const SHAPE_NAMES: Readonly<Record<ZoneShapeKind, string>> = {
@@ -17,6 +18,7 @@ const SHAPE_NAMES: Readonly<Record<ZoneShapeKind, string>> = {
     cone: 'Cone',
     line: 'Line',
     rectangle: 'Rectangle',
+    cells: 'Grid Spaces',
 };
 
 /** Foundry's field names for each shape's sizes, where they differ from the plain name. */
@@ -41,6 +43,8 @@ const LABELS: ZoneLabels = {
     size: (kind, field) => SIZE_NAMES[`${kind}.${field}`] ?? SIZE_NAMES[field] ?? field,
     curvature: 'Curvature',
     curvatures: { round: 'Round', flat: 'Flat', semicircle: 'Semicircle' },
+    rows: 'Rows (grid spaces)',
+    columns: 'Columns (grid spaces)',
     rotation: 'Rotation',
     gridBased: 'Is Grid-Based',
     token: 'Attached Token',
@@ -70,7 +74,7 @@ export function mountZonePanel(args: ZonePanelArgs): HTMLElement {
     let settings = args.settings;
     let presets = args.presets;
     const render = (): void => {
-        renderZonePanel(root, { settings, tokens: args.tokens, presets }, LABELS, {
+        renderZonePanel(root, { settings, tokens: args.tokens, presets, cellSize: args.cellSize }, LABELS, {
             set: (next) => {
                 settings = next;
                 render();
@@ -99,7 +103,7 @@ const meta: Meta<ZonePanelArgs> = {
     title: 'Regions/Zone Panel',
     excludeStories: ['mountZonePanel'],
     render: mountZonePanel,
-    args: { settings: NEW_ZONE, tokens: TOKENS, presets: [] },
+    args: { settings: NEW_ZONE, tokens: TOKENS, presets: [], cellSize: 100 },
 };
 
 export default meta;
@@ -124,4 +128,14 @@ export const FlamerCone: Story = {
 
 export const Ring: Story = {
     args: { settings: { ...NEW_ZONE, name: 'Cordon', shape: { kind: 'ring', radius: 400, innerWidth: 50, outerWidth: 50 } } },
+};
+
+/** Difficult ground square by square: rubble over three rows of four grid spaces. */
+export const RubbleSquares: Story = {
+    args: { settings: { ...NEW_ZONE, name: 'Rubble', shape: { kind: 'cells', size: 100, cells: cellBlock(3, 4) } } },
+};
+
+/** On a hex grid or none, grid spaces are not offered. */
+export const NoSquareGrid: Story = {
+    args: { cellSize: null },
 };

@@ -32,7 +32,11 @@ function labels(): ZoneLabels {
             cone: shape('cone'),
             line: shape('line'),
             rectangle: shape('rectangle'),
+            // Foundry's own name for its grid-spaces shape.
+            cells: localize('SHAPE.TYPES.grid.name'),
         },
+        rows: localize(I18N.zones.rows),
+        columns: localize(I18N.zones.columns),
         size: (kind, field) => localize(`SHAPE.TYPES.${kind}.FIELDS.${field}.label`),
         curvature: localize('SHAPE.TYPES.cone.FIELDS.curvature.label'),
         curvatures: {
@@ -78,6 +82,12 @@ function tokens(): TokenChoice[] {
     return (canvas?.scene?.tokens.contents ?? []).map((token) => ({ id: token.id, name: token.name }));
 }
 
+/** The viewed scene's cell size, for zones of grid spaces: only a square grid has cells the zone math follows. */
+function cellSize(): number | null {
+    const grid = canvas?.grid;
+    return grid?.type === CONST.GRID_TYPES.SQUARE ? grid.size : null;
+}
+
 export interface ZoneRuntime {
     /** Open the panel for a zone. */
     readonly edit: (zoneId: string) => void;
@@ -110,7 +120,7 @@ export function registerZoneRuntime(controller: () => CartographyController | nu
                 })();
             };
             const saved = presets();
-            renderZonePanel(root, { settings, tokens: tokens(), presets: saved.map((p) => p.name) }, labels(), {
+            renderZonePanel(root, { settings, tokens: tokens(), presets: saved.map((p) => p.name), cellSize: cellSize() }, labels(), {
                 set: (next) => {
                     after(async () => active.setZoneSettings(id, next));
                     return true;

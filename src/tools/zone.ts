@@ -16,10 +16,16 @@ import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-c
 import { isPoint, isRecord, numberOr, stringOrNull } from './guards';
 import type { Costed } from './terrain-cost';
 
-/** Foundry's region shape types a zone can take (`BaseShapeData.TYPES`). */
-export const ZONE_SHAPES = ['circle', 'ellipse', 'ring', 'cone', 'line', 'rectangle'] as const;
+/** Foundry's region shape types a zone can take (`BaseShapeData.TYPES`); `cells` is its grid-spaces shape. */
+export const ZONE_SHAPES = ['circle', 'ellipse', 'ring', 'cone', 'line', 'rectangle', 'cells'] as const;
 
 export type ZoneShapeKind = (typeof ZONE_SHAPES)[number];
+
+/** A grid cell by its row `i` and column `j`, from the cell the zone's point is in. */
+export interface CellOffset {
+    readonly i: number;
+    readonly j: number;
+}
 
 /** A cone's far edge: an arc, a straight edge, or a half circle (`ConeShapeData` `curvature`). */
 export const CONE_CURVATURES = ['round', 'flat', 'semicircle'] as const;
@@ -39,7 +45,13 @@ export type ZoneShape =
     /** `angle` is the cone's spread, in degrees. */
     | { readonly kind: 'cone'; readonly radius: number; readonly angle: number; readonly curvature: ConeCurvature }
     | { readonly kind: 'line'; readonly length: number; readonly width: number }
-    | { readonly kind: 'rectangle'; readonly width: number; readonly height: number };
+    | { readonly kind: 'rectangle'; readonly width: number; readonly height: number }
+    /**
+     * Whole spaces of a square grid (`GridShapeData`), relative to the one
+     * the zone's point is in, so moving the zone moves them by whole cells.
+     * `size` is the grid's cell size (px) it was made on.
+     */
+    | { readonly kind: 'cells'; readonly size: number; readonly cells: readonly CellOffset[] };
 
 /** What the zone panel edits. */
 export interface ZoneSettings {
@@ -99,8 +111,16 @@ export function withZonePlace(zone: ZoneFeature, at: Point, rotation: number): Z
     return { ...zone, points: [{ x: at.x, y: at.y }], rotation };
 }
 
-/** Whether Foundry takes `shape`: every size finite and positive, a ring's band inside its centre, a cone's spread within its curvature's. */
+/**
+ * Whether Foundry takes `shape`: every size finite and positive, a ring's
+ * band inside its centre, a cone's spread within its curvature's, and grid
+ * spaces at least one, each once, on a grid with a size.
+ */
 export function validZoneShape(shape: ZoneShape): boolean {
+    if (shape.kind === 'cells') {
+        const keys = new Set(shape.cells.map((c) => `${c.i},${c.j}`));
+        return Number.isFinite(shape.size) && shape.size > 0 && shape.cells.length > 0 && keys.size === shape.cells.length && shape.cells.every(wholeCell);
+    }
     const sizes = Object.values(shapeSizes(shape));
     if (!sizes.every((size) => Number.isFinite(size) && size > 0)) {
         return false;
@@ -137,6 +157,9 @@ export function scaledZoneShape(shape: ZoneShape, factor: number): ZoneShape {
             return { ...shape, radius: s(shape.radius) };
         case 'line':
             return { ...shape, length: s(shape.length), width: s(shape.width) };
+        case 'cells':
+            // Grid spaces stay the spaces they are; only the cell size is a length.
+            return { ...shape, size: s(shape.size) };
         case 'rectangle':
             break;
     }
@@ -148,8 +171,33 @@ export function withCurvature(cone: Extract<ZoneShape, { kind: 'cone' }>, curvat
     return { ...cone, curvature, angle: Math.min(cone.angle, MAX_CONE_ANGLE[curvature]) };
 }
 
-/** A shape's sizes by name (px, or degrees for a cone's angle). */
+function wholeCell(cell: CellOffset): boolean {
+    return Number.isInteger(cell.i) && Number.isInteger(cell.j);
+}
+
+/** A block of grid spaces `rows` by `columns`, from the zone's own cell. */
+export function cellBlock(rows: number, columns: number): CellOffset[] {
+    return Array.from({ length: rows * columns }, (_, n) => ({ i: Math.floor(n / columns), j: n % columns }));
+}
+
+/** How many rows and columns grid spaces span. */
+export function cellExtent(cells: readonly CellOffset[]): { readonly rows: number; readonly columns: number } {
+    const span = (values: readonly number[]): number => (values.length === 0 ? 0 : Math.max(...values) - Math.min(...values) + 1);
+    return { rows: span(cells.map((c) => c.i)), columns: span(cells.map((c) => c.j)) };
+}
+
+/** The zone's grid spaces, absolute (row, column), from the cell its point `at` is in on a grid of `size` px. */
+export function absoluteCells(at: Point, shape: Extract<ZoneShape, { kind: 'cells' }>): CellOffset[] {
+    const i0 = Math.floor(at.y / shape.size);
+    const j0 = Math.floor(at.x / shape.size);
+    return shape.cells.map((c) => ({ i: i0 + c.i, j: j0 + c.j }));
+}
+
+/** A shape's sizes by name (px, or degrees for a cone's angle); grid spaces have none but their count. */
 export function shapeSizes(shape: ZoneShape): Readonly<Record<string, number>> {
+    if (shape.kind === 'cells') {
+        return {};
+    }
     const { kind: _kind, ...rest } = shape;
     const sizes: Record<string, number> = {};
     for (const [field, value] of Object.entries(rest)) {
@@ -169,6 +217,10 @@ function reach(shape: ZoneShape): number {
             return shape.length * HALF;
         case 'rectangle':
             return Math.max(shape.width, shape.height) * HALF;
+        case 'cells': {
+            const { rows, columns } = cellExtent(shape.cells);
+            return Math.max(rows, columns) * shape.size * HALF;
+        }
         case 'circle':
         case 'ring':
         case 'cone':
@@ -177,10 +229,21 @@ function reach(shape: ZoneShape): number {
     return shape.radius;
 }
 
-/** A shape of `kind` about as big as `from`, for when the GM picks another kind. */
-export function reshapedZone(kind: ZoneShapeKind, from: ZoneShape): ZoneShape {
+/**
+ * A shape of `kind` about as big as `from`, for when the GM picks another
+ * kind; grid spaces take a square block on a grid of `cellSize` px (a circle
+ * without one).
+ */
+export function reshapedZone(kind: ZoneShapeKind, from: ZoneShape, cellSize: number | null): ZoneShape {
     const size = reach(from);
     switch (kind) {
+        case 'cells': {
+            if (cellSize === null || !(cellSize > 0)) {
+                break;
+            }
+            const side = Math.max(1, Math.round((size * 2) / cellSize));
+            return { kind, size: cellSize, cells: cellBlock(side, side) };
+        }
         case 'ellipse':
             return { kind, radiusX: size, radiusY: size * HALF };
         case 'ring':
@@ -199,8 +262,12 @@ export function reshapedZone(kind: ZoneShapeKind, from: ZoneShape): ZoneShape {
 
 /** Whether `pt` falls in the zone, by its exact shape (grid-based shapes by their px shape). */
 export function zoneHit(zone: ZoneFeature, pt: Point): boolean {
-    const { x, y } = localPoint(zonePoint(zone), zone.rotation, pt);
     const shape = zone.shape;
+    if (shape.kind === 'cells') {
+        const [here] = absoluteCells(pt, { ...shape, cells: [{ i: 0, j: 0 }] });
+        return here !== undefined && absoluteCells(zonePoint(zone), shape).some((c) => c.i === here.i && c.j === here.j);
+    }
+    const { x, y } = localPoint(zonePoint(zone), zone.rotation, pt);
     const d = Math.hypot(x, y);
     switch (shape.kind) {
         case 'circle':
@@ -244,9 +311,17 @@ export function parseZoneShape(v: unknown): ZoneShape | null {
         }),
         line: () => ({ kind: 'line', length: size('length'), width: size('width') }),
         rectangle: () => ({ kind: 'rectangle', width: size('width'), height: size('height') }),
+        cells: () => ({ kind: 'cells', size: size('size'), cells: parseCells(v['cells']) }),
     };
     const shape = shapes[kind]();
     return validZoneShape(shape) ? shape : null;
+}
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows persisted grid spaces from scene-flag JSON
+function parseCells(v: unknown): CellOffset[] {
+    return (Array.isArray(v) ? v : []).flatMap((cell) =>
+        isRecord(cell) && typeof cell['i'] === 'number' && typeof cell['j'] === 'number' ? [{ i: cell['i'], j: cell['j'] }] : [],
+    );
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses one untyped scene-flag entry, validating shape and returning a narrow ZoneFeature or null

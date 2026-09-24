@@ -95,6 +95,8 @@
         "Zones": {
             "Title": "Zone",
             "None": "None",
+            "Rows": "Rows (grid spaces)",
+            "Columns": "Columns (grid spaces)",
             "Presets": {
                 "Title": "Hazard presets",
                 "Preset": "Preset",

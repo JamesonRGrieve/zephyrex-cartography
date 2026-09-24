@@ -382,6 +382,13 @@ const zoneShapeSpec = z
             .strict(),
         z.object({ kind: z.literal('line'), length: positive, width: positive }).strict(),
         z.object({ kind: z.literal('rectangle'), width: positive, height: positive }).strict(),
+        z
+            .object({
+                kind: z.literal('cells'),
+                cells: z.array(z.object({ i: z.number().int().describe('Rows down.'), j: z.number().int().describe('Columns across.') }).strict()).min(1),
+            })
+            .strict()
+            .describe("Whole spaces of a square grid, from the one the zone's point is in: Foundry's grid-spaces shape."),
     ])
     .describe("One of Foundry's region shapes, sized in the spec's units. A cone or line starts at the zone's point; the rest are centred on it.");
 
@@ -582,16 +589,25 @@ function shapeIssues(f: FeatureSpec, i: number): SpecIssue[] {
 const MIN_POLYGON_POINTS = 3;
 const MIN_LINE_POINTS = 2;
 
-/** A zone shape Foundry would refuse: a ring whose band reaches past its centre, or a cone wider than its curvature allows. */
+/**
+ * A zone shape Foundry would refuse: a ring whose band reaches past its
+ * centre, a cone wider than its curvature allows, or a grid space named
+ * twice (a spec's spaces take the scene's cell size when built).
+ */
 function zoneIssues(f: FeatureSpec, i: number): SpecIssue[] {
-    return f.type === 'zone' && !validZoneShape(f.shape)
-        ? [
+    if (f.type !== 'zone') {
+        return [];
+    }
+    const shape = f.shape.kind === 'cells' ? { ...f.shape, size: 1 } : f.shape;
+    return validZoneShape(shape)
+        ? []
+        : [
               {
                   path: `features.${i}.shape`,
-                  message: 'Foundry does not take this shape: a ring must not reach past its centre, nor a cone spread wider than its curvature allows',
+                  message:
+                      'Foundry does not take this shape: a ring must not reach past its centre, a cone spread wider than its curvature allows, nor a grid space appear twice',
               },
-          ]
-        : [];
+          ];
 }
 
 /**

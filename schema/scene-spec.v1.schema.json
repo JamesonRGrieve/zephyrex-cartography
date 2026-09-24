@@ -2659,6 +2659,47 @@
                                             "height"
                                         ],
                                         "additionalProperties": false
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "const": "cells"
+                                            },
+                                            "cells": {
+                                                "minItems": 1,
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "i": {
+                                                            "type": "integer",
+                                                            "minimum": -9007199254740991,
+                                                            "maximum": 9007199254740991,
+                                                            "description": "Rows down."
+                                                        },
+                                                        "j": {
+                                                            "type": "integer",
+                                                            "minimum": -9007199254740991,
+                                                            "maximum": 9007199254740991,
+                                                            "description": "Columns across."
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "i",
+                                                        "j"
+                                                    ],
+                                                    "additionalProperties": false
+                                                }
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "cells"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "Whole spaces of a square grid, from the one the zone's point is in: Foundry's grid-spaces shape."
                                     }
                                 ],
                                 "description": "One of Foundry's region shapes, sized in the spec's units. A cone or line starts at the zone's point; the rest are centred on it."

@@ -646,10 +646,21 @@ These make everything after them cheaper and safer, so they come first.
     - The scene spec takes `zone` entries sized in its units, and rejects a
       shape Foundry would refuse.
     - Proven in `tests/e2e/pointer.spec.ts`.
-  - **Still open:** grid cells for terrain painted on the grid (painted
-    terrain is smoothed today, so it has no cell outline to give), and the
-    emanation and token shapes (a token's own footprint, which Foundry
-    builds with `createTokenEmanation`).
+  - **[done] Grid spaces.** A zone's `cells` shape is Foundry's
+    `GridShapeData`: whole spaces of a square grid, by row and column.
+    - The spaces are relative to the cell the zone's point is in, so the
+      zone moves by whole cells. The shape records the cell size it was
+      made on, which keeps hit testing and the absolute offsets pure.
+    - The zone panel offers it only on a square grid, as a block of rows by
+      columns.
+    - The scene spec lists any spaces and takes the scene's cell size
+      whatever its units, and it rejects a space named twice.
+    - `tests/e2e/structures.spec.ts` checks the offsets and Foundry's own
+      region geometry.
+    - This is how ground difficult square by square is drawn. Smoothed
+      painted terrain has no cell outline to give.
+  - **Still open:** the emanation and token shapes (a token's own
+    footprint, which Foundry builds with `createTokenEmanation`).
 - **Region fields**:
   - **[done]** `color`: every generated region is coloured by what it is
     (`tools/region-colours.ts`), terrain in its biome's colour, instead of

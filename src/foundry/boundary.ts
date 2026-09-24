@@ -153,6 +153,8 @@ export type RegionShape =
           readonly hole: boolean;
           readonly gridBased?: boolean;
       }
+    /** `GridShapeData`: grid spaces by row `i` and column `j`; `origin` null for the first space's centre. */
+    | { readonly type: 'grid'; readonly offsets: readonly { readonly i: number; readonly j: number }[]; readonly origin: null; readonly hole: boolean }
     | ZoneShapeData;
 
 /** A zone's shape, as 14.359's `CircleShapeData` … `LineShapeData` hold it: at `x`, `y`, sizes in px. */

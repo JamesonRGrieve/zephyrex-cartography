@@ -28,6 +28,7 @@ import type {
 } from '../tools/documents';
 import { regionColour } from '../tools/region-colours';
 import { type Environment, FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
+import { absoluteCells } from '../tools/zone';
 import type {
     AreaEffectBehaviour,
     AreaEffectBehaviourBody,
@@ -399,6 +400,9 @@ export function geometryShape(geometry: RegionGeometry): RegionShape {
             return { type: 'cone', ...placed, radius: geometry.radius, angle: geometry.angle, rotation, curvature: geometry.curvature };
         case 'line':
             return { type: 'line', ...placed, length: geometry.length, width: geometry.width, rotation };
+        case 'cells':
+            // Foundry's grid-spaces shape: the spaces themselves, by row and column.
+            return { type: 'grid', offsets: absoluteCells({ x, y }, geometry), origin: null, hole: false };
         case 'rectangle':
             break;
     }
