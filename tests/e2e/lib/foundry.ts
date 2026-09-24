@@ -40,6 +40,8 @@ const MODULE_SCRIPT = `/modules/${MODULE_ID}/dist/`;
 const RAW_COVERAGE_DIR = resolve('.e2e-raw-coverage');
 const JOIN_ATTEMPTS = 6;
 const JOIN_RETRY_MS = 2_000;
+/** The join form's user field: a name typed in, since 14.368 (earlier releases listed users in a select). */
+const USER_FIELD = 'input[name="username"]';
 const READY_TIMEOUT_MS = 60_000;
 
 /** A scene every test starts on: gridded, unpadded, so scene px equal canvas px from (0, 0). */
@@ -58,15 +60,16 @@ async function joinAsGamemaster(page: Page): Promise<void> {
     for (let attempt = 0; attempt < JOIN_ATTEMPTS; attempt++) {
         // eslint-disable-next-line no-await-in-loop -- sequential retry: each attempt waits out a still-booting world before the next
         await page.goto(`${serverUrl()}/join`);
+        // The join form (a user-name field since 14.368) is served once the world has booted.
         // eslint-disable-next-line no-await-in-loop -- see above
-        const listed = await page.locator('select[name="userid"] option', { hasText: 'Gamemaster' }).count();
-        if (listed > 0) {
+        const ready = await page.locator(USER_FIELD).count();
+        if (ready > 0) {
             break;
         }
         // eslint-disable-next-line no-await-in-loop -- see above
         await page.waitForTimeout(JOIN_RETRY_MS);
     }
-    await page.selectOption('select[name="userid"]', { label: 'Gamemaster' });
+    await page.fill(USER_FIELD, 'Gamemaster');
     await page.click('button[name="join"]');
     await page.waitForURL(/\/game/);
     await page.waitForFunction(() => game.ready === true, undefined, { timeout: READY_TIMEOUT_MS });
