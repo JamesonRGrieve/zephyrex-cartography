@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { catalogStamps } from '../canvas/test-fakes';
-import { pileSpec } from './containers';
+import { PILE_STATES, pileSpec, pileStateLabel, pileStateOf } from './containers';
 import { makeStamp } from './stamp';
 
 const [chest] = catalogStamps([
@@ -22,6 +22,23 @@ function placed(gridSize: number): ReturnType<typeof makeStamp> {
     }
     return makeStamp('c1', chest, { stamp: chest.key, x: 500, y: 300, rotation: 90 }, gridSize);
 }
+
+describe('pile states', () => {
+    it('are locked, then closed, then empty when open with nothing in it', () => {
+        expect(pileStateOf({ closed: true, locked: true }, 3)).toBe('locked');
+        expect(pileStateOf({ closed: true, locked: false }, 0)).toBe('closed');
+        expect(pileStateOf({ closed: false, locked: false }, 0)).toBe('empty');
+        expect(pileStateOf({ closed: false, locked: false }, 2)).toBe('open');
+    });
+
+    it('show the variant the pack names, a locked pile as closed and an emptied one as open where it names none', () => {
+        const states = { closed: 'shut', open: 'ajar' };
+        expect(PILE_STATES.map((state) => pileStateLabel(states, state))).toEqual(['ajar', 'ajar', 'shut', 'shut']);
+        expect(pileStateLabel({ locked: 'chained', empty: 'bare' }, 'locked')).toBe('chained');
+        expect(pileStateLabel({ empty: 'bare' }, 'open')).toBeUndefined();
+        expect(pileStateLabel(undefined, 'open')).toBeUndefined();
+    });
+});
 
 describe('pileSpec', () => {
     it('covers the stamp footprint in grid squares, in its image, turn and elevation above the floor', () => {

@@ -47,10 +47,21 @@
             ],
             "scale": "interior",
             "perspective": "top-down",
-            "container": true,
+            "container": {
+                "states": {
+                    "closed": "shut",
+                    "open": "open"
+                }
+            },
             "variants": [
                 {
                     "state": "shut",
+                    "image": "stamps/crate.svg",
+                    "width": 100,
+                    "height": 100
+                },
+                {
+                    "state": "open",
                     "image": "stamps/crate.svg",
                     "width": 100,
                     "height": 100

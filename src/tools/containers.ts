@@ -24,6 +24,35 @@ export interface PileSpec {
     readonly pile: StampPile;
 }
 
+/** What a pile shows: open with things in it, emptied, closed, or locked. */
+export const PILE_STATES = ['open', 'empty', 'closed', 'locked'] as const;
+
+export type PileState = (typeof PILE_STATES)[number];
+
+/**
+ * A pile's state from Item Piles' own record of it (its `closed` and
+ * `locked` data) and what it holds: locked first, then closed, then empty
+ * when open with nothing in it.
+ */
+export function pileStateOf(data: { readonly closed: boolean; readonly locked: boolean }, itemCount: number): PileState {
+    if (data.locked) {
+        return 'locked';
+    }
+    if (data.closed) {
+        return 'closed';
+    }
+    return itemCount === 0 ? 'empty' : 'open';
+}
+
+/** What a state falls back to showing when the pack names no variant for it: a locked pile looks closed, an emptied one open. */
+const FALLBACK: Readonly<Partial<Record<PileState, PileState>>> = { locked: 'closed', empty: 'open' };
+
+/** The variant label (a variant's `state`) the pack says shows a pile in `state`, if it says. */
+export function pileStateLabel(states: StampPile['states'], state: PileState): string | undefined {
+    const fallback = FALLBACK[state];
+    return states?.[state] ?? (fallback === undefined ? undefined : states?.[fallback]);
+}
+
 /** A container stamp's pile when its pack gave no options: a plain container. */
 const PLAIN_CONTAINER: StampPile = { type: 'container' };
 

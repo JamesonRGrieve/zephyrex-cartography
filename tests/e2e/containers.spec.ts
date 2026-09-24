@@ -49,3 +49,31 @@ test('a plain container stamp is a container pile with Item Piles defaults', asy
     // Kept when emptied: a chest is furniture, not a drop.
     expect(pile).toEqual({ type: 'container', enabled: true, deleteWhenEmpty: false });
 });
+
+test('a container stamp shows its pile closed or open as its Item Piles state changes', async ({ world }) => {
+    test.skip(!(await moduleActive(world, 'item-piles')), 'Item Piles is not installed in the e2e world (FOUNDRY_TEST_MODULES)');
+    const placed = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const id = await controller?.placeStamp({ stamp: 'zc-e2e-pack:chest', x: 300, y: 300 });
+        const feature = id === undefined || id === null ? null : controller?.getFeature(id);
+        return { id: id ?? '', pile: feature?.type === 'stamp' ? feature.pile ?? '' : '' };
+    });
+    expect(placed.pile).toMatch(/^Scene\.\w+\.Token\.\w+$/u);
+    const variant = async (): Promise<number | null> =>
+        world.evaluate((id) => {
+            const feature = game.modules?.get('zephyrex-cartography').api.controller()?.getFeature(id);
+            return feature?.type === 'stamp' ? feature.variant : null;
+        }, placed.id);
+    // Where Item Piles records a pile's state (its actor's `item-piles.data`), which its open and close calls and its
+    // sheet all write; set from plain script, since fvtt-types does not know another module's flags.
+    const setClosed = async (shut: boolean): Promise<void> => {
+        await world.evaluate(`foundry.utils.fromUuidSync('${placed.pile}').actor.update({ 'flags.item-piles.data.closed': ${String(shut)} })`);
+    };
+    await setClosed(true);
+    await expect.poll(variant).toBe(0);
+    // Open and empty: it shows open, as the pack names no empty look.
+    await setClosed(false);
+    await expect.poll(variant).toBe(1);
+    await setClosed(true);
+    await expect.poll(variant).toBe(0);
+});

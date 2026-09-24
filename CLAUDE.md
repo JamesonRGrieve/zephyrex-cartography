@@ -1013,7 +1013,8 @@ imports).
     movement actions that use it;
   - `enterable` (submap-capable);
   - `container`: `true`, or Item Piles pile options (type, starting closed or
-    locked, distance, sounds, and which variant shows each pile state);
+    locked, distance, sounds, and which variant shows each pile state:
+    closed, open, empty, locked);
   - `particles`: native particle emitters (textures, spawn area, count,
     lifetime, velocity, alpha, scale, fade, blend);
   - `sound`: an ambient sound emitter;
@@ -1043,7 +1044,22 @@ imports).
     and door fields, `surface` and `terrain` are realised too (see their
     priorities).
   - Particles run as native particle generators (Priority 6).
-  - Not yet realised: transition movement, and pile `states`. The engine takes each one up as its roadmap priority lands.
+  - **[done] Pile `states`.** A container stamp shows the variant its pack
+    names for its pile's state: locked, closed, empty (open with nothing
+    in it) or open.
+    - A locked pile falls back to its closed look, and an emptied one to
+      its open look.
+    - The state is read from Item Piles' own record (the pile actor's
+      `item-piles.data` `closed` and `locked`) and its items.
+    - The active GM rechecks on any token, actor or item change, one
+      recheck at a time. A failed recheck is logged and never stalls the
+      next.
+    - A new pile's `closed` and `locked` are set outright (Item Piles'
+      defaults when the pack gives none), since piles share Item Piles'
+      default pile actor, and a new one would otherwise inherit the last
+      one's state.
+    - Proven in `tests/e2e/containers.spec.ts`.
+  - Not yet realised: transition movement (blocked on 14.361). The engine takes it up as its roadmap priority lands.
     Packs may author them now; they are validated and snapshotted on placed
     stamps, so they take effect as soon as that priority ships.
 - **Evolution:** v1 changes are **additive only**. A breaking change becomes a new

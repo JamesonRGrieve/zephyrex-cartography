@@ -25,6 +25,19 @@ const stamps = catalogStamps([
         ],
     },
     {
+        id: 'strongbox',
+        name: 'Strongbox',
+        category: 'Storage',
+        scale: 'interior',
+        perspective: 'top-down',
+        container: { type: 'container', states: { closed: 'shut', open: 'open', locked: 'chained' } },
+        variants: [
+            { state: 'shut', image: 'box.png', width: 100, height: 100 },
+            { state: 'open', image: 'box-open.png', width: 100, height: 100 },
+            { state: 'chained', image: 'box-chained.png', width: 100, height: 100 },
+        ],
+    },
+    {
         id: 'rug',
         name: 'Rug',
         category: 'Decor',
@@ -63,6 +76,27 @@ describe('CartographyController containers', () => {
         expect(shut?.type === 'stamp' ? shut.pile : null).toBe('pile2');
         await c.redo(); // smashed again: that pile goes too
         expect(k.removed).toEqual(['pile1', 'pile2']);
+    });
+
+    it('show the variant the pack names for their pile’s state, empty as open, keeping the pile', async () => {
+        const { c, k } = makeHarness(stamps);
+        await c.placeStamp({ stamp: 'pack:strongbox', x: 50, y: 50 });
+        const variant = (): number | null => {
+            const box = c.getFeature('p1');
+            return box?.type === 'stamp' ? box.variant : null;
+        };
+        expect(c.stampPiles()).toEqual(['pile1']);
+        expect(await c.applyPileState('pile1', 'open')).toBe(true);
+        expect(variant()).toBe(1);
+        // The pack names no empty look: an emptied box looks open, which it already does.
+        expect(await c.applyPileState('pile1', 'empty')).toBe(false);
+        expect(await c.applyPileState('pile1', 'locked')).toBe(true);
+        expect(variant()).toBe(2);
+        expect(await c.applyPileState('nope', 'open')).toBe(false);
+        expect(k.removed).toEqual([]);
+        // A crate's pack names no states at all.
+        await c.placeStamp({ stamp: 'pack:crate', x: 300, y: 300 });
+        expect(await c.applyPileState('pile2', 'open')).toBe(false);
     });
 
     it('places the pile at the level floor', async () => {

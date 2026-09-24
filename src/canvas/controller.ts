@@ -14,7 +14,7 @@ import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../st
 import { storedDisplay, storedEffects } from '../tools/area-effects';
 import { type AreaFeature, type AreaSettings, areaSettingsOf, isArea } from '../tools/areas';
 import type { BiomeKind } from '../tools/biome';
-import { pileSpec, type PileSpec } from '../tools/containers';
+import { pileSpec, type PileSpec, type PileState, pileStateLabel } from '../tools/containers';
 import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type RegionDoc, type SubmapTravel, type TileDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
@@ -947,6 +947,28 @@ export class CartographyController {
         const varied = await this.withSilhouette(withStampVariant(feature, stamp, index, this.stampGrid(stamp)));
         await this.replaceFeature(id, await this.followPile(varied, feature.pile));
         return true;
+    }
+
+    /** The Item Piles piles (token UUIDs) backing the scene's container stamps. */
+    stampPiles(): string[] {
+        return this.features.flatMap((f) => (f.type === 'stamp' && f.pile !== null ? [f.pile] : []));
+    }
+
+    /**
+     * Follow a pile opened, closed, locked or emptied in play: switch the
+     * container stamp backed by pile `pileUuid` to the variant its pack names
+     * for `state`, as a door stamp follows its door. False when no stamp has
+     * that pile, the pack names no variant for the state, or it shows already.
+     */
+    async applyPileState(pileUuid: string, state: PileState): Promise<boolean> {
+        const feature = this.features.find((f): f is StampFeature => f.type === 'stamp' && f.pile === pileUuid);
+        const stamp = feature ? this.catalog.get(feature.stamp) : null;
+        const label = feature ? pileStateLabel(feature.behaviour.pile?.states, state) : undefined;
+        const index = stamp && label !== undefined ? stamp.variants.findIndex((variant) => variant.state === label) : -1;
+        if (!feature || index < 0 || index === feature.variant) {
+            return false;
+        }
+        return this.setStampVariant(feature.id, index);
     }
 
     /** Step a placed stamp to its next (or previous) variant, wrapping. */

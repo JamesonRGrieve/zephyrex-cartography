@@ -19,7 +19,7 @@ import { FoundryDocumentSink } from './foundry/documents';
 import { registerDoorRuntime } from './foundry/door-runtime';
 import { registerEffectsRuntime } from './foundry/effects-runtime';
 import { registerGeneratorRuntime } from './foundry/generator-runtime';
-import { createItemPilesContainers } from './foundry/item-piles';
+import { createItemPilesContainers, followPileStates } from './foundry/item-piles';
 import { registerLabelRuntime } from './foundry/label-runtime';
 import { registerLevelRuntime } from './foundry/level-runtime';
 import { createLevelStore } from './foundry/levels';
@@ -80,6 +80,8 @@ const pins = registerPinRuntime(() => state?.controller ?? null);
 const labels = registerLabelRuntime(() => state?.controller ?? null);
 
 const zones = registerZoneRuntime(() => state?.controller ?? null);
+
+followPileStates(() => state?.controller ?? null);
 
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
