@@ -180,7 +180,6 @@ export const I18N = {
         room: key('Regions.Room'),
         terrain: key('Regions.Terrain'),
         surface: key('Regions.Surface'),
-        body: key('Regions.Body'),
     },
     submap: {
         title: key('Submap.Title'),

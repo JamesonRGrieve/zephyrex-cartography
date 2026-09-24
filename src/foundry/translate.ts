@@ -465,7 +465,6 @@ export function regionCreateData(regions: readonly RegionDoc[], ids: readonly st
         name: nameOf(region),
         color: regionColour(region),
         shapes: [regionShape(region.polygon)],
-        ...(region.restriction === undefined ? {} : { restriction: { enabled: true, type: region.restriction, priority: 0 } }),
         elevation: { bottom: region.bottom, top: region.top },
         behaviors: [...behaviourData(region.behaviour), ...(region.effects ?? []).map(effectBehaviour)],
         // A region drawn from a feature is edited through the feature, so it is locked and

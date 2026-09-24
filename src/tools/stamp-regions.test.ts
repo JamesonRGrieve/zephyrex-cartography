@@ -108,16 +108,16 @@ describe('stamp regions', () => {
         expect(regions(place(roof, {}, 'g'), 0)).toEqual([expect.objectContaining({ bottom: 0, top: 20 })]);
     });
 
-    it('bars movement over the footprint of a stamp tokens cannot pass, on each level it stands on, while its variant says so', () => {
-        expect(regions(place(boulder, {}, 'g'))).toEqual([
-            expect.objectContaining({ label: { kind: 'stamp-body', name: 'Boulder' }, level: 'g', bottom: 0, top: 20, restriction: 'move', behaviour: null }),
-        ]);
-        // A stamp on every level bars each one: Foundry restricts only a region on exactly one level.
-        const upper: Level = { id: 'u', name: 'Upper', bottom: 20, top: 40, art: NO_LEVEL_ART };
-        const everywhere = place(boulder);
-        const bodies = planDocuments(everywhere, { features: [everywhere], levels: [GROUND, upper], terrainRegions: false, gridDistance: 5 }).regions;
-        expect(bodies.map((r) => r.level)).toEqual(['g', 'u']);
-        expect(regions(place(boulder, { variant: 1 }, 'g'))).toEqual([]);
+    it('walls round the footprint of a stamp tokens cannot pass, barring movement alone, while its variant says so', () => {
+        const walls = (stamp: StampFeature): ReturnType<typeof planDocuments>['walls'] => planDocuments(stamp).walls;
+        // A region restriction clips a region to walls and bars nothing, so a body is walls, and no region at all.
+        expect(regions(place(boulder, {}, 'g'))).toEqual([]);
+        const body = walls(place(boulder, {}, 'g'));
+        expect(body).toHaveLength(4);
+        expect(body.map(({ door, blocks, level }) => ({ door, blocks, level }))).toEqual(
+            Array.from({ length: 4 }, () => ({ door: 'none', blocks: { sight: 'none', light: 'none', sound: 'none', movement: true }, level: 'g' })),
+        );
+        expect(walls(place(boulder, { variant: 1 }, 'g'))).toEqual([]);
     });
 
     it('makes no region for a stamp with neither', () => {

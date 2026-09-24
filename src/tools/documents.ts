@@ -179,7 +179,7 @@ type RegionLabel =
     | { readonly kind: 'terrain'; readonly biome: BiomeKind }
     | { readonly kind: 'floor' | 'ceiling'; readonly level: string }
     | { readonly kind: 'room' }
-    | { readonly kind: 'stamp-terrain' | 'stamp-surface' | 'stamp-body'; readonly name: string };
+    | { readonly kind: 'stamp-terrain' | 'stamp-surface'; readonly name: string };
 
 /** Where a teleported token lands in the region it arrives in (v14 `teleportToken` placement). */
 export const TRAVEL_PLACEMENTS = ['relative', 'center', 'random'] as const;
@@ -243,8 +243,6 @@ export interface RegionDoc {
      */
     readonly spans: readonly string[];
     readonly behaviour: RegionBehaviour | null;
-    /** What the region bars, as Foundry's region restriction (`move`: tokens cannot enter); absent for none. */
-    readonly restriction?: 'move';
     /** The area effects the GM put on the feature, as further behaviours after `behaviour`; absent for none. */
     readonly effects?: readonly AreaEffect[];
 }

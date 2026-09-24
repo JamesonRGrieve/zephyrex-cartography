@@ -634,13 +634,19 @@ These make everything after them cheaper and safer, so they come first.
   - **[done]** `color`: every generated region is coloured by what it is
     (`tools/region-colours.ts`), terrain in its biome's colour, instead of
     Foundry's random pick;
-  - **[done]** `restriction` for movement: a stamp whose `physical` says
-    `blocksMovement` gets a "<stamp> (impassable)" region barring movement.
-    Foundry restricts only a region on exactly one level (14.359
-    `_computeShapeConstraints`), and a batch rejects the create otherwise, so
-    a stamp on every level gets one per level. **Still open:** the light,
-    darkness, sight and sound restrictions, and `priority`;
-  - `hidden` [14.360]: GM-only, with behaviours off;
+  - **[done, corrected] Impassable stamps.** A region's `restriction`
+    does not bar tokens. It clips the region's own shapes to walls of its
+    type, cast from each shape's origin like a light (14.359
+    `_computeShapeConstraints`). So a stamp whose `physical` says
+    `blocksMovement` gets movement-only walls round its footprint instead
+    (Foundry's Invisible Wall), unless its occlusion walls already bar
+    movement. `tests/e2e/stamps.spec.ts` runs Foundry's own move collision
+    test through it.
+  - **Still open:** `restriction` as what it is: a region shaped by walls
+    (light, darkness, sight, sound or move) with a `priority`, for effects
+    that should stop at walls;
+  - `hidden` [14.360]: GM-only, with behaviours off. Blocked: not in the
+    14.359 schema;
   - `highlightMode` (covered grid spaces) and `displayMeasurements`;
   - `ownership`;
   - `attachment.token`: a region that moves with a token [14.353, renamed

@@ -53,16 +53,23 @@ test('a stamp’s terrain and surface become native Modify Movement Cost and Def
     });
 });
 
-test('an impassable stamp bars movement with a native region restriction, coloured by what it is', async ({ world }) => {
-    const regions = await world.evaluate(async () => {
+test('an impassable stamp is walled for movement alone, so Foundry stops a token crossing it but it hides nothing', async ({ world }) => {
+    const result = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.controller()?.placeStamp({ stamp: 'zc-e2e-pack:boulder', x: 400, y: 400 });
-        return (canvas?.scene?.regions.contents ?? []).map((r) => ({
-            name: r.name,
-            color: r.color.css,
-            restriction: { enabled: r.restriction.enabled, type: r.restriction.type },
-        }));
+        const walls = (canvas?.scene?.walls.contents ?? []).map((w) => ({ move: w.move, sight: w.sight, light: w.light, sound: w.sound }));
+        // The collision test Foundry's own token movement runs: a straight move through the boulder, and one beside it.
+        const level = canvas?.level ?? undefined;
+        const collides = (y: number): boolean =>
+            CONFIG.Canvas.polygonBackends.move.testCollision({ x: 250, y }, { x: 550, y }, { type: 'move', mode: 'any', level });
+        const blocked = collides(400);
+        const beside = collides(700);
+        return { walls, blocked, beside, regions: canvas?.scene?.regions.size };
     });
-    expect(regions).toEqual([{ name: 'Boulder (impassable)', color: '#c0392b', restriction: { enabled: true, type: 'move' } }]);
+    // CONST.WALL_MOVEMENT_TYPES.NORMAL is 20; EDGE_SENSE_TYPES.NONE is 0.
+    expect(result.walls).toEqual(Array.from({ length: 4 }, () => ({ move: 20, sight: 0, light: 0, sound: 0 })));
+    expect(result.blocked).toBe(true);
+    expect(result.beside).toBe(false);
+    expect(result.regions).toBe(0);
 });
 
 test('a stamp’s particles run as native particle generators, following its variant', async ({ world }) => {

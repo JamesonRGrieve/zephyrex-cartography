@@ -310,27 +310,20 @@ function stampTerrainRegion(stamp: StampFeature, levels: readonly Level[]): Regi
 }
 
 /**
- * A stamp whose body tokens cannot pass (a boulder, a pillar): a region over
- * its footprint barring movement. Foundry restricts only a region on exactly
- * one level (14.359), so there is one per level the stamp stands on: its own,
- * or each of the scene's for a stamp on every level.
+ * A stamp whose body tokens cannot pass (a boulder, a pillar): walls round its
+ * footprint that bar movement alone (Foundry's Invisible Wall), so it hides
+ * and lights nothing. What bars movement in v14 is a wall; a region
+ * restriction only clips the region's own shape to walls. A stamp whose
+ * occlusion walls already bar movement needs none.
  */
-function stampBodyRegions(stamp: StampFeature, levels: readonly Level[]): RegionDoc[] {
-    if (stamp.behaviour.physical?.blocksMovement !== true) {
+function stampBodyWalls(stamp: StampFeature, floor: Floor): WallDoc[] {
+    const occlusion = stamp.behaviour.occlusion;
+    const walled = occlusion !== null && occlusion.shape !== 'none' && occlusion.movement;
+    if (stamp.behaviour.physical?.blocksMovement !== true || walled) {
         return [];
     }
-    const own = findLevel(levels, stamp.level);
-    return (stamp.level === null ? levels : own ? [own] : []).map((level) => ({
-        id: null,
-        label: { kind: 'stamp-body', name: stamp.name },
-        polygon: stampCorners(stamp),
-        bottom: level.bottom,
-        top: level.top,
-        level: level.id,
-        spans: [],
-        behaviour: null,
-        restriction: 'move',
-    }));
+    const { blocks } = presetWall('invisible');
+    return perimeterSegments(stampCorners(stamp)).map((s) => ({ a: s.a, b: s.b, door: 'none', doorState: 'closed', blocks, level: floor.level }));
 }
 
 /**
@@ -391,7 +384,7 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
     const door = stampDoorWall(stamp, floor);
     return {
         ...NO_PLAN,
-        walls: [...(door ? [door] : []), ...stampWalls(stamp, floor)],
+        walls: [...(door ? [door] : []), ...stampWalls(stamp, floor), ...stampBodyWalls(stamp, floor)],
         tiles: [stampTile(stamp, floor)],
         lights: light ? [light] : [],
         regions: [
@@ -402,7 +395,6 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
                 stampTerrainRegion(stamp, context.levels),
                 stampSurfaceRegion(stamp, context.levels, context.gridDistance, floor),
             ].filter((r): r is RegionDoc => r !== null),
-            ...stampBodyRegions(stamp, context.levels),
         ],
         sounds: sound ? [sound] : [],
     };

@@ -13,7 +13,7 @@ import { format, localize } from './localize';
 export function regionName(region: RegionDoc): string {
     const label = region.label;
     if ('name' in label) {
-        const keys = { 'stamp-terrain': I18N.regions.terrain, 'stamp-surface': I18N.regions.surface, 'stamp-body': I18N.regions.body } as const;
+        const keys = { 'stamp-terrain': I18N.regions.terrain, 'stamp-surface': I18N.regions.surface } as const;
         return format(keys[label.kind], { name: label.name });
     }
     if ('scene' in label) {
