@@ -59,10 +59,7 @@ export function registerDoorRuntime(controller: () => CartographyController | nu
             }
             const { room, segment } = target;
             const apply = (settings: Parameters<CartographyController['setRoomDoor']>[2]): void => {
-                void (async (): Promise<void> => {
-                    await active.setRoomDoor(room, segment, settings);
-                    panel.refresh();
-                })();
+                panel.apply(async () => active.setRoomDoor(room, segment, settings));
             };
             renderDoorPanel(root, door, labels(), { set: apply, remove: () => apply(null) });
         },

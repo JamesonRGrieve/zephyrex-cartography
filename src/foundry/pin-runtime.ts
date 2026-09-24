@@ -57,10 +57,7 @@ export function registerPinRuntime(controller: () => CartographyController | nul
                 return;
             }
             const save = (next: typeof settings): void => {
-                void (async (): Promise<void> => {
-                    await active.setPinSettings(id, next);
-                    panel.refresh();
-                })();
+                panel.apply(async () => active.setPinSettings(id, next));
             };
             renderPinPanel(root, { settings, journal: journal() }, labels(), {
                 set: save,

@@ -148,10 +148,7 @@ export function registerEffectsRuntime(controller: () => CartographyController |
                 return;
             }
             const save = (next: typeof settings): void => {
-                void (async (): Promise<void> => {
-                    await active.setAreaSettings(id, next);
-                    panel.refresh();
-                })();
+                panel.apply(async () => active.setAreaSettings(id, next));
             };
             renderEffectsPanel(root, { settings, adding }, labels(), {
                 setMovementCost: (typed) => {

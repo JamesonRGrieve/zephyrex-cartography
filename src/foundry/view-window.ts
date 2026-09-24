@@ -19,6 +19,13 @@ export interface ViewWindowOptions {
 export interface ViewWindow {
     open: () => void;
     refresh: () => void;
+    /**
+     * Make an edit the panel shows. The controller holds the change as soon
+     * as the edit starts, so the panel redraws at once: the GM's next change
+     * builds on this one, not on what the panel showed before it. It redraws
+     * again once the edit is written, and a write that fails is logged.
+     */
+    apply: (edit: () => Promise<unknown>) => void;
 }
 
 export function createViewWindow(options: ViewWindowOptions): ViewWindow {
@@ -48,15 +55,27 @@ export function createViewWindow(options: ViewWindowOptions): ViewWindow {
     }
 
     let app: ViewApplication | null = null;
+    const refresh = (): void => {
+        if (app?.rendered === true) {
+            options.render(root);
+        }
+    };
     return {
         open: (): void => {
             app ??= new ViewApplication();
             void app.render({ force: true });
         },
-        refresh: (): void => {
-            if (app?.rendered === true) {
-                options.render(root);
-            }
+        refresh,
+        apply: (edit): void => {
+            const written = edit();
+            refresh();
+            written
+                .then(refresh)
+                // eslint-disable-next-line no-restricted-syntax -- boundary: a rejection's reason is untyped, and is only logged
+                .catch((error: unknown) => {
+                    console.error(`${MODULE_ID} | could not apply an edit from the ${options.id} panel`, error);
+                    refresh();
+                });
         },
     };
 }

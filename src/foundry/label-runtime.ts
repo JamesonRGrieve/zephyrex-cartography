@@ -47,10 +47,7 @@ export function registerLabelRuntime(controller: () => CartographyController | n
                 return;
             }
             renderLabelPanel(root, { settings, fonts: Object.keys(CONFIG.fontDefinitions) }, labels(), (next) => {
-                void (async (): Promise<void> => {
-                    await active.setLabelSettings(id, next);
-                    panel.refresh();
-                })();
+                panel.apply(async () => active.setLabelSettings(id, next));
             });
         },
     });

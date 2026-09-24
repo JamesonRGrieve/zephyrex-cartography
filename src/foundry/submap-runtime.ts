@@ -93,10 +93,7 @@ export function registerSubmapRuntime(controller: () => CartographyController | 
             const current = canvas?.scene?.id;
             const scenes = (game.scenes?.contents ?? []).filter((s) => s.id !== current).map((s) => ({ id: s.id, name: s.name }));
             const run = (action: () => Promise<unknown>): void => {
-                void (async (): Promise<void> => {
-                    await action();
-                    panel.refresh();
-                })();
+                panel.apply(action);
             };
             const panelState = {
                 stampName: stampName(active, id),

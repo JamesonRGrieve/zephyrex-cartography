@@ -85,16 +85,10 @@ export function registerPaintRuntime(
                         choose({ ...settings, strength });
                     }),
                     bake: (into) => {
-                        void (async (): Promise<void> => {
-                            await baking.bake(into);
-                            panel.refresh();
-                        })();
+                        panel.apply(async () => baking.bake(into));
                     },
                     unbake: () => {
-                        void (async (): Promise<void> => {
-                            await baking.unbake();
-                            panel.refresh();
-                        })();
+                        panel.apply(async () => baking.unbake());
                     },
                 },
             );

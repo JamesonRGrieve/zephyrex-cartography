@@ -150,10 +150,7 @@ export function registerZoneRuntime(controller: () => CartographyController | nu
                 return;
             }
             const after = (work: () => Promise<unknown>): void => {
-                void (async (): Promise<void> => {
-                    await work();
-                    panel.refresh();
-                })();
+                panel.apply(work);
             };
             const saved = presets();
             const level = active.getFeature(id)?.level ?? null;

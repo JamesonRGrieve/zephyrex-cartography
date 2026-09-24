@@ -70,10 +70,7 @@ export function registerLevelRuntime(controller: () => CartographyController | n
     const run = (action: (active: CartographyController) => Promise<unknown>): void => {
         const active = controller();
         if (active) {
-            void (async (): Promise<void> => {
-                await action(active);
-                panel.refresh();
-            })();
+            panel.apply(async () => action(active));
         }
     };
 

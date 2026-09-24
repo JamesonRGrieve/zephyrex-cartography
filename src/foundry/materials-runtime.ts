@@ -71,10 +71,7 @@ export function registerMaterialsRuntime(controller: () => CartographyController
                 },
                 (materials) => {
                     last = materials;
-                    void (async (): Promise<void> => {
-                        await active.setRoomMaterials(id, materials);
-                        panel.refresh();
-                    })();
+                    panel.apply(async () => active.setRoomMaterials(id, materials));
                 },
             );
         },
