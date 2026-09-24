@@ -161,6 +161,50 @@ test('an area’s region shows as the spec says, and is shaped by walls only on 
     ]);
 });
 
+test('a toggle names its area’s other behaviours by UUID, and a token walking in switches a disabled one on', async ({ world }) => {
+    const built = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            features: [
+                {
+                    type: 'room',
+                    points: [
+                        { x: 4, y: 4 },
+                        { x: 8, y: 4 },
+                        { x: 8, y: 8 },
+                        { x: 4, y: 8 },
+                    ],
+                    // A door on the left wall, for the token to walk through.
+                    doors: [{ segment: 3, state: 'open' }],
+                    effects: [
+                        { kind: 'darkness', modifier: 1, disabled: true },
+                        { kind: 'toggle', events: ['tokenEnter'], enable: [0] },
+                    ],
+                },
+            ],
+        });
+        const room = canvas?.scene?.regions.contents.find((r) => r.name === 'Room');
+        const [darkness, toggle] = room?.behaviors.contents ?? [];
+        const enable = toggle?.type === 'toggleBehavior' ? [...toggle.system.enable] : [];
+        return {
+            types: room?.behaviors.contents.map((b) => b.type),
+            startsDisabled: darkness?.disabled,
+            // The UUID the toggle holds resolves to the darkness behaviour itself.
+            resolves: enable.map((uuid) => foundry.utils.fromUuidSync(uuid)?.id === darkness?.id),
+        };
+    });
+    expect(built).toEqual({ types: ['adjustDarknessLevel', 'toggleBehavior'], startsDisabled: true, resolves: [true] });
+
+    await world.evaluate(async () => {
+        // Outside the room, level with the door, then into the room through it. Region events need no Actor.
+        const [token] = (await canvas?.scene?.createEmbeddedDocuments('Token', [{ name: 'Walker', x: 200, y: 500 }])) ?? [];
+        await token?.update({ x: 500, y: 500 });
+    });
+    const darknessDisabled = async (): Promise<boolean | undefined> =>
+        world.evaluate(() => canvas?.scene?.regions.contents.find((r) => r.name === 'Room')?.behaviors.contents[0]?.disabled);
+    await expect.poll(darknessDisabled).toBe(false);
+});
+
 test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
     const walls = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

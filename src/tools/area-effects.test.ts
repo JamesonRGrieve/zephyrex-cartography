@@ -17,7 +17,11 @@ import {
     storedDisplay,
     storedEffects,
     TEXT_EVENTS,
+    toggleActionOf,
+    withDisabled,
     withEvent,
+    withoutEffect,
+    withToggleAction,
 } from './area-effects';
 
 describe('area effects', () => {
@@ -30,6 +34,7 @@ describe('area effects', () => {
             { kind: 'macro', uuid: null, everyone: false, events: [] },
             { kind: 'script', source: '', events: [] },
             { kind: 'activeEffect', effects: [] },
+            { kind: 'toggle', events: [], enable: [], disable: [] },
         ]);
     });
 
@@ -89,6 +94,55 @@ describe('area effects', () => {
 
     it('read UUIDs one per line', () => {
         expect(parseUuidLines(' a \n\n  b\n')).toEqual(['a', 'b']);
+    });
+});
+
+describe('toggles', () => {
+    const lightsOut = [
+        { kind: 'darkness', mode: 'override', modifier: 1, disabled: true },
+        { kind: 'toggle', events: ['tokenEnter'], enable: [0], disable: [] },
+        { kind: 'suppressWeather' },
+        { kind: 'toggle', events: ['tokenExit'], enable: [], disable: [0, 2] },
+    ] as const;
+
+    it('start with nothing to toggle, and an effect starts disabled or not', () => {
+        expect(newAreaEffect('toggle')).toEqual({ kind: 'toggle', events: [], enable: [], disable: [] });
+        expect(withDisabled({ kind: 'suppressWeather' }, true)).toEqual({ kind: 'suppressWeather', disabled: true });
+        expect(withDisabled({ kind: 'suppressWeather', disabled: true }, false)).toEqual({ kind: 'suppressWeather' });
+    });
+
+    it('enable or disable each other behaviour, never both', () => {
+        const [, toggle] = lightsOut;
+        expect(toggleActionOf(toggle, 0)).toBe('enable');
+        expect(toggleActionOf(toggle, 2)).toBeNull();
+        const flipped = withToggleAction(toggle, 0, 'disable');
+        expect([flipped.enable, flipped.disable]).toEqual([[], [0]]);
+        expect(withToggleAction(withToggleAction(flipped, 2, 'enable'), 0, null)).toMatchObject({ enable: [2], disable: [] });
+    });
+
+    it('are renumbered when an effect is removed, dropping what named it', () => {
+        expect(withoutEffect(lightsOut, 0)).toEqual([
+            { kind: 'toggle', events: ['tokenEnter'], enable: [], disable: [] },
+            { kind: 'suppressWeather' },
+            { kind: 'toggle', events: ['tokenExit'], enable: [], disable: [1] },
+        ]);
+    });
+
+    it('round-trip through the scene flag, keeping only targets that exist, are not themselves and are named once', () => {
+        expect(parseAreaEffects(JSON.parse(JSON.stringify(lightsOut)))).toEqual(lightsOut);
+        expect(
+            parseAreaEffects([{ kind: 'toggle', events: ['tokenEnter', 'regionBoundary'], enable: [0, 1, 7, 1], disable: [1, 'x'] }, { kind: 'pause' }]),
+        ).toEqual([
+            { kind: 'toggle', events: ['tokenEnter'], enable: [], disable: [1] },
+            { kind: 'pause', once: false },
+        ]);
+    });
+
+    it('renumber past a malformed effect the flag held, as removing it would', () => {
+        expect(parseAreaEffects(['x', { kind: 'suppressWeather' }, { kind: 'toggle', enable: [1], disable: [0] }])).toEqual([
+            { kind: 'suppressWeather' },
+            { kind: 'toggle', events: [], enable: [0], disable: [] },
+        ]);
     });
 });
 

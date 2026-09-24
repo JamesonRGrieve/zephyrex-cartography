@@ -21,6 +21,7 @@ import {
     RESTRICTION_TYPES,
     TEXT_EVENTS,
     TEXT_VISIBILITIES,
+    TOGGLE_EVENTS,
 } from '../tools/area-effects';
 import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
@@ -57,6 +58,8 @@ const movementCost = z
 
 const regionEvents = z.array(z.enum(REGION_EVENTS)).default([]).describe("Foundry's region events the behaviour runs on.");
 
+const effectIndex = z.number().int().min(0);
+
 const areaEffectSpec = z
     .discriminatedUnion('kind', [
         z.object({ kind: z.literal('darkness'), mode: z.enum(DARKNESS_MODES).default('override'), modifier: z.number().min(0).max(1).default(0) }).strict(),
@@ -82,12 +85,38 @@ const areaEffectSpec = z
             .strict(),
         z.object({ kind: z.literal('script'), source: z.string().default(''), events: regionEvents }).strict(),
         z.object({ kind: z.literal('activeEffect'), effects: z.array(text).default([]).describe('ActiveEffect UUIDs.') }).strict(),
+        z
+            .object({
+                kind: z.literal('toggle'),
+                events: z.array(z.enum(TOGGLE_EVENTS)).default([]),
+                enable: z.array(effectIndex).default([]).describe('The behaviours it enables, by their place in this area’s `effects` (from 0).'),
+                disable: z.array(effectIndex).default([]).describe('The behaviours it disables, likewise.'),
+            })
+            .strict(),
     ])
+    .and(z.object({ disabled: z.boolean().default(false).describe('Start disabled, for a toggle to enable.') }))
     .describe(
-        "A region behaviour on the area, as Foundry's: Adjust Darkness Level, Suppress Weather, Display Scrolling Text, Pause Game, Execute Macro, Execute Script or Apply Active Effect.",
+        "A region behaviour on the area, as Foundry's: Adjust Darkness Level, Suppress Weather, Display Scrolling Text, Pause Game, Execute Macro, Execute Script, Apply Active Effect or Toggle Behavior.",
     );
 
-const areaEffects = z.array(areaEffectSpec).default([]).describe("Region behaviours on the area's Scene Region.");
+const areaEffects = z
+    .array(areaEffectSpec)
+    .default([])
+    .superRefine((effects, context) => {
+        effects.forEach((effect, own) => {
+            if (effect.kind !== 'toggle') {
+                return;
+            }
+            const targets = [...effect.enable, ...effect.disable];
+            if (targets.some((t) => t >= effects.length || t === own)) {
+                context.addIssue({ code: 'custom', path: [own], message: 'A toggle names only other behaviours of its own area.' });
+            }
+            if (new Set(targets).size < targets.length) {
+                context.addIssue({ code: 'custom', path: [own], message: 'A toggle names each behaviour once, to enable or to disable.' });
+            }
+        });
+    })
+    .describe("Region behaviours on the area's Scene Region.");
 
 const areaDisplay = z
     .object({

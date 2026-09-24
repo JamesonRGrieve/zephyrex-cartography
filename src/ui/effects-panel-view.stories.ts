@@ -18,6 +18,7 @@ const KIND_NAMES: Readonly<Record<AreaEffectKind, string>> = {
     macro: 'Execute Macro',
     script: 'Execute Script',
     activeEffect: 'Apply Active Effect',
+    toggle: 'Toggle Behavior',
 };
 
 const EVENT_NAMES: Readonly<Record<RegionEvent, string>> = {
@@ -63,6 +64,9 @@ const LABELS: EffectsLabels = {
     everyone: 'Everyone',
     script: 'Script',
     activeEffects: 'Effects (one UUID per line)',
+    disabled: 'Disabled',
+    toggleActions: { enable: 'Enable Behaviors', disable: 'Disable Behaviors' },
+    untouched: 'Left as it is',
     region: {
         title: 'Region',
         visibility: 'Visibility',
@@ -159,6 +163,21 @@ export const TrappedCorridor: Story = {
                 { kind: 'macro', uuid: 'Macro.dartTrap', everyone: false, events: ['tokenEnter'] },
                 { kind: 'script', source: 'ui.notifications.info("A draught.");', events: ['tokenExit'] },
                 { kind: 'activeEffect', effects: ['Compendium.world.effects.ActiveEffect.poisoned'] },
+            ],
+            display: DEFAULT_AREA_DISPLAY,
+        },
+    },
+};
+
+/** A room that goes dark when a token walks in, and light again when it leaves. */
+export const LightsOutRoom: Story = {
+    args: {
+        settings: {
+            movementCost: 1,
+            effects: [
+                { kind: 'darkness', mode: 'override', modifier: 1, disabled: true },
+                { kind: 'toggle', events: ['tokenEnter'], enable: [0], disable: [] },
+                { kind: 'toggle', events: ['tokenExit'], enable: [], disable: [0] },
             ],
             display: DEFAULT_AREA_DISPLAY,
         },

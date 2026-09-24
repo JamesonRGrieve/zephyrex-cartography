@@ -5,6 +5,8 @@ import { DEFAULT_TRAVEL } from '../tools/submap';
 import {
     doorStateFromDs,
     drawingCreateData,
+    effectBehaviourId,
+    effectBehaviours,
     lightCreateData,
     noteCreateData,
     pxToDistance,
@@ -370,6 +372,7 @@ describe('regionCreateData', () => {
         { x: 10, y: 10 },
     ];
     const nameOf = (r: RegionDoc): string => `${r.label.kind} ${r.level ?? ''}`;
+    const SCENE = 'sceneAAAAAAAAAAA';
 
     it('makes a stair a native changeLevel region on every level it joins', () => {
         const stair: RegionDoc = {
@@ -382,7 +385,7 @@ describe('regionCreateData', () => {
             spans: ['B', 'C'],
             behaviour: { kind: 'changeLevel' },
         };
-        expect(regionCreateData([stair], ['r0'], nameOf)).toEqual([
+        expect(regionCreateData([stair], ['r0'], nameOf, SCENE)).toEqual([
             {
                 _id: 'r0',
                 name: 'stairs A',
@@ -417,16 +420,41 @@ describe('regionCreateData', () => {
                 { kind: 'activeEffect', effects: ['Item.i.ActiveEffect.e'] },
             ],
         };
-        expect(regionCreateData([room], ['r0'], nameOf)[0]?.behaviors).toEqual([
+        const id = (i: number): string => `roomRegion00Bh0${i}`;
+        expect(regionCreateData([room], ['roomRegion000001'], nameOf, SCENE)[0]?.behaviors).toEqual([
             { type: 'modifyMovementCost', system: { difficulties: { walk: 2 } } },
-            { type: 'adjustDarknessLevel', system: { mode: 2, modifier: 0.5 } },
-            { type: 'suppressWeather', system: {} },
-            { type: 'displayScrollingText', system: { events: ['tokenTurnStart'], text: 'Hot', color: '#ff0000', visibility: 1, once: true } },
-            { type: 'pauseGame', system: { once: true } },
-            { type: 'executeMacro', system: { events: ['tokenEnter'], uuid: 'Macro.m', everyone: true } },
-            { type: 'executeScript', system: { events: ['tokenExit'], source: 'return;' } },
-            { type: 'applyActiveEffect', system: { effects: ['Item.i.ActiveEffect.e'] } },
+            { _id: id(0), type: 'adjustDarknessLevel', system: { mode: 2, modifier: 0.5 } },
+            { _id: id(1), type: 'suppressWeather', system: {} },
+            { _id: id(2), type: 'displayScrollingText', system: { events: ['tokenTurnStart'], text: 'Hot', color: '#ff0000', visibility: 1, once: true } },
+            { _id: id(3), type: 'pauseGame', system: { once: true } },
+            { _id: id(4), type: 'executeMacro', system: { events: ['tokenEnter'], uuid: 'Macro.m', everyone: true } },
+            { _id: id(5), type: 'executeScript', system: { events: ['tokenExit'], source: 'return;' } },
+            { _id: id(6), type: 'applyActiveEffect', system: { effects: ['Item.i.ActiveEffect.e'] } },
         ]);
+    });
+
+    it('gives each behaviour of an area an id up front, so a toggle names the others by UUID, and starts disabled ones off', () => {
+        const effects = [
+            { kind: 'darkness', mode: 'override', modifier: 1, disabled: true },
+            { kind: 'toggle', events: ['tokenEnter'], enable: [0], disable: [2] },
+            { kind: 'suppressWeather' },
+        ] as const;
+        const behaviours = effectBehaviours(effects, { scene: SCENE, region: 'lightsOutRoom001' });
+        // The region id's first 12 characters, then Bh and the behaviour's place.
+        expect(behaviours.map((b) => b._id)).toEqual(['lightsOutRooBh00', 'lightsOutRooBh01', 'lightsOutRooBh02']);
+        expect(behaviours[0]).toMatchObject({ type: 'adjustDarknessLevel', disabled: true });
+        expect(behaviours[1]).toEqual({
+            _id: effectBehaviourId('lightsOutRoom001', 1),
+            type: 'toggleBehavior',
+            system: {
+                events: ['tokenEnter'],
+                enable: [`Scene.${SCENE}.Region.lightsOutRoom001.RegionBehavior.${effectBehaviourId('lightsOutRoom001', 0)}`],
+                disable: [`Scene.${SCENE}.Region.lightsOutRoom001.RegionBehavior.${effectBehaviourId('lightsOutRoom001', 2)}`],
+            },
+        });
+        expect(behaviours[2]).not.toHaveProperty('disabled');
+        // A valid 16-character document id, unique within the region.
+        expect(effectBehaviourId('lightsOutRoom001', 40)).toMatch(/^[a-zA-Z0-9]{16}$/u);
     });
 
     it('sends a rectangular outline, rotated or not, as Foundry’s own rectangle shape centred on its anchor', () => {
@@ -461,7 +489,7 @@ describe('regionCreateData', () => {
             spans: [],
             behaviour: null,
         };
-        const [data] = regionCreateData([plain], ['r2'], nameOf);
+        const [data] = regionCreateData([plain], ['r2'], nameOf, SCENE);
         expect(data?.behaviors).toEqual([]);
         expect(data?.levels).toEqual(['C']);
     });
@@ -475,7 +503,7 @@ describe('regionCreateData', () => {
             restriction: { type: 'sight', priority: 3 },
         } as const;
         const area: RegionDoc = { id: null, label: { kind: 'room' }, polygon: square, bottom: 0, top: 10, level: 'C', spans: [], behaviour: null, display };
-        const [one, everywhere, spanning] = regionCreateData([area, { ...area, level: null }, { ...area, spans: ['D'] }], ['r1', 'r2', 'r3'], nameOf);
+        const [one, everywhere, spanning] = regionCreateData([area, { ...area, level: null }, { ...area, spans: ['D'] }], ['r1', 'r2', 'r3'], nameOf, SCENE);
         expect(one).toMatchObject({
             visibility: 3,
             highlightMode: 'coverage',
@@ -487,7 +515,7 @@ describe('regionCreateData', () => {
         expect(everywhere).not.toHaveProperty('restriction');
         expect(spanning).not.toHaveProperty('restriction');
         const { display: _shown, ...undisplayed } = area;
-        const [plain] = regionCreateData([undisplayed], ['r4'], nameOf);
+        const [plain] = regionCreateData([undisplayed], ['r4'], nameOf, SCENE);
         expect(plain).toMatchObject({ visibility: 0 });
         expect(plain).not.toHaveProperty('highlightMode');
         expect(plain).not.toHaveProperty('ownership');
@@ -504,7 +532,7 @@ describe('regionCreateData', () => {
             spans: ['A', 'B'],
             behaviour: { kind: 'surface', placement: 'bottom', reveal: false },
         };
-        const [data] = regionCreateData([floor], ['r4'], nameOf);
+        const [data] = regionCreateData([floor], ['r4'], nameOf, SCENE);
         expect(data?.behaviors).toEqual([
             {
                 type: 'defineSurface',
@@ -534,7 +562,7 @@ describe('regionCreateData', () => {
                 travel: { placement: 'center', transition: 'swirl', duration: 2000, prompt: 'Enter {scene}?' },
             },
         };
-        expect(regionCreateData([many], ['r3'], nameOf)[0]?.behaviors).toEqual([
+        expect(regionCreateData([many], ['r3'], nameOf, SCENE)[0]?.behaviors).toEqual([
             {
                 type: 'teleportToken',
                 system: {
@@ -559,7 +587,7 @@ describe('regionCreateData', () => {
             spans: [],
             behaviour: { kind: 'teleport', targets: [{ scene: 'hab', region: 'out1' }], travel: DEFAULT_TRAVEL },
         };
-        const [data] = regionCreateData([entrance], ['in1'], nameOf);
+        const [data] = regionCreateData([entrance], ['in1'], nameOf, SCENE);
         expect(data?.elevation).toEqual({ bottom: null, top: null });
         expect(data?.behaviors[0]?.system).toEqual({
             destinations: ['Scene.hab.Region.out1'],
@@ -582,7 +610,7 @@ describe('regionCreateData', () => {
             spans: [],
             behaviour: null,
         };
-        const [entrance, back] = regionCreateData([{ ...exit, id: 'in1', label: { kind: 'entrance', scene: 'Hab' } }, exit], ['in1', 'out1'], nameOf);
+        const [entrance, back] = regionCreateData([{ ...exit, id: 'in1', label: { kind: 'entrance', scene: 'Hab' } }, exit], ['in1', 'out1'], nameOf, SCENE);
         expect([entrance?.locked, back?.locked]).toEqual([true, false]);
         expect([entrance?.visibility, back?.visibility]).toEqual([0, 0]);
     });

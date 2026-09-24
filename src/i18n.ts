@@ -153,6 +153,7 @@ export const I18N = {
         region: key('Effects.Region'),
         unrestricted: key('Effects.Unrestricted'),
         observed: key('Effects.Observed'),
+        untouched: key('Effects.Untouched'),
     },
     materials: {
         title: key('Materials.Title'),

@@ -26,6 +26,7 @@ const BEHAVIOUR_TYPES: Readonly<Record<AreaEffectKind, string>> = {
     macro: 'executeMacro',
     script: 'executeScript',
     activeEffect: 'applyActiveEffect',
+    toggle: 'toggleBehavior',
 };
 
 function labels(): EffectsLabels {
@@ -60,6 +61,9 @@ function labels(): EffectsLabels {
         everyone: behaviour('executeMacro.FIELDS.everyone.label'),
         script: behaviour('executeScript.FIELDS.source.label'),
         activeEffects: localize(I18N.effects.activeEffects),
+        disabled: localize('BEHAVIOR.FIELDS.disabled.label'),
+        toggleActions: { enable: behaviour('toggleBehavior.FIELDS.enable.label'), disable: behaviour('toggleBehavior.FIELDS.disable.label') },
+        untouched: localize(I18N.effects.untouched),
         region: regionLabels(),
     };
 }

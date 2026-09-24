@@ -692,8 +692,22 @@ These make everything after them cheaper and safer, so they come first.
     another. The scene spec's regions, strokes and rooms take `effects`,
     rooms take `movementCost` too, and fields left out take Foundry's
     defaults. Proven in `tests/e2e/pointer.spec.ts`.
-  - **Still open:** `toggleBehavior`. It names other behaviours by UUID,
-    which generated regions recreate on every re-sync.
+  - **[done] `toggleBehavior`**, and behaviours that start disabled.
+    - A toggle enables or disables other behaviours of its own area, named
+      by their place in the area's effects.
+    - Each area behaviour's id is chosen up front from its region's id and
+      its place (`effectBehaviourId`), so the toggle holds real absolute
+      UUIDs. An area's behaviours are always recreated together, so these
+      never dangle.
+    - Removing an effect renumbers the toggles. So does parsing past a
+      malformed one.
+    - Any effect can start `disabled`, for a toggle to switch it on.
+    - The panel lists each behaviour as "N. Kind", with a Disabled box and,
+      on a toggle, an enable, disable or leave choice for each other
+      behaviour. The scene spec takes both and rejects a toggle naming
+      itself, a missing behaviour, or one twice.
+    - `tests/e2e/structures.spec.ts` walks a token into a room and sees its
+      darkness switch on.
 - **[done] Teleport options for submap entrances** [14.349, 14.353]. A
   link carries its `travel`, used both ways:
   - where the token lands: relative, centre or anywhere (14.359's

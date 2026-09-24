@@ -153,8 +153,14 @@ export type RegionShape =
           readonly hole: boolean;
       };
 
+/**
+ * The behaviour an area effect becomes, with its id chosen up front (so a
+ * toggle can name it) and whether it starts disabled.
+ */
+export type AreaEffectBehaviour = AreaEffectBehaviourBody & { readonly _id: string; readonly disabled?: boolean };
+
 /** The behaviours an area effect becomes, with their 14.359 schemas (`client/data/region-behaviors/`). */
-export type AreaEffectBehaviour =
+export type AreaEffectBehaviourBody =
     /** `mode` is an `AdjustDarknessLevelRegionBehaviorType.MODES` value. */
     | { readonly type: 'adjustDarknessLevel'; readonly system: { readonly mode: number; readonly modifier: number } }
     | { readonly type: 'suppressWeather'; readonly system: Readonly<Record<string, never>> }
@@ -172,7 +178,12 @@ export type AreaEffectBehaviour =
     | { readonly type: 'pauseGame'; readonly system: { readonly once: boolean } }
     | { readonly type: 'executeMacro'; readonly system: { readonly events: readonly string[]; readonly uuid: string | null; readonly everyone: boolean } }
     | { readonly type: 'executeScript'; readonly system: { readonly events: readonly string[]; readonly source: string } }
-    | { readonly type: 'applyActiveEffect'; readonly system: { readonly effects: readonly string[] } };
+    | { readonly type: 'applyActiveEffect'; readonly system: { readonly effects: readonly string[] } }
+    /** `enable` and `disable` are RegionBehavior UUIDs. */
+    | {
+          readonly type: 'toggleBehavior';
+          readonly system: { readonly events: readonly string[]; readonly enable: readonly string[]; readonly disable: readonly string[] };
+      };
 
 export interface RegionCreateData extends OnLevels {
     readonly _id: string;

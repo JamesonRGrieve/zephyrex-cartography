@@ -56,7 +56,32 @@ export const TEXT_VISIBILITIES = ['gamemaster', 'observer', 'anyone'] as const;
 
 export type TextVisibility = (typeof TEXT_VISIBILITIES)[number];
 
-export type AreaEffect =
+/** The events Toggle Behavior takes (its schema narrows them). */
+export const TOGGLE_EVENTS = [
+    'tokenEnter',
+    'tokenExit',
+    'tokenMoveIn',
+    'tokenMoveOut',
+    'tokenTurnStart',
+    'tokenTurnEnd',
+    'tokenRoundStart',
+    'tokenRoundEnd',
+] as const satisfies readonly RegionEvent[];
+
+export type ToggleEvent = (typeof TOGGLE_EVENTS)[number];
+
+/** What a toggle can do to another behaviour of its area. */
+export const TOGGLE_ACTIONS = ['enable', 'disable'] as const;
+
+export type ToggleAction = (typeof TOGGLE_ACTIONS)[number];
+
+/**
+ * One behaviour on an area's region. `disabled` is the behaviour's native
+ * `disabled`: it starts switched off, for a toggle to switch on.
+ */
+export type AreaEffect = AreaEffectBody & { readonly disabled?: true };
+
+type AreaEffectBody =
     | { readonly kind: 'darkness'; readonly mode: DarknessMode; readonly modifier: number }
     | { readonly kind: 'suppressWeather' }
     | {
@@ -73,7 +98,13 @@ export type AreaEffect =
     | { readonly kind: 'macro'; readonly uuid: string | null; readonly everyone: boolean; readonly events: readonly RegionEvent[] }
     | { readonly kind: 'script'; readonly source: string; readonly events: readonly RegionEvent[] }
     /** `effects` are ActiveEffect UUIDs. */
-    | { readonly kind: 'activeEffect'; readonly effects: readonly string[] };
+    | { readonly kind: 'activeEffect'; readonly effects: readonly string[] }
+    /**
+     * Toggle Behavior. `enable` and `disable` name other behaviours of the
+     * same area by their place in its effects: the area's behaviours are
+     * always recreated together, so they can be named by UUID.
+     */
+    | { readonly kind: 'toggle'; readonly events: readonly ToggleEvent[]; readonly enable: readonly number[]; readonly disable: readonly number[] };
 
 export type AreaEffectKind = AreaEffect['kind'];
 
@@ -85,6 +116,7 @@ export const AREA_EFFECT_KINDS = [
     'macro',
     'script',
     'activeEffect',
+    'toggle',
 ] as const satisfies readonly AreaEffectKind[];
 
 /** A new effect of `kind`, as Foundry makes a new behaviour of its type. */
@@ -102,10 +134,63 @@ export function newAreaEffect(kind: AreaEffectKind): AreaEffect {
             return { kind, source: '', events: [] };
         case 'activeEffect':
             return { kind, effects: [] };
+        case 'toggle':
+            return { kind, events: [], enable: [], disable: [] };
         case 'suppressWeather':
             break;
     }
     return { kind: 'suppressWeather' };
+}
+
+/** `effect`, starting switched off or not. */
+export function withDisabled(effect: AreaEffect, disabled: boolean): AreaEffect {
+    const { disabled: _was, ...body } = effect;
+    return disabled ? { ...body, disabled: true } : body;
+}
+
+/** What `toggle` does to effect `target`: enable it, disable it, or nothing. */
+export function toggleActionOf(toggle: Extract<AreaEffect, { kind: 'toggle' }>, target: number): ToggleAction | null {
+    return toggle.enable.includes(target) ? 'enable' : toggle.disable.includes(target) ? 'disable' : null;
+}
+
+/** `toggle`, set to `action` effect `target` (a behaviour is never both enabled and disabled). */
+export function withToggleAction(
+    toggle: Extract<AreaEffect, { kind: 'toggle' }>,
+    target: number,
+    action: ToggleAction | null,
+): Extract<AreaEffect, { kind: 'toggle' }> {
+    const without = (targets: readonly number[]): number[] => targets.filter((t) => t !== target);
+    const withTarget = (targets: readonly number[]): number[] => [...without(targets), target].sort((a, b) => a - b);
+    return {
+        ...toggle,
+        enable: action === 'enable' ? withTarget(toggle.enable) : without(toggle.enable),
+        disable: action === 'disable' ? withTarget(toggle.disable) : without(toggle.disable),
+    };
+}
+
+/** `effects` less effect `index`, every toggle's targets renumbered to match and any on it dropped. */
+export function withoutEffect(effects: readonly AreaEffect[], index: number): AreaEffect[] {
+    const renumber = (targets: readonly number[]): number[] => targets.filter((t) => t !== index).map((t) => (t > index ? t - 1 : t));
+    return effects
+        .filter((_, i) => i !== index)
+        .map((effect) => (effect.kind === 'toggle' ? { ...effect, enable: renumber(effect.enable), disable: renumber(effect.disable) } : effect));
+}
+
+/**
+ * Every toggle's targets kept to other effects that exist, each once and in
+ * order, and never both enabled and disabled (disabling wins, as the later
+ * of Foundry's two passes).
+ */
+function checkedToggles(effects: readonly AreaEffect[]): AreaEffect[] {
+    return effects.map((effect, own) => {
+        if (effect.kind !== 'toggle') {
+            return effect;
+        }
+        const valid = (targets: readonly number[]): number[] =>
+            [...new Set(targets)].filter((t) => Number.isInteger(t) && t >= 0 && t < effects.length && t !== own).sort((a, b) => a - b);
+        const disable = valid(effect.disable);
+        return { ...effect, enable: valid(effect.enable).filter((t) => !disable.includes(t)), disable };
+    });
 }
 
 /** Who sees an area's region: v14 `CONST.REGION_VISIBILITY` less LAYER_UNLOCKED, which would hide a locked region. */
@@ -239,11 +324,22 @@ function eventsOf<T extends string>(choices: readonly T[], v: unknown): T[] {
     return stringArray(v).flatMap((stored) => choices.filter((choice) => choice === stored));
 }
 
+// eslint-disable-next-line no-restricted-syntax -- boundary: narrows persisted effect indices from scene-flag JSON
+function indicesOf(v: unknown): number[] {
+    return Array.isArray(v) ? v.filter((t): t is number => typeof t === 'number') : [];
+}
+
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses one persisted effect from scene-flag JSON
 function parseAreaEffect(v: unknown): AreaEffect | null {
     if (!isRecord(v)) {
         return null;
     }
+    const body = parseEffectBody(v);
+    return body && withDisabled(body, v['disabled'] === true);
+}
+
+// eslint-disable-next-line no-restricted-syntax -- boundary: parses one persisted effect's own fields from scene-flag JSON
+function parseEffectBody(v: Record<string, unknown>): AreaEffect | null {
     const base = AREA_EFFECT_KINDS.find((kind) => kind === v['kind']);
     if (base === undefined) {
         return null;
@@ -278,15 +374,23 @@ function parseAreaEffect(v: unknown): AreaEffect | null {
             return { ...fresh, source: typeof v['source'] === 'string' ? v['source'] : fresh.source, events: eventsOf(REGION_EVENTS, v['events']) };
         case 'activeEffect':
             return { ...fresh, effects: stringArray(v['effects']).filter((uuid) => uuid !== '') };
+        case 'toggle':
+            return { ...fresh, events: eventsOf(TOGGLE_EVENTS, v['events']), enable: indicesOf(v['enable']), disable: indicesOf(v['disable']) };
         case 'suppressWeather':
             break;
     }
     return fresh;
 }
 
-/** The persisted effects of an area: each valid one, in order; none when there are none. */
+/**
+ * The persisted effects of an area: each valid one, in order; none when there
+ * are none. Dropping a malformed effect renumbers the toggles' targets, as
+ * removing it in the panel would.
+ */
 // eslint-disable-next-line no-restricted-syntax -- boundary: narrows persisted area effects from scene-flag JSON
 export function parseAreaEffects(v: unknown): readonly AreaEffect[] | undefined {
-    const effects = Array.isArray(v) ? v.map(parseAreaEffect).filter((effect): effect is AreaEffect => effect !== null) : [];
+    const parsed = Array.isArray(v) ? v.map(parseAreaEffect) : [];
+    const kept = checkedToggles(parsed.map((effect) => effect ?? newAreaEffect('suppressWeather')));
+    const effects = parsed.reduceRight<AreaEffect[]>((all, effect, i) => (effect === null ? withoutEffect(all, i) : all), kept);
     return storedEffects(effects);
 }

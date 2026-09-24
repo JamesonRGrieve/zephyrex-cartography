@@ -29,6 +29,7 @@ import { regionColour } from '../tools/region-colours';
 import { type Environment, FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
 import type {
     AreaEffectBehaviour,
+    AreaEffectBehaviourBody,
     DrawingCreateData,
     LightCreateData,
     NoteCreateData,
@@ -418,7 +419,42 @@ export function behaviourData(behaviour: RegionBehaviour | null): RegionCreateDa
  * An area effect as its native behaviour. Modes and visibilities are the
  * behaviour types' numeric enums, in the order the core lists them.
  */
-export function effectBehaviour(effect: AreaEffect): AreaEffectBehaviour {
+/**
+ * The id of effect `index`'s behaviour on region `region`, chosen up front so
+ * a toggle can name it. It is unique within the region, which is all an
+ * embedded id needs to be, and a valid 16-character document id.
+ */
+export function effectBehaviourId(region: string, index: number): string {
+    return `${region.slice(0, BEHAVIOUR_ID_PREFIX)}Bh${index.toString(BASE36).padStart(2, '0')}`;
+}
+
+/** Characters of the region id an effect behaviour's id keeps: 16 less the `Bh` and a two-digit index. */
+const BEHAVIOUR_ID_PREFIX = 12;
+
+const BASE36 = 36;
+
+/** Where the behaviour `index` of an area's region sits, for the others to name. */
+interface BehaviourPlace {
+    readonly scene: string;
+    readonly region: string;
+}
+
+/** An area's behaviours: each with its id chosen up front, starting disabled if it says so, a toggle naming its targets by UUID. */
+export function effectBehaviours(effects: readonly AreaEffect[], place: BehaviourPlace): AreaEffectBehaviour[] {
+    const uuidOf = (index: number): string => `${regionUuid(place.scene, place.region)}.RegionBehavior.${effectBehaviourId(place.region, index)}`;
+    return effects.map((effect, index) => ({
+        _id: effectBehaviourId(place.region, index),
+        ...(effect.kind === 'toggle'
+            ? {
+                  type: 'toggleBehavior' as const,
+                  system: { events: [...effect.events], enable: effect.enable.map(uuidOf), disable: effect.disable.map(uuidOf) },
+              }
+            : effectBehaviour(effect)),
+        ...(effect.disabled === true ? { disabled: true } : {}),
+    }));
+}
+
+function effectBehaviour(effect: Exclude<AreaEffect, { readonly kind: 'toggle' }>): Exclude<AreaEffectBehaviourBody, { readonly type: 'toggleBehavior' }> {
     switch (effect.kind) {
         case 'darkness':
             return { type: 'adjustDarknessLevel', system: { mode: DARKNESS_MODES.indexOf(effect.mode), modifier: effect.modifier } };
@@ -456,17 +492,22 @@ function regionLevels(region: RegionDoc): { readonly levels?: readonly string[] 
 }
 
 /**
- * Create data for the regions of one plan, whose ids are chosen up front
- * (`ids[i]` for `regions[i]`).
+ * Create data for the regions of one plan on scene `scene`, whose ids are
+ * chosen up front (`ids[i]` for `regions[i]`).
  */
-export function regionCreateData(regions: readonly RegionDoc[], ids: readonly string[], nameOf: (region: RegionDoc) => string): RegionCreateData[] {
+export function regionCreateData(
+    regions: readonly RegionDoc[],
+    ids: readonly string[],
+    nameOf: (region: RegionDoc) => string,
+    scene: string,
+): RegionCreateData[] {
     return regions.map((region, i) => ({
         _id: ids[i] ?? '',
         name: nameOf(region),
         color: regionColour(region),
         shapes: [regionShape(region.polygon)],
         elevation: { bottom: region.bottom, top: region.top },
-        behaviors: [...behaviourData(region.behaviour), ...(region.effects ?? []).map(effectBehaviour)],
+        behaviors: [...behaviourData(region.behaviour), ...effectBehaviours(region.effects ?? [], { scene, region: ids[i] ?? '' })],
         // A region drawn from a feature is edited through the feature, so it is locked and
         // shown on the Regions layer unless the GM chose otherwise. An interior exit is the GM's to place, so it stays free.
         locked: region.label.kind !== 'exit',

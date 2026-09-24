@@ -20,7 +20,13 @@ import {
     RESTRICTION_TYPES,
     TEXT_EVENTS,
     TEXT_VISIBILITIES,
+    TOGGLE_ACTIONS,
+    TOGGLE_EVENTS,
+    toggleActionOf,
+    withDisabled,
     withEvent,
+    withoutEffect,
+    withToggleAction,
     type AreaDisplay,
     type AreaEffect,
     type AreaEffectKind,
@@ -30,6 +36,7 @@ import {
     type RegionVisibility,
     type RestrictionType,
     type TextVisibility,
+    type ToggleAction,
 } from '../tools/area-effects';
 import type { AreaSettings } from '../tools/areas';
 import { button, choice, el, labelledCheckbox, labelledInput, labelledTextArea, replacePreservingFocus } from './dom';
@@ -66,6 +73,11 @@ export interface EffectsLabels {
     readonly script: string;
     /** The Active Effects to apply, one UUID per line. */
     readonly activeEffects: string;
+    /** A behaviour's native `disabled`. */
+    readonly disabled: string;
+    /** What a toggle does to another behaviour: its two actions, and leaving it be. */
+    readonly toggleActions: Readonly<Record<ToggleAction, string>>;
+    readonly untouched: string;
     readonly region: RegionDisplayLabels;
 }
 
@@ -172,8 +184,42 @@ function eventChecks<T extends RegionEvent>(
     return group;
 }
 
-/** The fields of one effect, as Foundry's behaviour sheet has them; `change` replaces the effect. */
-function effectFields(effect: AreaEffect, labels: EffectsLabels, key: string, change: (next: AreaEffect) => void): HTMLElement[] {
+/** Select value standing for "leave this behaviour be". */
+const UNTOUCHED = '';
+
+/** What a toggle does to each other behaviour of the area, one choice each, named by its place and kind. */
+function toggleTargets(
+    toggle: Extract<AreaEffect, { kind: 'toggle' }>,
+    own: number,
+    effects: readonly AreaEffect[],
+    labels: EffectsLabels,
+    key: string,
+    change: (next: AreaEffect) => void,
+): HTMLElement[] {
+    const actions = [[UNTOUCHED, labels.untouched] as const, ...TOGGLE_ACTIONS.map((action) => [action, labels.toggleActions[action]] as const)];
+    return effects.flatMap((target, index) =>
+        index === own
+            ? []
+            : [
+                  choice(
+                      `${key}-target-${index}`,
+                      `${index + 1}. ${labels.kind(target.kind)}`,
+                      actions,
+                      toggleActionOf(toggle, index) ?? UNTOUCHED,
+                      (action) => {
+                          change(withToggleAction(toggle, index, action === UNTOUCHED ? null : action));
+                      },
+                  ),
+              ],
+    );
+}
+
+/** The fields of effect `index` of `effects`, as Foundry's behaviour sheet has them; `change` replaces the effect. */
+function effectFields(index: number, effects: readonly AreaEffect[], labels: EffectsLabels, key: string, change: (next: AreaEffect) => void): HTMLElement[] {
+    const effect = effects[index];
+    if (effect === undefined) {
+        return [];
+    }
     switch (effect.kind) {
         case 'darkness':
             return [
@@ -254,6 +300,13 @@ function effectFields(effect: AreaEffect, labels: EffectsLabels, key: string, ch
                     change({ ...effect, effects: parseUuidLines(typed) });
                 }),
             ];
+        case 'toggle':
+            return [
+                eventChecks(TOGGLE_EVENTS, effect.events, labels, key, (events) => {
+                    change({ ...effect, events });
+                }),
+                ...toggleTargets(effect, index, effects, labels, key, change),
+            ];
         case 'suppressWeather':
             break;
     }
@@ -275,15 +328,22 @@ function onceCheck(once: boolean, labels: EffectsLabels, key: string, onChange: 
 function effectSection(effect: AreaEffect, index: number, effects: readonly AreaEffect[], labels: EffectsLabels, handlers: EffectsHandlers): HTMLElement {
     const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
     const key = `effect-${index}`;
-    const replace = (next: AreaEffect | null): void => {
-        handlers.setEffects(effects.flatMap((e, i) => (i !== index ? [e] : next === null ? [] : [next])));
+    const replace = (next: AreaEffect): void => {
+        handlers.setEffects(effects.map((e, i) => (i === index ? next : e)));
     };
     const remove = button('tw-text-xs', labels.remove, `${key}-remove`, () => {
-        replace(null);
+        handlers.setEffects(withoutEffect(effects, index));
     });
     const kindName = labels.kind(effect.kind);
     remove.setAttribute('aria-label', `${labels.remove}: ${kindName}`);
-    section.append(el('legend', 'tw-text-xs tw-font-bold', kindName), ...effectFields(effect, labels, key, replace), remove);
+    section.append(
+        el('legend', 'tw-text-xs tw-font-bold', `${index + 1}. ${kindName}`),
+        ...effectFields(index, effects, labels, key, replace),
+        labelledCheckbox(labels.disabled, effect.disabled === true, `${key}-disabled`, (disabled) => {
+            replace(withDisabled(effect, disabled));
+        }),
+        remove,
+    );
     return section;
 }
 

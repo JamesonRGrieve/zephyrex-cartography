@@ -62,6 +62,26 @@ describe('parseSceneSpec', () => {
         expect(parseSceneSpec('nope').ok).toBe(false);
     });
 
+    it('takes toggles naming other behaviours of their own area, each once', () => {
+        const withEffects = (effects: unknown[]): ReturnType<typeof parseSceneSpec> =>
+            parseSceneSpec({ schemaVersion: 1, features: [{ type: 'room', points: square, effects }] });
+        const good = withEffects([
+            { kind: 'darkness', disabled: true },
+            { kind: 'toggle', events: ['tokenEnter'], enable: [0] },
+        ]);
+        expect(good.ok && good.spec.features[0]?.type === 'room' ? good.spec.features[0].effects : null).toEqual([
+            { kind: 'darkness', mode: 'override', modifier: 0, disabled: true },
+            { kind: 'toggle', events: ['tokenEnter'], enable: [0], disable: [], disabled: false },
+        ]);
+        const paths = (effects: unknown[]): string[] => {
+            const result = withEffects(effects);
+            return result.ok ? [] : result.issues.map((i) => i.path);
+        };
+        expect(paths([{ kind: 'toggle', enable: [0] }])).toEqual(['features.0.effects.0']);
+        expect(paths([{ kind: 'pause' }, { kind: 'toggle', enable: [3] }])).toEqual(['features.0.effects.1']);
+        expect(paths([{ kind: 'pause' }, { kind: 'toggle', enable: [0], disable: [0] }])).toEqual(['features.0.effects.1']);
+    });
+
     it('parses JSON text, reporting text that is not JSON at the root', () => {
         expect(parseSceneSpecJson('{"schemaVersion": 1, "features": []}').ok).toBe(true);
         const broken = parseSceneSpecJson('{"schemaVersion": 1,');

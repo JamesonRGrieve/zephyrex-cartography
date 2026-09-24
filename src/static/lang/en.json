@@ -100,7 +100,8 @@
             "ActiveEffects": "Active Effect UUIDs, one per line",
             "Region": "Region",
             "Unrestricted": "Not shaped by walls",
-            "Observed": "Players observe it"
+            "Observed": "Players observe it",
+            "Untouched": "Left as it is"
         },
         "Materials": {
             "Title": "Room materials",

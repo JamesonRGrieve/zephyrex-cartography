@@ -58,7 +58,7 @@ describe('area effects panel', () => {
         const root = mount(stories.OrdinaryGround);
         change(select(root, 'zc-effect-kind'), 'pause');
         [...root.querySelectorAll('button')].find((b) => b.textContent === 'Add effect')?.click();
-        expect(legends(root)).toEqual(['Pause Game']);
+        expect(legends(root)).toEqual(['1. Pause Game']);
         expect(root.querySelector<HTMLInputElement>('input[data-zc-focus="effect-0-once"]')?.checked).toBe(false);
         root.querySelector<HTMLButtonElement>('button[aria-label="Remove: Pause Game"]')?.click();
         expect(root.textContent).toContain('No effects.');
@@ -66,7 +66,7 @@ describe('area effects panel', () => {
 
     it('edits darkness, reverting a modifier outside 0 to 1', () => {
         const root = mount(stories.DarkMireRoom);
-        expect(legends(root)).toEqual(['Adjust Darkness Level', 'Suppress Weather']);
+        expect(legends(root)).toEqual(['1. Adjust Darkness Level', '2. Suppress Weather']);
         expect(select(root, 'effect-0-mode').value).toBe('darken');
         change(select(root, 'effect-0-mode'), 'brighten');
         expect(select(root, 'effect-0-mode').value).toBe('brighten');
@@ -78,7 +78,7 @@ describe('area effects panel', () => {
 
     it('shows every kind’s fields, and subscribes events in Foundry’s order', () => {
         const root = mount(stories.TrappedCorridor);
-        expect(legends(root)).toEqual(['Display Scrolling Text', 'Pause Game', 'Execute Macro', 'Execute Script', 'Apply Active Effect']);
+        expect(legends(root)).toEqual(['1. Display Scrolling Text', '2. Pause Game', '3. Execute Macro', '4. Execute Script', '5. Apply Active Effect']);
         expect(input(root, 'Text').value).toBe('Click.');
         expect(select(root, 'effect-0-visibility').value).toBe('anyone');
         // Scrolling text only offers the events Foundry lets it subscribe to.
@@ -123,8 +123,27 @@ describe('area effects panel', () => {
         expect(priority()).toBeNull();
     });
 
+    it('sets what a toggle does to each other behaviour, starts one disabled, and renumbers the toggles when one is removed', () => {
+        const root = mount(stories.LightsOutRoom);
+        const disabled = (index: number): boolean | undefined =>
+            root.querySelector<HTMLInputElement>(`input[data-zc-focus="effect-${index}-disabled"]`)?.checked;
+        expect([0, 1, 2].map(disabled)).toEqual([true, false, false]);
+        expect(select(root, 'effect-1-target-0').value).toBe('enable');
+        expect(select(root, 'effect-2-target-0').value).toBe('disable');
+        // A toggle names every behaviour but itself.
+        expect(root.querySelector('#effect-1-target-1')).toBeNull();
+        change(select(root, 'effect-1-target-2'), 'disable');
+        expect(select(root, 'effect-1-target-2').value).toBe('disable');
+        root.querySelector<HTMLInputElement>('input[data-zc-focus="effect-0-disabled"]')?.click();
+        expect(disabled(0)).toBe(false);
+        // Removing the first toggle makes the second one the new second behaviour, still disabling the first.
+        root.querySelector<HTMLButtonElement>('button[data-zc-focus="effect-1-remove"]')?.click();
+        expect(legends(root)).toEqual(['1. Adjust Darkness Level', '2. Toggle Behavior']);
+        expect(select(root, 'effect-1-target-0').value).toBe('disable');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.OrdinaryGround, stories.DarkMireRoom, stories.TrappedCorridor]) {
+        for (const story of [stories.OrdinaryGround, stories.DarkMireRoom, stories.TrappedCorridor, stories.LightsOutRoom]) {
             expect(mount(story).querySelector('#zc-effect-kind')).not.toBeNull();
         }
     });

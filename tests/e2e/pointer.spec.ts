@@ -417,7 +417,7 @@ test('the effects tool, with the Regions tools, gives a room difficult ground an
     // Foundry's own name for the behaviour type.
     await panel.getByLabel('New behaviour').selectOption({ label: 'Adjust Darkness Level' });
     await panel.getByRole('button', { name: 'Add behaviour' }).click();
-    await panel.getByLabel('Mode').selectOption({ label: 'Darken' });
+    await panel.getByLabel('Mode', { exact: true }).selectOption({ label: 'Darken' });
     // The darkness behaviour's mode is Foundry's DARKEN (2).
     const behaviours = async (): Promise<{ type: string; mode: number | null }[]> =>
         world.evaluate(() =>
