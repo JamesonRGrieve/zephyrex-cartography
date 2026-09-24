@@ -922,7 +922,22 @@ option**: a splat map, as in Dungeondraft and Inkarnate.
       a Tile.
     - A layer saved with a bare Tile id reads as a Tile bake.
     - Both are proven in `tests/e2e/structures.spec.ts`.
-  - **Still open:** layering more than one mask per level.
+  - **[done] Stacked masks: more than four textures.** A level's splat map
+    is a stack of up to four layers (`SplatLayer.index`, sixteen textures).
+    - A texture goes to the layer holding it, else the lowest with a free
+      channel, else a new layer on top (`stackChannelFor`), saved to its own
+      file (`splat-<scene>-<level>-<n>.png`; the first keeps the old path).
+    - Painting a texture takes as much from the layers above it, so it
+      shows through them. Unblending takes from every layer.
+    - A stroke is one undo step across every layer it touched. Undoing the
+      stroke that made a layer takes the layer away.
+    - Layers draw in stack order, a stack on every level beneath a level's
+      own. A bake renders the whole stack into one image, recorded on the
+      first layer.
+    - The scene spec stacks up to four masks per level, bottom to top as
+      listed, replacing the level's stack as one undo step.
+    - A layer saved before stacks reads as its level's first.
+    - Proven in `tests/e2e/structures.spec.ts`.
 
 ---
 

@@ -26,6 +26,11 @@ export interface SceneRect {
 export interface SplatLayer {
     /** The level it covers, or null on a scene painted on every level. */
     readonly level: string | null;
+    /**
+     * Its place in its level's stack, from 0: each layer blends four
+     * textures, and a level with more stacks further layers above.
+     */
+    readonly index: number;
     /** The mask's PNG, as a world data path. */
     readonly path: string;
     /** The scene rectangle the mask covers. */
@@ -104,11 +109,31 @@ const CHANNELS = 4;
 const FULL = 255;
 const NO_ROLES: SplatRoles = [null, null, null, null];
 
-/** A fresh layer over `bounds` for `level`, its mask saved at `path`: sized by the grid, empty of roles. */
-export function newSplatLayer(level: string | null, path: string, bounds: SceneRect, gridSize: number): SplatLayer {
+/** A fresh layer `index` of `level`'s stack over `bounds`, its mask saved at `path`: sized by the grid, empty of roles. */
+export function newSplatLayer(level: string | null, index: number, path: string, bounds: SceneRect, gridSize: number): SplatLayer {
     const scale = gridSize > 0 ? MASK_PX_PER_SQUARE / gridSize : 1;
     const side = (span: number): number => Math.max(1, Math.min(MAX_MASK_SIDE, Math.ceil(span * scale)));
-    return { level, path, bounds, width: side(bounds.width), height: side(bounds.height), roles: NO_ROLES, baked: null };
+    return { level, index, path, bounds, width: side(bounds.width), height: side(bounds.height), roles: NO_ROLES, baked: null };
+}
+
+/** Most layers one level stacks: sixteen textures. */
+export const MAX_SPLAT_LAYERS = 4;
+
+/**
+ * Where painting `role` goes in a level's stack (its layers, bottom to top):
+ * the layer already holding it, else the lowest with a free channel, which
+ * the returned layer now names. Null when every layer's channels hold other
+ * roles, for a new layer to go on top.
+ */
+export function stackChannelFor(
+    stack: readonly SplatLayer[],
+    role: string,
+): { readonly index: number; readonly layer: SplatLayer; readonly channel: number } | null {
+    const holding = stack.find((layer) => layer.roles.includes(role));
+    const free = stack.find((layer) => layer.roles.includes(null));
+    const target = holding ?? free;
+    const assigned = target ? channelFor(target, role) : null;
+    return target && assigned ? { index: target.index, ...assigned } : null;
 }
 
 /** Where a layer's baked image is saved: beside its mask. */
@@ -231,9 +256,12 @@ export function parseSplatLayers(v: unknown): SplatLayer[] {
         }
         const roles = entry['roles'];
         const level = entry['level'];
+        const index = Math.floor(numberOr(entry['index'], 0));
         return [
             {
                 level: typeof level === 'string' ? level : null,
+                // A layer saved before stacks existed is its level's only one.
+                index: index >= 0 && index < MAX_SPLAT_LAYERS ? index : 0,
                 path: entry['path'],
                 bounds,
                 width,

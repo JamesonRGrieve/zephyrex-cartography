@@ -112,6 +112,7 @@ export function createSplatStore(getScene: () => FoundryScene | null): SplatStor
         writeMask: async (layer: SplatLayer, mask) => {
             await upload(layer.path, await encodePng({ width: layer.width, height: layer.height, pixels: mask }));
         },
-        pathFor: (level) => `${worldFolder()}/splat-${getScene()?.id ?? 'scene'}-${level ?? 'all'}.png`,
+        // A level's first layer keeps the path a lone layer always had.
+        pathFor: (level, index) => `${worldFolder()}/splat-${getScene()?.id ?? 'scene'}-${level ?? 'all'}${index === 0 ? '' : `-${index}`}.png`,
     };
 }

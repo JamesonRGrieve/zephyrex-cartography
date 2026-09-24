@@ -71,6 +71,8 @@ import {
     type SplatRoles,
     type SplatState,
     splatState,
+    MAX_SPLAT_LAYERS,
+    stackChannelFor,
 } from '../tools/splat';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
@@ -148,18 +150,22 @@ export interface SplatStore {
     /** Delete a baked Tile; one a GM has deleted already is simply gone. */
     removeTile: (id: string) => Promise<void>;
     writeMask: (layer: SplatLayer, mask: Uint8ClampedArray<ArrayBuffer>) => Promise<void>;
-    /** Where a new splat map for `level` saves its mask. */
-    pathFor: (level: string | null) => string;
+    /** Where layer `index` of `level`'s stack saves its mask. */
+    pathFor: (level: string | null, index: number) => string;
 }
 
-/** Draws splat maps, one per key (a level, or "" for every level). */
+/**
+ * Draws splat maps, one per key (a level's layer), each level's stack in
+ * order from its first layer up, and a stack on every level beneath a
+ * level's own.
+ */
 export interface SplatRenderer {
     set: (key: string, layer: SplatLayer, mask: Uint8ClampedArray) => void;
     /** Redraw the part of `key`'s mask a brush just changed. */
     update: (key: string, rect: MaskRect) => void;
     remove: (key: string) => void;
-    /** The blend `key` draws, rendered to a PNG over its scene area; null when it is not drawn. */
-    snapshot: (key: string) => Promise<Uint8Array<ArrayBuffer> | null>;
+    /** The blend `keys` draw together, in order, rendered to a PNG over their scene area; null when none is drawn. */
+    snapshot: (keys: readonly string[]) => Promise<Uint8Array<ArrayBuffer> | null>;
 }
 
 /** A level's splat map: its layer and its mask's pixels. */
@@ -175,13 +181,29 @@ interface Splat {
  */
 type HistoryEntry =
     | { readonly kind: 'features'; readonly features: readonly Feature[] }
-    | ({ readonly kind: 'blend'; readonly key: string } & Splat)
+    /** A splat layer as it was: its layer and mask, or null when it was not there. */
+    | { readonly kind: 'blend'; readonly key: string; readonly splat: Splat | null }
     | { readonly kind: 'steps'; readonly steps: readonly HistoryEntry[] };
 
-/** A splat map's key: its level, or "" for one on every level. */
-function splatKey(level: string | null): string {
-    return level ?? '';
+/** A copy of a splat layer and its mask, unbaked, for undo to bring back live; null when there is none. */
+function liveCopy(splat: Splat | undefined): Splat | null {
+    return splat ? { layer: { ...splat.layer, baked: null }, mask: splat.mask.slice() } : null;
 }
+
+/** A splat layer's key: its level ("" for every level), then its place in the stack past the first. */
+function splatKey(level: string | null, index: number): string {
+    const base = level ?? '';
+    return index === 0 ? base : `${base}${STACK_SEPARATOR}${index}`;
+}
+
+/** The level a splat layer's key names, or null for every level. */
+function keyLevel(key: string): string | null {
+    const [level = ''] = key.split(STACK_SEPARATOR);
+    return level === '' ? null : level;
+}
+
+/** Between a layer key's level and its place in the stack: no document id holds it. */
+const STACK_SEPARATOR = '#';
 
 /** A blend brush dab, in scene terms. */
 export interface BlendDab {
@@ -299,11 +321,12 @@ export class CartographyController {
     /** Each level's splat map, by key. */
     private readonly splats = new Map<string, Splat>();
     /** The splat map as the blend stroke under way found it, for undo; null between strokes. */
-    private blendStart: (Splat & { readonly key: string }) | null = null;
+    /** The layers the blend stroke under way has touched, each as it was before (null: not there yet). */
+    private blendStart: Map<string, Splat | null> | null = null;
     /** Inside {@link batch}: edits share the batch's one undo snapshot. */
     private batching = false;
     /** Splat maps as they were before the batch under way changed them, to undo with it. */
-    private batchSteps: Extract<HistoryEntry, { kind: 'blend' }>[] = [];
+    private batchSteps: HistoryEntry[] = [];
     /** Document changes waiting for the current transaction to end. */
     private readonly staged: StagedChanges;
     /** Depth of nested transactions; only the outermost one writes. */
@@ -638,7 +661,8 @@ export class CartographyController {
                     const steps = prune(entry.steps);
                     return steps.length > 0 ? [{ kind: 'steps', steps }] : [];
                 }
-                return entry.layer.level !== null && findLevel(this.levelList, entry.layer.level) === null ? [] : [entry];
+                const level = keyLevel(entry.key);
+                return level !== null && findLevel(this.levelList, level) === null ? [] : [entry];
             });
         this.history.splice(0, this.history.length, ...prune(this.history));
         this.future = prune(this.future);
@@ -1387,9 +1411,8 @@ export class CartographyController {
         if (entry.kind === 'steps') {
             return { kind: 'steps', steps: entry.steps.map((step) => this.present(step)) };
         }
-        const now = this.splats.get(entry.key);
         // Stepping back and forth brings the blend back live; a bake is not undone and redone.
-        return now ? { kind: 'blend', key: entry.key, layer: { ...now.layer, baked: null }, mask: now.mask.slice() } : entry;
+        return { kind: 'blend', key: entry.key, splat: liveCopy(this.splats.get(entry.key)) };
     }
 
     /** Make what `entry` records the present. */
@@ -1411,9 +1434,16 @@ export class CartographyController {
         if (now) {
             await this.discardBake(now);
         }
-        this.splats.set(entry.key, { layer: entry.layer, mask: entry.mask.slice() });
+        if (entry.splat === null) {
+            // A layer the step made is taken away again.
+            this.splats.delete(entry.key);
+            this.splatRenderer.remove(entry.key);
+            await this.saveSplatLayers();
+            return;
+        }
+        this.splats.set(entry.key, { layer: entry.splat.layer, mask: entry.splat.mask.slice() });
         this.redrawSplats();
-        await this.saveSplat(entry.key);
+        await this.saveSplats([entry.key]);
     }
 
     async toFront(id: string): Promise<void> {
@@ -1590,8 +1620,8 @@ export class CartographyController {
         }
     }
 
-    /** Record a splat map as it was: its own undo step, or part of the batch under way. */
-    private recordSplat(entry: Extract<HistoryEntry, { kind: 'blend' }>): void {
+    /** Record splat layers as they were: their own undo step, or part of the batch under way. */
+    private recordSplat(entry: HistoryEntry): void {
         if (this.batching) {
             this.batchSteps.push(entry);
         } else {
@@ -1621,15 +1651,25 @@ export class CartographyController {
         const layers = this.splatStore.load();
         const loaded = await Promise.all(layers.map(async (layer) => ({ layer, mask: (await this.splatStore.readMask(layer)) ?? blankMask(layer) })));
         this.splats.clear();
-        for (const splat of loaded) {
-            this.splats.set(splatKey(splat.layer.level), splat);
+        // Bottom of each stack first, so each level's layers draw in order.
+        for (const splat of [...loaded].sort((a, b) => a.layer.index - b.layer.index)) {
+            this.splats.set(splatKey(splat.layer.level, splat.layer.index), splat);
         }
         this.redrawSplats();
     }
 
-    /** The splat map of the level being edited, if it has one. */
+    /** The first layer of the splat map of the level being edited, if it has one: the one a bake is recorded on. */
     splatLayer(): SplatLayer | null {
-        return this.splats.get(splatKey(this.active))?.layer ?? null;
+        return this.splats.get(splatKey(this.active, 0))?.layer ?? null;
+    }
+
+    /** The layers of `level`'s splat map, bottom to top. */
+    splatStack(level: string | null): SplatLayer[] {
+        return this.stackOf(level).map((splat) => splat.layer);
+    }
+
+    private stackOf(level: string | null): Splat[] {
+        return [...this.splats.values()].filter((splat) => splat.layer.level === level).sort((a, b) => a.layer.index - b.layer.index);
     }
 
     /** Whether the blend of the level being edited is live, baked (and into what), or not there. */
@@ -1639,16 +1679,13 @@ export class CartographyController {
 
     /** Take the blend of the level being edited back from its bake to the live overlay; false when it is not baked. */
     async unbakeSplat(): Promise<boolean> {
-        const key = splatKey(this.active);
-        const splat = this.splats.get(key);
-        if (!splat?.layer.baked) {
+        const base = this.splats.get(splatKey(this.active, 0));
+        if (!base?.layer.baked) {
             return false;
         }
-        await this.discardBake(splat.layer);
-        const live = { ...splat, layer: { ...splat.layer, baked: null } };
-        this.splats.set(key, live);
-        this.splatRenderer.set(key, live.layer, live.mask);
-        await this.splatStore.save([...this.splats.values()].map((s) => s.layer));
+        await this.discardBake(base.layer);
+        this.liven(this.active);
+        await this.saveSplatLayers();
         return true;
     }
 
@@ -1661,14 +1698,15 @@ export class CartographyController {
      * one already baked, or an image that could not be rendered.
      */
     async bakeSplat(into: BakeTarget = 'tile'): Promise<boolean> {
-        const key = splatKey(this.active);
+        const key = splatKey(this.active, 0);
         const splat = this.splats.get(key);
         const level = splat?.layer.level == null ? null : findLevel(this.levelList, splat.layer.level);
         // Nothing to bake, baked already, or no level's background to bake into.
         if (splat?.layer.baked !== null || (into === 'background' && !level)) {
             return false;
         }
-        const png = await this.splatRenderer.snapshot(key);
+        // The whole stack bakes into one image.
+        const png = await this.splatRenderer.snapshot(this.splatStack(this.active).map((layer) => splatKey(layer.level, layer.index)));
         if (!png) {
             return false;
         }
@@ -1680,7 +1718,7 @@ export class CartographyController {
         }
         this.splats.set(key, { ...splat, layer: { ...splat.layer, baked } });
         this.redrawSplats();
-        await this.splatStore.save([...this.splats.values()].map((s) => s.layer));
+        await this.saveSplatLayers();
         return true;
     }
 
@@ -1711,114 +1749,173 @@ export class CartographyController {
     }
 
     /**
-     * One dab of the blend brush on the level being edited: its splat map,
-     * made to cover the scene if it has none yet, takes the role into a
-     * channel of its own (false once all four hold other roles, or with no
-     * scene to cover). The stroke ends, as one undo step, with `endBlend`.
+     * One dab of the blend brush on the level being edited. Painting puts the
+     * role into its own channel of the level's splat map: the layer holding
+     * it, else the lowest with a channel free, else a new layer stacked on
+     * top (made to cover the scene). The layers above it lose as much, so the
+     * paint shows through them. Unblending takes from every layer. False once
+     * the stack is full and every channel holds another role, or with no
+     * scene to cover. The stroke ends, as one undo step, with `endBlend`.
      */
     blend(dab: BlendDab): boolean {
-        const key = splatKey(this.active);
-        const splat = this.unbaked(key) ?? this.newSplat();
-        const assigned = splat && channelFor(splat.layer, dab.role);
-        if (!splat || !assigned) {
+        const level = this.active;
+        this.liven(level);
+        if (dab.erase) {
+            for (const splat of this.stackOf(level)) {
+                this.dab(splat, dab, 0, true);
+            }
+            return true;
+        }
+        const placed = this.placeRole(level, dab.role);
+        if (!placed) {
             return false;
         }
-        this.blendStart ??= { key, layer: splat.layer, mask: splat.mask.slice() };
-        const rect = paintDab(splat.mask, assigned.layer, {
-            at: maskPoint(assigned.layer, dab.at),
-            radius: maskLength(assigned.layer, dab.radius),
-            channel: assigned.channel,
-            strength: dab.strength,
-            erase: dab.erase,
-        });
-        if (assigned.layer === this.splats.get(key)?.layer) {
-            this.splatRenderer.update(key, rect);
-        } else {
-            this.splats.set(key, { layer: assigned.layer, mask: splat.mask });
-            this.splatRenderer.set(key, assigned.layer, splat.mask);
+        this.dab(placed.splat, dab, placed.channel, false);
+        for (const above of this.stackOf(level).filter((splat) => splat.layer.index > placed.splat.layer.index)) {
+            this.dab(above, dab, 0, true);
         }
         return true;
     }
 
-    /** End the blend stroke under way: one undo step, and its mask saved. */
+    /** The layer and channel painting `role` on `level` goes into, naming it there first if it is new; null when the stack is full. */
+    private placeRole(level: string | null, role: string): { readonly splat: Splat; readonly channel: number } | null {
+        const stack = this.splatStack(level);
+        const found = stackChannelFor(stack, role);
+        // No layer has room for it: a new one on top, while the stack has room.
+        const fresh = found !== null || stack.length >= MAX_SPLAT_LAYERS ? null : this.newSplat(level, stack.length);
+        const freshChannel = fresh && channelFor(fresh.layer, role);
+        const assigned = found ?? (fresh && freshChannel ? { index: fresh.layer.index, ...freshChannel } : null);
+        if (!assigned) {
+            return null;
+        }
+        const key = splatKey(level, assigned.index);
+        const mask = this.splats.get(key)?.mask ?? fresh?.mask;
+        if (!mask) {
+            return null;
+        }
+        if (this.splats.get(key)?.layer !== assigned.layer) {
+            // The role is new to this layer (or the layer is new): recorded as it was, then redrawn naming it.
+            this.touch(key);
+            this.splats.set(key, { layer: assigned.layer, mask });
+            this.splatRenderer.set(key, assigned.layer, mask);
+        }
+        const splat = this.splats.get(key);
+        return splat ? { splat, channel: assigned.channel } : null;
+    }
+
+    /** One dab into one layer's mask, the layer recorded as it was first. */
+    private dab(splat: Splat, dab: BlendDab, channel: number, erase: boolean): void {
+        const { layer } = splat;
+        const key = splatKey(layer.level, layer.index);
+        this.touch(key);
+        const rect = paintDab(splat.mask, layer, {
+            at: maskPoint(layer, dab.at),
+            radius: maskLength(layer, dab.radius),
+            channel,
+            strength: dab.strength,
+            erase,
+        });
+        this.splatRenderer.update(key, rect);
+    }
+
+    /** Record layer `key` as it is, the first time the stroke under way touches it. */
+    private touch(key: string): void {
+        this.blendStart ??= new Map();
+        if (!this.blendStart.has(key)) {
+            this.blendStart.set(key, liveCopy(this.splats.get(key)));
+        }
+    }
+
+    /** End the blend stroke under way: one undo step for every layer it touched, and their masks saved. */
     async endBlend(): Promise<void> {
         const start = this.blendStart;
         if (!start) {
             return;
         }
         this.blendStart = null;
-        this.recordSplat({ kind: 'blend', ...start });
-        await this.saveSplat(start.key);
+        const steps: HistoryEntry[] = [...start].map(([key, splat]) => ({ kind: 'blend', key, splat }));
+        const [only] = steps;
+        this.recordSplat(steps.length === 1 && only ? only : { kind: 'steps', steps });
+        await this.saveSplats([...start.keys()]);
     }
 
     /**
-     * Make a mask image the splat map of `level` (null: every level), its
-     * channels weighting `roles`: a scene spec's painted blend. The image is
-     * copied to the level's own mask file, so painting over it never touches
-     * the original, and it covers the scene whatever its size. False when the
-     * image cannot be read or there is no scene to cover.
+     * Make mask images the splat map of `level` (null: every level), bottom
+     * to top, each one's channels weighting its roles: a scene spec's painted
+     * blend. It replaces the level's whole stack, as one undo step. Each
+     * image is copied to a mask file of the level's own, so painting over it
+     * never touches the original, and covers the scene whatever its size.
+     * Whether each image was taken: not when it cannot be read, or there is
+     * no scene to cover.
      */
-    async adoptSplat(level: string | null, image: string, roles: SplatRoles): Promise<boolean> {
+    async adoptSplats(level: string | null, masks: readonly { readonly image: string; readonly roles: SplatRoles }[]): Promise<boolean[]> {
         const here = this.scenes.current();
         const frame = here ? this.scenes.frame(here.id) : null;
-        const read = await this.splatStore.readImage(image);
-        if (!frame || !read) {
-            return false;
+        const reads = await Promise.all(masks.map(async (mask) => this.splatStore.readImage(mask.image)));
+        if (!frame) {
+            return masks.map(() => false);
         }
-        const key = splatKey(level);
-        const before = this.splats.get(key);
+        const before = this.stackOf(level);
         const bounds = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
-        const layer: SplatLayer = { level, path: this.splatStore.pathFor(level), bounds, width: read.width, height: read.height, roles, baked: null };
-        // Undo brings the blend back live: its baked Tile, if it had one, is deleted here.
-        this.recordSplat(
-            before
-                ? { kind: 'blend', key, layer: { ...before.layer, baked: null }, mask: before.mask.slice() }
-                : { kind: 'blend', key, layer, mask: blankMask(layer) },
+        const adopted = reads.flatMap((read, i) => (read && masks[i] ? [{ read, roles: masks[i].roles }] : []));
+        const layers = adopted.map(
+            ({ read, roles }, index): Splat => ({
+                layer: { level, index, path: this.splatStore.pathFor(level, index), bounds, width: read.width, height: read.height, roles, baked: null },
+                mask: read.pixels,
+            }),
         );
-        if (before) {
-            await this.discardBake(before.layer);
+        // Undo brings back the stack as it was, live, and takes away the layers it did not have.
+        const keys = [...new Set([...before, ...layers].map(({ layer }) => splatKey(level, layer.index)))];
+        this.recordSplat({ kind: 'steps', steps: keys.map((key) => ({ kind: 'blend', key, splat: liveCopy(this.splats.get(key)) })) });
+        const base = before[0];
+        if (base) {
+            await this.discardBake(base.layer);
         }
-        this.splats.set(key, { layer, mask: read.pixels });
+        for (const { layer } of before) {
+            const key = splatKey(level, layer.index);
+            this.splats.delete(key);
+            this.splatRenderer.remove(key);
+        }
+        for (const splat of layers) {
+            this.splats.set(splatKey(level, splat.layer.index), splat);
+        }
         this.redrawSplats();
-        await this.saveSplat(key);
-        return true;
+        await this.saveSplats(layers.map(({ layer }) => splatKey(level, layer.index)));
+        return reads.map((read) => read !== null);
     }
 
     /**
-     * `key`'s splat map, unbaked: blending again takes the blend back from its
-     * baked Tile (deleted in the background, as a stroke cannot wait for it)
-     * to the live overlay. The layer's record is saved when the stroke ends.
+     * `level`'s splat map live again: blending takes the blend back from where
+     * it was baked (undone in the background, as a stroke cannot wait for it),
+     * and its whole stack draws. The record is saved when the stroke ends.
      */
-    private unbaked(key: string): Splat | null {
-        const splat = this.splats.get(key);
-        if (splat === undefined) {
-            return null;
+    private liven(level: string | null): void {
+        const key = splatKey(level, 0);
+        const base = this.splats.get(key);
+        if (!base?.layer.baked) {
+            return;
         }
-        if (splat.layer.baked === null) {
-            return splat;
-        }
-        void this.discardBake(splat.layer);
-        const live = { ...splat, layer: { ...splat.layer, baked: null } };
-        this.splats.set(key, live);
-        this.splatRenderer.set(key, live.layer, live.mask);
-        return live;
+        void this.discardBake(base.layer);
+        this.splats.set(key, { ...base, layer: { ...base.layer, baked: null } });
+        this.redrawSplats();
     }
 
-    /** A blank splat map over the scene for the level being edited, or null with no scene frame to cover. */
-    private newSplat(): Splat | null {
+    /** A blank layer `index` of `level`'s splat map over the scene, or null with no scene frame to cover. */
+    private newSplat(level: string | null, index: number): Splat | null {
         const here = this.scenes.current();
         const frame = here ? this.scenes.frame(here.id) : null;
         if (!frame) {
             return null;
         }
-        const layer = newSplatLayer(this.active, this.splatStore.pathFor(this.active), frame, frame.gridSize);
+        const layer = newSplatLayer(level, index, this.splatStore.pathFor(level, index), frame, frame.gridSize);
         return { layer, mask: blankMask(layer) };
     }
 
-    /** Draw the splat maps shown while editing the active level, and no others; a baked one is its Tile. */
+    /** Draw the splat maps shown while editing the active level, and no others; a baked one is what it was baked into. */
     private redrawSplats(): void {
         for (const [key, splat] of this.splats) {
-            if (splat.layer.baked === null && onLevel(splat.layer.level, this.active)) {
+            const baked = this.splats.get(splatKey(splat.layer.level, 0))?.layer.baked ?? null;
+            if (baked === null && onLevel(splat.layer.level, this.active)) {
                 this.splatRenderer.set(key, splat.layer, splat.mask);
             } else {
                 this.splatRenderer.remove(key);
@@ -1826,13 +1923,21 @@ export class CartographyController {
         }
     }
 
-    /** Save one splat map's mask, and every layer's record. */
-    private async saveSplat(key: string): Promise<void> {
-        const splat = this.splats.get(key);
-        if (splat) {
-            await this.splatStore.writeMask(splat.layer, splat.mask);
+    /** Save the masks of the layers `keys`, and every layer's record. */
+    private async saveSplats(keys: readonly string[]): Promise<void> {
+        for (const key of keys) {
+            const splat = this.splats.get(key);
+            if (splat) {
+                // eslint-disable-next-line no-await-in-loop -- each mask is its own file upload; one at a time keeps the order the records name
+                await this.splatStore.writeMask(splat.layer, splat.mask);
+            }
         }
-        await this.splatStore.save([...this.splats.values()].map((s) => s.layer));
+        await this.saveSplatLayers();
+    }
+
+    /** Save every layer's record, each level's stack in order. */
+    private async saveSplatLayers(): Promise<void> {
+        await this.splatStore.save([...this.splats.values()].map((splat) => splat.layer).sort((a, b) => a.index - b.index));
     }
 
     /** Apply an in-place reordering `move` to a copy, persisting + redrawing if it changed. */

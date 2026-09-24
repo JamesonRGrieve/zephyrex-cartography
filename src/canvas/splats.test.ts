@@ -30,15 +30,30 @@ describe('splat maps', () => {
     it('undo a whole stroke at once, and redo it', async () => {
         const { c, sp } = makeHarness();
         c.blend({ ...dab, role: 'grassland' });
-        c.blend({ ...dab, at: { x: 600, y: 400 }, role: 'grassland' });
         await c.endBlend();
-        const painted = weight(sp.masks.get('splats/all.png'), 80, 40, 32, 0);
+        c.blend({ ...dab, role: 'sand' });
+        c.blend({ ...dab, at: { x: 600, y: 400 }, role: 'sand' });
+        await c.endBlend();
+        const painted = weight(sp.masks.get('splats/all.png'), 80, 40, 32, 1);
         expect(painted).toBeGreaterThan(200);
         await c.undo();
-        expect(weight(sp.masks.get('splats/all.png'), 80, 40, 32, 0)).toBe(0);
-        expect(c.splatLayer()?.roles).toEqual([null, null, null, null]);
+        expect(weight(sp.masks.get('splats/all.png'), 80, 40, 32, 1)).toBe(0);
+        expect(c.splatLayer()?.roles).toEqual(['grassland', null, null, null]);
         await c.redo();
-        expect(weight(sp.masks.get('splats/all.png'), 80, 40, 32, 0)).toBe(painted);
+        expect(weight(sp.masks.get('splats/all.png'), 80, 40, 32, 1)).toBe(painted);
+        expect(c.splatLayer()?.roles[1]).toBe('sand');
+    });
+
+    it('take away, on an undo, a map the stroke made', async () => {
+        const { c, sp, spr } = makeHarness();
+        c.blend({ ...dab, role: 'grassland' });
+        await c.endBlend();
+        await c.undo();
+        expect(c.splatLayer()).toBeNull();
+        expect(c.splatState()).toBe('none');
+        expect(sp.layers).toEqual([]);
+        expect(spr.shown.has('')).toBe(false);
+        await c.redo();
         expect(c.splatLayer()?.roles[0]).toBe('grassland');
     });
 
@@ -58,20 +73,49 @@ describe('splat maps', () => {
         expect([...spr.shown.keys()]).toEqual(['lv1']);
     });
 
-    it('refuse a fifth texture, and read saved maps back in', async () => {
+    it('stack a layer for a fifth texture, sixteen at most, and read saved maps back in', async () => {
         const first = makeHarness();
-        for (const role of ['a', 'b', 'c', 'd']) {
+        const roles = 'abcdefghijklmnop'.split('');
+        for (const role of roles) {
             expect(first.c.blend({ ...dab, role })).toBe(true);
         }
-        expect(first.c.blend({ ...dab, role: 'e' })).toBe(false);
+        expect(first.c.blend({ ...dab, role: 'q' })).toBe(false);
         await first.c.endBlend();
+        expect(first.c.splatStack(null).map((layer) => [layer.index, layer.path, layer.roles.join('')])).toEqual([
+            [0, 'splats/all.png', 'abcd'],
+            [1, 'splats/all-1.png', 'efgh'],
+            [2, 'splats/all-2.png', 'ijkl'],
+            [3, 'splats/all-3.png', 'mnop'],
+        ]);
+        // Each stack layer draws, in order, and the stroke is one undo step.
+        expect([...first.spr.shown.keys()]).toEqual(['', '#1', '#2', '#3']);
 
         const second = makeHarness();
-        second.sp.layers = first.sp.layers;
-        second.sp.masks.set('splats/all.png', first.sp.masks.get('splats/all.png') ?? new Uint8ClampedArray(0));
+        second.sp.layers = [...first.sp.layers].reverse();
+        for (const [path, mask] of first.sp.masks) {
+            second.sp.masks.set(path, mask);
+        }
         await second.c.loadSplats();
-        expect(second.c.splatLayer()?.roles).toEqual(['a', 'b', 'c', 'd']);
-        expect(second.spr.shown.get('')).toEqual(['a', 'b', 'c', 'd']);
+        expect(second.c.splatStack(null).map((layer) => layer.roles.join(''))).toEqual(['abcd', 'efgh', 'ijkl', 'mnop']);
+        expect([...second.spr.shown.keys()]).toEqual(['', '#1', '#2', '#3']);
+    });
+
+    it('show a texture painted low in the stack through the layers above it, and unblend every layer', async () => {
+        const { c, sp } = makeHarness();
+        for (const role of ['a', 'b', 'c', 'd', 'e']) {
+            c.blend({ ...dab, role });
+        }
+        await c.endBlend();
+        // 'e' lies on the second layer; painting 'a' again takes it from there.
+        expect(weight(sp.masks.get('splats/all-1.png'), 80, 40, 32, 0)).toBeGreaterThan(200);
+        c.blend({ ...dab, role: 'a' });
+        await c.endBlend();
+        // Nearly none: a pixel's centre sits half a pixel off the dab's, just inside full strength.
+        expect(weight(sp.masks.get('splats/all-1.png'), 80, 40, 32, 0)).toBeLessThan(10);
+        expect(weight(sp.masks.get('splats/all.png'), 80, 40, 32, 0)).toBeGreaterThan(200);
+        c.blend({ ...dab, role: 'a', erase: true });
+        await c.endBlend();
+        expect(Math.max(weight(sp.masks.get('splats/all.png'), 80, 40, 32, 0), weight(sp.masks.get('splats/all-1.png'), 80, 40, 32, 0))).toBeLessThan(10);
     });
 
     it('end a stroke that never started as nothing', async () => {

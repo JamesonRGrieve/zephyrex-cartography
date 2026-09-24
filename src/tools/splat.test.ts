@@ -13,12 +13,13 @@ import {
     type SplatBake,
     type SplatLayer,
     splatState,
+    stackChannelFor,
 } from './splat';
 
 const SCENE = { x: 100, y: 100, width: 2000, height: 1000 };
 
 function layer(): SplatLayer {
-    return newSplatLayer('lv1', 'worlds/w/zephyrex-cartography/splat-lv1.png', SCENE, 100);
+    return newSplatLayer('lv1', 0, 'worlds/w/zephyrex-cartography/splat-lv1.png', SCENE, 100);
 }
 
 /** One pixel's four weights. */
@@ -29,9 +30,23 @@ function weights(mask: Uint8ClampedArray, l: SplatLayer, x: number, y: number): 
 
 describe('splat layers', () => {
     it('size a new mask by the grid, 8 pixels a square, with no roles yet', () => {
-        expect(layer()).toMatchObject({ level: 'lv1', width: 160, height: 80, roles: [null, null, null, null] });
-        expect(newSplatLayer(null, 'p', { x: 0, y: 0, width: 1e6, height: 50 }, 100)).toMatchObject({ width: 2048, height: 4 });
+        expect(layer()).toMatchObject({ level: 'lv1', index: 0, width: 160, height: 80, roles: [null, null, null, null] });
+        expect(newSplatLayer(null, 2, 'p', { x: 0, y: 0, width: 1e6, height: 50 }, 100)).toMatchObject({ index: 2, width: 2048, height: 4 });
         expect(blankMask(layer())).toHaveLength(160 * 80 * 4);
+    });
+
+    it('put a role in a stack where it already is, else the lowest layer with a free channel, else nowhere', () => {
+        const full = { ...layer(), roles: ['a', 'b', 'c', 'd'] } as const;
+        const upper = { ...layer(), index: 1, roles: ['e', null, null, null] } as const;
+        expect(stackChannelFor([full, upper], 'c')).toMatchObject({ index: 0, channel: 2, layer: full });
+        expect(stackChannelFor([full, upper], 'f')).toMatchObject({ index: 1, channel: 1, layer: { roles: ['e', 'f', null, null] } });
+        expect(stackChannelFor([full], 'f')).toBeNull();
+        expect(stackChannelFor([], 'f')).toBeNull();
+    });
+
+    it('read a layer’s place in its stack, a layer saved before stacks as the first, and one out of range as the first', () => {
+        const index = (value: number | undefined): number | undefined => parseSplatLayers([{ ...layer(), index: value }])[0]?.index;
+        expect([index(2), index(undefined), index(-1), index(9)]).toEqual([2, 0, 0, 0]);
     });
 
     it('give each texture role a channel, the one it holds or the first free, until all four are taken', () => {
@@ -100,7 +115,16 @@ describe('parseSplatLayers', () => {
         expect(parseSplatLayers([{ path: 'p', bounds: { x: 0, y: 0, width: 0, height: 5 }, width: 1, height: 1, roles: [] }, 'junk', { path: 3 }])).toEqual([]);
         expect(parseSplatLayers(null)).toEqual([]);
         expect(parseSplatLayers([{ path: 'p', bounds: { width: 5, height: 5 }, width: 2, height: 2, roles: [], level: 7 }])).toEqual([
-            { level: null, path: 'p', bounds: { x: 0, y: 0, width: 5, height: 5 }, width: 2, height: 2, roles: [null, null, null, null], baked: null },
+            {
+                level: null,
+                index: 0,
+                path: 'p',
+                bounds: { x: 0, y: 0, width: 5, height: 5 },
+                width: 2,
+                height: 2,
+                roles: [null, null, null, null],
+                baked: null,
+            },
         ]);
     });
 

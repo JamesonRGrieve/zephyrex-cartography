@@ -293,9 +293,12 @@ test('the paint tool blends texture into the level’s splat map, saved as an ex
             const bytes = new Uint8Array(await response.arrayBuffer());
             // Read the saved PNG back with the browser's own decoder: the red channel of the pixel under the stroke's middle.
             // Through WebGL, unpremultiplied: a 2D canvas would zero every channel where the unused fourth one (alpha) is 0.
-            const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+            // A file caught mid-upload does not decode yet.
+            const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }).catch(
+                () => null,
+            );
             const gl = new OffscreenCanvas(1, 1).getContext('webgl2');
-            if (!gl) {
+            if (!gl || !bitmap) {
                 return null;
             }
             gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
@@ -314,8 +317,9 @@ test('the paint tool blends texture into the level’s splat map, saved as an ex
     await frameScene(world);
     await expect(world.locator('#board')).toHaveScreenshot('sand-blend.png');
 
+    // The stroke made the map, so undoing it takes the map away.
     await world.evaluate(async () => game.modules?.get('zephyrex-cartography').api.controller()?.undo());
-    await expect.poll(async () => (await saved())?.weight).toBe(0);
+    await expect.poll(async () => world.evaluate(() => game.modules?.get('zephyrex-cartography').api.controller()?.splatState())).toBe('none');
 });
 
 test('the river tool draws the liquid, shade, bed and width picked in its panel', async ({ world }) => {

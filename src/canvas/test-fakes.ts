@@ -323,8 +323,8 @@ class FakeSplats implements SplatStore {
         const image = this.images.get(path);
         return image ? { ...image, pixels: image.pixels.slice() } : null;
     }
-    pathFor(level: string | null): string {
-        return `splats/${level ?? 'all'}.png`;
+    pathFor(level: string | null, index: number): string {
+        return `splats/${level ?? 'all'}${index === 0 ? '' : `-${index}`}.png`;
     }
     /** Baked images saved, by path. */
     readonly written = new Map<string, Uint8Array<ArrayBuffer>>();
@@ -361,9 +361,10 @@ class FakeSplatRenderer implements SplatRenderer {
     remove(key: string): void {
         this.shown.delete(key);
     }
-    async snapshot(key: string): Promise<Uint8Array<ArrayBuffer> | null> {
+    async snapshot(keys: readonly string[]): Promise<Uint8Array<ArrayBuffer> | null> {
         await Promise.resolve();
-        return this.shown.has(key) ? new TextEncoder().encode(`png:${key}`) : null;
+        const drawn = keys.filter((key) => this.shown.has(key));
+        return drawn.length > 0 ? new TextEncoder().encode(`png:${drawn.join('+')}`) : null;
     }
 }
 

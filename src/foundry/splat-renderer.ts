@@ -9,7 +9,7 @@
 import type { SplatRenderer } from '../canvas/controller';
 import { biomeLook } from '../canvas/renderer';
 import { isBiomeKind } from '../tools/biome';
-import type { SplatLayer } from '../tools/splat';
+import { MAX_SPLAT_LAYERS, type SplatLayer } from '../tools/splat';
 import type { TextureResolver } from '../tools/texture';
 
 const VERTEX = `
@@ -71,13 +71,15 @@ const MAX_BAKE_SIDE = 4096;
  * copy of the mesh with no parent: a drawn mesh would carry the canvas's pan
  * and zoom into the image.
  */
-async function snapshotOf(drawn: Drawn): Promise<Uint8Array<ArrayBuffer> | null> {
+async function snapshotOf(stack: readonly [Drawn, ...Drawn[]]): Promise<Uint8Array<ArrayBuffer> | null> {
     const renderer = canvas?.app?.renderer;
     if (!renderer) {
         return null;
     }
-    const { x, y, width, height } = drawn.layer.bounds;
-    const loose = new PIXI.Mesh(drawn.mesh.geometry, drawn.mesh.shader);
+    const { x, y, width, height } = stack[0].layer.bounds;
+    // Loose copies, bottom of the stack first, so the canvas's pan and zoom stay out of the image.
+    const loose = new PIXI.Container();
+    loose.addChild(...stack.map((drawn) => new PIXI.Mesh(drawn.mesh.geometry, drawn.mesh.shader)));
     const texture = renderer.generateTexture(loose, {
         region: new PIXI.Rectangle(x, y, width, height),
         resolution: Math.min(1, MAX_BAKE_SIDE / Math.max(width, height)),
@@ -87,8 +89,8 @@ async function snapshotOf(drawn: Drawn): Promise<Uint8Array<ArrayBuffer> | null>
         return new Uint8Array(await (await fetch(url)).arrayBuffer());
     } finally {
         texture.destroy(true);
-        // The copy shares the drawn mesh's geometry and shader, which stay.
-        loose.destroy();
+        // The copies share the drawn meshes' geometry and shaders, which stay.
+        loose.destroy({ children: true });
     }
 }
 
@@ -168,17 +170,24 @@ export function createSplatRenderer(container: PIXI.Container, resolve: TextureR
                 });
             }
             const mesh = new PIXI.Mesh(geometry, new PIXI.Shader(program, uniforms));
-            // Beneath the painted terrain and paths, above the scene's own background.
-            container.addChildAt(mesh, 0);
+            // Beneath the painted terrain and paths, above the scene's own background; among the splat maps, in stack
+            // order, and one on every level beneath a level's own.
+            const below = [...drawn.values()].filter((other) => stackOrder(other.layer) < stackOrder(layer)).length;
+            container.addChildAt(mesh, below);
             drawn.set(key, { mesh, mask, layer });
         },
         update: (key) => {
             drawn.get(key)?.mask.update();
         },
         remove,
-        snapshot: async (key) => {
-            const shown = drawn.get(key);
-            return shown ? snapshotOf(shown) : null;
+        snapshot: async (keys) => {
+            const [first, ...rest] = keys.flatMap((key) => drawn.get(key) ?? []);
+            return first ? snapshotOf([first, ...rest]) : null;
         },
     };
+}
+
+/** Where a layer draws among the splat maps: every level's stack first, then a level's own, each bottom to top. */
+function stackOrder(layer: SplatLayer): number {
+    return (layer.level === null ? 0 : MAX_SPLAT_LAYERS) + layer.index;
 }

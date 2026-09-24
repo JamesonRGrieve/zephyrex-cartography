@@ -66,6 +66,8 @@ describe('baking a blend', () => {
 
     it('comes back live on an undo, which a bake does not take a step of', async () => {
         const { c, sp, spr } = await blended();
+        c.blend(DAB);
+        await c.endBlend();
         await c.bakeSplat();
         await c.undo();
         expect(sp.tiles.size).toBe(0);

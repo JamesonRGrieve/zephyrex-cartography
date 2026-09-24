@@ -347,7 +347,7 @@
         },
         "splats": {
             "default": [],
-            "description": "Painted texture blends: at most one per level.",
+            "description": "Painted texture blends. A level stacks up to four, bottom to top in the order listed, for sixteen textures.",
             "type": "array",
             "items": {
                 "type": "object",

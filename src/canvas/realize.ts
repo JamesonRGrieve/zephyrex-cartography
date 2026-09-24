@@ -205,12 +205,21 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
                 await controller.setLevelArt(id, levelArt(l, levels));
             }
         }, Promise.resolve());
-        await spec.splats.reduce(async (previous, splat, index) => {
+        // Each level's masks stack bottom to top in the order the spec lists them.
+        const stacks = new Map<string, { index: number; image: string; roles: SceneSpec['splats'][number]['roles'] }[]>();
+        spec.splats.forEach((splat, index) => {
+            const key = splat.level ?? '';
+            stacks.set(key, [...(stacks.get(key) ?? []), { index, image: splat.mask, roles: splat.roles }]);
+        });
+        await [...stacks].reduce(async (previous, [key, masks]) => {
             await previous;
-            const level = splat.level === undefined ? null : levels[splat.level] ?? null;
-            if (!(await controller.adoptSplat(level, splat.mask, splat.roles))) {
-                problems.push({ index, problem: 'splat' });
-            }
+            const level = key === '' ? null : levels[key] ?? null;
+            const taken = await controller.adoptSplats(level, masks);
+            masks.forEach((mask, i) => {
+                if (taken[i] !== true) {
+                    problems.push({ index: mask.index, problem: 'splat' });
+                }
+            });
         }, Promise.resolve());
 
         await spec.features.reduce(async (previous, f, index) => {

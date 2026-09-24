@@ -401,6 +401,33 @@ test('a blend bakes into a native Tile over the scene, drawn without the module�
     expect(unbaked).toEqual({ ok: true, tiles: 0, baked: 'live' });
 });
 
+test('a spec’s masks on one level stack, each saved to its own file, and bake together into one Tile', async ({ world }) => {
+    const stacked = await world.evaluate(async () => {
+        const api = game.modules?.get('zephyrex-cartography').api;
+        const outcome = await api?.buildSpec({
+            schemaVersion: 1,
+            splats: [
+                { mask: 'modules/zc-e2e-pack/masks/sand-rock.png', roles: ['sand', 'rock', null, null] },
+                { mask: 'modules/zc-e2e-pack/masks/sand-rock.png', roles: ['snow', 'ice', null, null] },
+            ],
+            features: [],
+        });
+        const controller = api?.controller();
+        const stack = controller?.splatStack(null).map((layer) => ({ index: layer.index, path: layer.path, first: layer.roles[0] })) ?? [];
+        // Each layer's mask is a file of its own in the world's data.
+        const saved = await Promise.all(stack.map(async (layer) => (await fetch(layer.path)).ok));
+        const baked = await controller?.bakeSplat('tile');
+        return { problems: outcome?.ok === true ? outcome.report.problems : null, stack, saved, baked, tiles: canvas?.scene?.tiles.size };
+    });
+    expect(stacked.problems).toEqual([]);
+    expect(stacked.stack).toEqual([
+        { index: 0, path: expect.stringMatching(/splat-.+-all\.png$/u), first: 'sand' },
+        { index: 1, path: expect.stringMatching(/splat-.+-all-1\.png$/u), first: 'snow' },
+    ]);
+    expect(stacked.saved).toEqual([true, true]);
+    expect([stacked.baked, stacked.tiles]).toEqual([true, 1]);
+});
+
 test('a blend on a level bakes into the native Level’s background, and unbaking puts the level’s own image back', async ({ world }) => {
     const background = async (): Promise<string | null> =>
         world.evaluate(() => canvas?.scene?.levels.contents.find((level) => level.name === 'Ground')?.background.src ?? null);

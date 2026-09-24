@@ -31,6 +31,7 @@ import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
 import { FOG_MODES } from '../tools/scene-settings';
 import { MAX_SPAWN_COUNT, NO_SPAWN, SPAWN_PLACEMENTS } from '../tools/spawn';
+import { MAX_SPLAT_LAYERS } from '../tools/splat';
 import { DEFAULT_WALL_PRESET, WALL_PRESETS } from '../tools/wall-presets';
 import { CONE_CURVATURES, FULL_TURN, validZoneShape } from '../tools/zone';
 
@@ -465,7 +466,10 @@ export const sceneSpecSchema = z
         units: z.enum(['grid', 'px']).default('grid').describe('Unit of every coordinate, width and radius: grid squares, or scene pixels.'),
         scene: sceneSettingsSpec.optional(),
         levels: z.array(levelSpec).default([]).describe('Levels to add, bottom to top, stacked above any the scene has.'),
-        splats: z.array(splatSpec).default([]).describe('Painted texture blends: at most one per level.'),
+        splats: z
+            .array(splatSpec)
+            .default([])
+            .describe('Painted texture blends. A level stacks up to four, bottom to top in the order listed, for sixteen textures.'),
         features: z.array(featureSpec).describe('In drawing order: later features draw above, and earlier rooms own shared walls.'),
     })
     .strict();
@@ -504,17 +508,17 @@ function unresolved(named: readonly string[], keys: ReadonlySet<string>, pathOf:
     return named.flatMap((reference, j) => (keys.has(reference) ? [] : [{ path: pathOf(j), message: `no ${what} with key "${reference}"` }]));
 }
 
-/** Splat maps on levels the spec does not have, and a second one on the same level. */
+/** Splat maps on levels the spec does not have, and more on one level than its stack holds. */
 function splatIssues(splats: SceneSpec['splats'], levelKeys: ReadonlySet<string>): SpecIssue[] {
-    const seen = new Set<string>();
+    const counts = new Map<string, number>();
     return splats.flatMap((splat, i) => {
         const on = splat.level ?? '';
-        const issues = [
+        const count = (counts.get(on) ?? 0) + 1;
+        counts.set(on, count);
+        return [
             ...unresolved(splat.level === undefined ? [] : [splat.level], levelKeys, () => `splats.${i}.level`, 'level'),
-            ...(seen.has(on) ? [{ path: `splats.${i}.level`, message: 'a level has one splat map at most' }] : []),
+            ...(count > MAX_SPLAT_LAYERS ? [{ path: `splats.${i}.level`, message: `a level stacks ${MAX_SPLAT_LAYERS} splat maps at most` }] : []),
         ];
-        seen.add(on);
-        return issues;
     });
 }
 
