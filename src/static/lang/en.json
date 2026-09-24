@@ -128,6 +128,8 @@
             "Entrance": "Enter {scene}",
             "Exit": "Back to {scene}",
             "Floor": "Floor of {level}",
+            "Terrain": "{name} terrain",
+            "Surface": "{name} surface",
             "Transition": "{kind}: {from} → {to}",
             "Kinds": {
                 "Stairs": "Stairs",

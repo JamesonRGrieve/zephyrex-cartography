@@ -117,6 +117,8 @@ export const I18N = {
         entrance: key('Regions.Entrance'),
         exit: key('Regions.Exit'),
         floor: key('Regions.Floor'),
+        terrain: key('Regions.Terrain'),
+        surface: key('Regions.Surface'),
     },
     submap: {
         title: key('Submap.Title'),

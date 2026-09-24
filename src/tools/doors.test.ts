@@ -99,7 +99,7 @@ describe('snapDoorToRooms', () => {
 
 describe('room walls around door stamps', () => {
     it('cut an opening where a door stamp sits on the wall', () => {
-        const walls = room ? planDocuments(room, { features: [place(door, 200, 0)], levels: [], terrainRegions: false }).walls : [];
+        const walls = room ? planDocuments(room, { features: [place(door, 200, 0)], levels: [], terrainRegions: false, gridDistance: 5 }).walls : [];
         const topWall = walls.filter((w) => w.a.y === 0 && w.b.y === 0);
         expect(topWall.map((w) => [w.a.x, w.b.x])).toEqual([
             [0, 150],
@@ -109,6 +109,8 @@ describe('room walls around door stamps', () => {
     });
 
     it('leave walls whole for a door stamp elsewhere', () => {
-        expect(room ? planDocuments(room, { features: [place(door, 200, 150)], levels: [], terrainRegions: false }).walls : []).toHaveLength(4);
+        expect(room ? planDocuments(room, { features: [place(door, 200, 150)], levels: [], terrainRegions: false, gridDistance: 5 }).walls : []).toHaveLength(
+            4,
+        );
     });
 });

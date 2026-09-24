@@ -475,10 +475,13 @@ These make everything after them cheaper and safer, so they come first.
   - Foundry refreshes its surfaces when one comes into view, meaning a level
     it is on is viewed, so the e2e check in `tests/e2e/levels.spec.ts` views
     each level before `Scene#getSurfaces`.
-  - **Still open: ceilings and reveal.** A roof or ceiling surface, and
-    **reveal elevated surface** [14.355]: roofs and balconies stay hidden
-    from observers almost directly below and show more to those further off.
-    Roof stamps and room ceilings offer it.
+  - **[done] Roof stamps and reveal.** A stamp's `surface` becomes a Define
+    Surface region over its footprint, from its base up its physical height
+    (its level's band when the height or the grid is unknown), at the
+    bottom, top or both. `reveal` is Foundry's **Reveal Elevated Surface**
+    [14.355] (`exposure` in the behaviour's data): roofs and balconies stay
+    hidden from observers almost directly below.
+  - **Still open: room ceilings.**
   - It pairs with the tile **SURFACE** occlusion mode (Priority 4).
 - **[done] Per-level images.** A `Level` carries its `art`: the native
   Level's `background`, `foreground` and `fog` image paths. The levels panel
@@ -581,10 +584,14 @@ These make everything after them cheaper and safer, so they come first.
   - `ownership`;
   - `attachment.token`: a region that moves with a token [14.353, renamed
     14.356].
-- **Region behaviours** on terrain regions and rooms. Today `teleportToken`
-  (submaps) and `changeLevel` (stairs) are generated, and `defineSurface`
-  comes in Priority 2. Still to add:
-  - `increaseMovementCost` (difficult terrain);
+- **Region behaviours** on terrain regions and rooms. Generated today:
+  `teleportToken` (submaps), `changeLevel` (stairs), `defineSurface` (room
+  floors, roof stamps) and **[done] `modifyMovementCost`**: a stamp's
+  `terrain` becomes a "<stamp> terrain" region over its footprint on its
+  level, with the pack's cost per movement action (actions left out keep
+  Foundry's 1). The roadmap's earlier name for it, `increaseMovementCost`,
+  is not the v14 type key. Still to add:
+  - difficult terrain on painted terrain and rooms;
   - `adjustDarknessLevel`, `suppressWeather` and `applyActiveEffect`;
   - `displayScrollingText`, `executeMacro`, `executeScript`, `pauseGame` and
     `toggleBehavior`.
@@ -714,10 +721,10 @@ imports).
     followed too: switching to a variant that is not a container removes the
     pile, and switching back (or undoing) makes a fresh one. `sound` becomes
     a native AmbientSound ("<stamp> sound") at its offset, on the stamp's
-    level, removed by a variant with `sound: null`.
-  - Not yet realised: the other new fields (particles, tile, surface,
-    terrain, the new light and door fields, transition movement, and pile
-    `states`). The engine takes each one up as its roadmap priority lands.
+    level, removed by a variant with `sound: null`. `tile`, the new light
+    and door fields, `surface` and `terrain` are realised too (see their
+    priorities).
+  - Not yet realised: particles, transition movement, and pile `states`. The engine takes each one up as its roadmap priority lands.
     Packs may author them now; they are validated and snapshotted on placed
     stamps, so they take effect as soon as that priority ships.
 - **Evolution:** v1 changes are **additive only**. A breaking change becomes a new

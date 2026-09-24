@@ -277,9 +277,12 @@ function behaviourData(behaviour: RegionBehaviour | null): RegionCreateData['beh
         return [
             {
                 type: 'defineSurface',
-                system: { placement: 'bottom', light: true, move: true, sight: true, sound: true, occlusion: true, exposure: false },
+                system: { placement: behaviour.placement, light: true, move: true, sight: true, sound: true, occlusion: true, exposure: behaviour.reveal },
             },
         ];
+    }
+    if (behaviour.kind === 'terrain') {
+        return [{ type: 'modifyMovementCost', system: { difficulties: behaviour.difficulties } }];
     }
     const destinations = behaviour.targets.map((target) => regionUuid(target.scene, target.region));
     return [{ type: 'teleportToken', system: { destinations, placement: 'relative', choice: destinations.length > 1 } }];

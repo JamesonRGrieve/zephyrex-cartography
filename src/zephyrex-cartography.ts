@@ -35,7 +35,6 @@ import { createSwitchLinker, type SwitchLinker } from './foundry/switch-linker';
 import { distance, type Point } from './geometry/spline';
 import { I18N } from './i18n';
 import { MODULE_ID } from './module-id';
-import { levelHeightFor } from './tools/levels';
 
 interface DrawState {
     controller: CartographyController;
@@ -306,7 +305,7 @@ function setupDrawLayer(): void {
     });
     const gridSize = canvas.grid?.size ?? 0;
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
-    controller.levelHeight = levelHeightFor(canvas.scene?.grid.distance ?? 0);
+    controller.gridDistance = canvas.scene?.grid.distance ?? 0;
     controller.brushRadius = paint.current().radius;
     applyPathSettings(controller, paths.current());
     controller.load();

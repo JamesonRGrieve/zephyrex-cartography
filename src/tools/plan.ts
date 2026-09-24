@@ -50,9 +50,11 @@ export interface PlanContext {
     readonly levels: readonly Level[];
     /** Whether terrain (biome regions and brush strokes) is mirrored as Scene Regions. */
     readonly terrainRegions: boolean;
+    /** Scene distance units per grid square, turning stamp heights (grid units) into elevations; 0: unknown. */
+    readonly gridDistance: number;
 }
 
-const NO_CONTEXT: PlanContext = { features: [], levels: [], terrainRegions: false };
+const NO_CONTEXT: PlanContext = { features: [], levels: [], terrainRegions: false, gridDistance: 0 };
 
 /** Where a feature's documents go: its level, and that level's floor elevation. */
 interface Floor {
@@ -250,6 +252,58 @@ function entranceRegion(stamp: StampFeature, levels: readonly Level[]): RegionDo
     };
 }
 
+/** A stamp's region band: its level's, or open-ended when it stands on no level. */
+function levelBand(stamp: StampFeature, levels: readonly Level[]): { readonly bottom: number | null; readonly top: number | null } {
+    const band = findLevel(levels, stamp.level);
+    return { bottom: band?.bottom ?? null, top: band?.top ?? null };
+}
+
+/** Difficult terrain over the stamp's footprint (rubble, mud), on its level, as its variant declares. */
+function stampTerrainRegion(stamp: StampFeature, levels: readonly Level[]): RegionDoc | null {
+    const terrain = stamp.behaviour.terrain;
+    if (!terrain || Object.keys(terrain.difficulty).length === 0) {
+        return null;
+    }
+    return {
+        id: null,
+        label: { kind: 'stamp-terrain', name: stamp.name },
+        polygon: stampCorners(stamp),
+        ...levelBand(stamp, levels),
+        level: stamp.level,
+        spans: [],
+        behaviour: { kind: 'terrain', difficulties: terrain.difficulty },
+    };
+}
+
+/**
+ * A stamp's Define Surface (a roof, a balcony, a raised floor) over its
+ * footprint. Its band runs from the stamp's base up its physical height, so
+ * a `top` surface is its roof; a stamp of unknown height takes its level's
+ * band, putting a roof at the level's ceiling. A stamp with neither has no
+ * band to put a surface on, and gets none.
+ */
+function stampSurfaceRegion(stamp: StampFeature, levels: readonly Level[], gridDistance: number, floor: Floor): RegionDoc | null {
+    const surface = stamp.behaviour.surface;
+    if (!surface) {
+        return null;
+    }
+    const height = stamp.behaviour.physical?.height;
+    const base = floor.elevation + stamp.elevation;
+    const band = height !== undefined && gridDistance > 0 ? { bottom: base, top: base + height * gridDistance } : levelBand(stamp, levels);
+    if (band.bottom === null || band.top === null) {
+        return null;
+    }
+    return {
+        id: null,
+        label: { kind: 'stamp-surface', name: stamp.name },
+        polygon: stampCorners(stamp),
+        ...band,
+        level: stamp.level,
+        spans: [],
+        behaviour: { kind: 'surface', placement: surface.placement, reveal: surface.reveal },
+    };
+}
+
 /** The stamp's ambient sound, if its current variant emits one. The radius goes from grid units to px. */
 function stampSound(stamp: StampFeature, floor: Floor): SoundDoc | null {
     const sound = stamp.behaviour.sound;
@@ -281,7 +335,14 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
         walls: [...(door ? [door] : []), ...stampWalls(stamp, floor)],
         tiles: [stampTile(stamp, floor)],
         lights: light ? [light] : [],
-        regions: [...transitionRegions(stamp, context.levels), ...[entranceRegion(stamp, context.levels)].filter((r): r is RegionDoc => r !== null)],
+        regions: [
+            ...transitionRegions(stamp, context.levels),
+            ...[
+                entranceRegion(stamp, context.levels),
+                stampTerrainRegion(stamp, context.levels),
+                stampSurfaceRegion(stamp, context.levels, context.gridDistance, floor),
+            ].filter((r): r is RegionDoc => r !== null),
+        ],
         sounds: sound ? [sound] : [],
     };
 }
@@ -307,7 +368,7 @@ function roomFloor(room: RoomFeature, levels: readonly Level[]): RegionDoc | nul
         top: here.bottom,
         level: here.id,
         spans: [below.id],
-        behaviour: { kind: 'surface' },
+        behaviour: { kind: 'surface', placement: 'bottom', reveal: false },
     };
 }
 

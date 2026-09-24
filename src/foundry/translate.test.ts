@@ -307,7 +307,7 @@ describe('regionCreateData', () => {
             top: 10,
             level: 'B',
             spans: ['A', 'B'],
-            behaviour: { kind: 'surface' },
+            behaviour: { kind: 'surface', placement: 'bottom', reveal: false },
         };
         const [data] = regionCreateData([floor], ['r4'], nameOf);
         expect(data?.behaviors).toEqual([

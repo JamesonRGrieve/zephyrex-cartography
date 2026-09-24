@@ -21,6 +21,32 @@ test('a stamp’s tile and light take its pack’s occlusion, restrictions and l
     expect(placed.light).toEqual({ coloration: 101, luminosity: 0.3, walls: false });
 });
 
+test('a stamp’s terrain and surface become native Modify Movement Cost and Define Surface regions', async ({ world }) => {
+    await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const crate = await controller?.placeStamp({ stamp: 'zc-e2e-pack:crate', x: 300, y: 300 });
+        await controller?.setStampVariant(crate ?? '', 1); // smashed: rubble underfoot
+        await controller?.placeStamp({ stamp: 'zc-e2e-pack:canopy', x: 800, y: 500 });
+    });
+    const regions = await world.evaluate(() =>
+        (canvas?.scene?.regions.contents ?? []).map((r) => ({
+            name: r.name,
+            bottom: r.elevation.bottom,
+            top: r.elevation.top,
+            // The behaviours' source data, plain for the trip out of the page.
+            behaviors: r.behaviors.contents.map((b) => b.toObject()),
+        })),
+    );
+    const byName = Object.fromEntries(regions.map((r) => [r.name, r]));
+    expect(byName['Crate terrain']).toMatchObject({ behaviors: [{ type: 'modifyMovementCost', system: { difficulties: { walk: 2 } } }] });
+    // The canopy's roof sits atop its 2-square height: 10 distance units on the fixture's 5-unit grid.
+    expect(byName['Canopy surface']).toMatchObject({
+        bottom: 0,
+        top: 10,
+        behaviors: [{ type: 'defineSurface', system: { placement: 'top', exposure: true } }],
+    });
+});
+
 test('a placed stamp is a native tile centred on its point, with its light', async ({ world }) => {
     const placed = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();

@@ -12,6 +12,9 @@ import { format, localize } from './localize';
 /** A generated region's display name, e.g. "Stairs: Ground floor → Upper floor" or "Enter Hab 12". */
 export function regionName(region: RegionDoc): string {
     const label = region.label;
+    if ('name' in label) {
+        return format(label.kind === 'stamp-terrain' ? I18N.regions.terrain : I18N.regions.surface, { name: label.name });
+    }
     if ('scene' in label) {
         return format(label.kind === 'entrance' ? I18N.regions.entrance : I18N.regions.exit, { scene: label.scene });
     }

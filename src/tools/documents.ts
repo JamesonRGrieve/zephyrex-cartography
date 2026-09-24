@@ -172,7 +172,8 @@ type RegionLabel =
     | { readonly kind: NonNullable<PlacedBehaviour['transition']>['kind']; readonly from: string; readonly to: readonly string[] }
     | { readonly kind: 'entrance' | 'exit'; readonly scene: string }
     | { readonly kind: 'terrain'; readonly biome: BiomeKind }
-    | { readonly kind: 'floor'; readonly level: string };
+    | { readonly kind: 'floor'; readonly level: string }
+    | { readonly kind: 'stamp-terrain' | 'stamp-surface'; readonly name: string };
 
 /** Where a teleport leads: a region in any scene, by id (a submap's other side). */
 interface RegionTarget {
@@ -194,7 +195,10 @@ interface RegionTarget {
 export type RegionBehaviour =
     | { readonly kind: 'teleport'; readonly targets: readonly RegionTarget[] }
     | { readonly kind: 'changeLevel' }
-    | { readonly kind: 'surface' };
+    /** A Define Surface at the region's bottom, top or both that restricts everything; `reveal` is Foundry's Reveal Elevated Surface. */
+    | { readonly kind: 'surface'; readonly placement: 'bottom' | 'top' | 'both'; readonly reveal: boolean }
+    /** Foundry's Modify Movement Cost: a cost multiplier per movement action (walk, fly, ...). */
+    | { readonly kind: 'terrain'; readonly difficulties: Readonly<Record<string, number>> };
 
 /** A native Scene Region. The sink turns its targets into region UUIDs. */
 export interface RegionDoc {

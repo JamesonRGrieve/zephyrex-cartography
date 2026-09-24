@@ -133,6 +133,8 @@ export interface RegionCreateData extends OnLevels {
         | { readonly type: 'teleportToken'; readonly system: TeleportSystem }
         | { readonly type: 'changeLevel'; readonly system: Readonly<Record<string, never>> }
         | { readonly type: 'defineSurface'; readonly system: SurfaceSystem }
+        /** Cost multipliers per movement action (v14 `modifyMovementCost`, 14.359); actions left out keep Foundry's 1. */
+        | { readonly type: 'modifyMovementCost'; readonly system: { readonly difficulties: Readonly<Record<string, number>> } }
     )[];
     readonly locked: boolean;
     /** A `CONST.REGION_VISIBILITY` value. */

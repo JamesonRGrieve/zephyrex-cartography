@@ -20,11 +20,11 @@ import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
 import { withDocs, type Feature } from '../tools/feature';
 import { featureHit } from '../tools/hit';
 import {
-    DEFAULT_LEVEL_HEIGHT,
     findLevel,
     type Level,
     type LevelArt,
     levelElevation,
+    levelHeightFor,
     nextLevelBand,
     NO_LEVEL_ART,
     onLevel,
@@ -202,8 +202,12 @@ export class CartographyController {
     grid: Grid | null = null;
     /** Whether committed paths also emit Foundry walls along their centerline. */
     emitWalls = false;
-    /** How tall a newly added level is (scene distance units); the entry sets it from the scene's grid. */
-    levelHeight = DEFAULT_LEVEL_HEIGHT;
+    /**
+     * Scene distance units per grid square; the entry sets it from the scene's
+     * grid. 0 (no grid) leaves new levels at the default height and stamp
+     * heights unknown.
+     */
+    gridDistance = 0;
 
     private readonly renderer: FeatureRenderer;
     private readonly store: SceneStore;
@@ -292,7 +296,7 @@ export class CartographyController {
 
     /** What plans read besides the feature: the scene's features (by default the live ones), levels and options. */
     private planContext(features: readonly Feature[] = this.features): PlanContext {
-        return { features, levels: this.levelList, terrainRegions: this.terrainRegions };
+        return { features, levels: this.levelList, terrainRegions: this.terrainRegions, gridDistance: this.gridDistance };
     }
 
     /** Whether terrain is mirrored as Scene Regions. */
@@ -350,7 +354,11 @@ export class CartographyController {
 
     /** Add a level stacked above (or below) the existing ones and make it active; returns its id. */
     async addLevel(position: 'above' | 'below', levelName: string): Promise<string | null> {
-        const id = await this.levelStore.create({ name: levelName, ...nextLevelBand(this.levelList, position, this.levelHeight), art: NO_LEVEL_ART });
+        const id = await this.levelStore.create({
+            name: levelName,
+            ...nextLevelBand(this.levelList, position, levelHeightFor(this.gridDistance)),
+            art: NO_LEVEL_ART,
+        });
         await this.reloadLevels();
         if (id !== null) {
             this.setActiveLevel(id);

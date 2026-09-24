@@ -36,9 +36,9 @@ async function drawRoom(c: ReturnType<typeof makeHarness>['c']): Promise<void> {
 }
 
 describe('CartographyController levels', () => {
-    it('adds levels at the level height it is given', async () => {
+    it('adds levels four grid squares tall', async () => {
         const { c } = makeHarness();
-        c.levelHeight = 20;
+        c.gridDistance = 5;
         await c.addLevel('above', 'Ground');
         await c.addLevel('above', 'Upper');
         expect(c.levels.map((l) => [l.bottom, l.top])).toEqual([
@@ -159,7 +159,7 @@ describe('CartographyController levels', () => {
                 spans: ['lv1'],
                 bottom: 10,
                 top: 10,
-                behaviour: { kind: 'surface' },
+                behaviour: { kind: 'surface', placement: 'bottom', reveal: false },
             }),
         ]);
         c.setActiveLevel('lv1');

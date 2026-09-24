@@ -270,6 +270,28 @@
             ]
         },
         {
+            "id": "canopy",
+            "name": "Canopy",
+            "category": "Structures",
+            "scale": "exterior",
+            "perspective": "top-down",
+            "physical": {
+                "height": 2
+            },
+            "surface": {
+                "placement": "top",
+                "reveal": true
+            },
+            "variants": [
+                {
+                    "state": "up",
+                    "image": "stamps/hab.svg",
+                    "width": 200,
+                    "height": 200
+                }
+            ]
+        },
+        {
             "id": "brazier",
             "name": "Brazier",
             "category": "Lighting",
