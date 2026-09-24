@@ -534,8 +534,12 @@ These make everything after them cheaper and safer, so they come first.
     `tests/e2e/levels.spec.ts`.
 - **Tests and validation** use `Scene#getSurfaces` and
   `Scene#testSurfaceCollision` [14.355, 14.356] to check floors and walls.
-  `Level#updateRegionShapeConstraints` [14.365] refreshes region constraints
-  after a level edit.
+- **Region constraints stay current without the engine** (checked in 14.368).
+  A restricted region is clipped to the walls and sources on its level, and
+  Foundry recomputes that itself (`Level#updateRegionShapeConstraints`,
+  14.365) whenever a wall, light or token on the level changes, walls
+  written in the engine's batches included, and on scene updates. A level's
+  band is not an input, so the engine never calls it.
 
 ### Priority 3: full wall and door options
 - **[done] Senses, one-way walls and thresholds.**
