@@ -211,7 +211,8 @@ function transitionRegions(stamp: StampFeature, levels: readonly Level[]): Regio
             bottom: Math.min(...joined.map((level) => level.bottom)),
             top: Math.max(...joined.map((level) => level.top)),
             level: here.id,
-            behaviour: { kind: 'changeLevel', levels: joined.map((level) => level.id) },
+            spans: ends.map((end) => end.id),
+            behaviour: { kind: 'changeLevel' },
         },
     ];
 }
@@ -230,6 +231,7 @@ function entranceRegion(stamp: StampFeature, levels: readonly Level[]): RegionDo
         bottom: band?.bottom ?? null,
         top: band?.top ?? null,
         level: stamp.level,
+        spans: [],
         behaviour: { kind: 'teleport', targets: [{ scene: link.scene, region: link.exitRegion }] },
     };
 }
@@ -267,6 +269,31 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
         lights: light ? [light] : [],
         regions: [...transitionRegions(stamp, context.levels), ...[entranceRegion(stamp, context.levels)].filter((r): r is RegionDoc => r !== null)],
         sounds: sound ? [sound] : [],
+    };
+}
+
+/**
+ * A room's floor, when it stands on a level with another below: a solid,
+ * flat surface over the room at its level's base, on both levels, so the room
+ * cannot be seen, heard, lit or walked into from beneath, and hides what is
+ * below from those standing in it. A room on the lowest level, or on none,
+ * stands on the ground and has no floor region.
+ */
+function roomFloor(room: RoomFeature, levels: readonly Level[]): RegionDoc | null {
+    const here = findLevel(levels, room.level);
+    const below = here ? adjacentLevel(levels, here.id, -1) : null;
+    if (!here || !below) {
+        return null;
+    }
+    return {
+        id: null,
+        label: { kind: 'floor', level: here.name },
+        polygon: room.points,
+        bottom: here.bottom,
+        top: here.bottom,
+        level: here.id,
+        spans: [below.id],
+        behaviour: { kind: 'surface' },
     };
 }
 
@@ -308,7 +335,7 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
         ),
         lights: light.dim > 0 ? [{ source: { kind: 'room' }, ...light, elevation: floor.elevation, level: floor.level }] : [],
         tiles: [],
-        regions: [],
+        regions: [roomFloor(room, context.levels)].filter((region): region is RegionDoc => region !== null),
         sounds: [],
     };
 }
@@ -365,6 +392,7 @@ function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly 
         bottom: band?.bottom ?? null,
         top: band?.top ?? null,
         level: feature.level,
+        spans: [],
         behaviour: null,
     };
 }

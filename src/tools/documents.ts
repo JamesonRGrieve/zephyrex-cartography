@@ -137,7 +137,8 @@ export interface TileDoc {
 type RegionLabel =
     | { readonly kind: NonNullable<PlacedBehaviour['transition']>['kind']; readonly from: string; readonly to: readonly string[] }
     | { readonly kind: 'entrance' | 'exit'; readonly scene: string }
-    | { readonly kind: 'terrain'; readonly biome: BiomeKind };
+    | { readonly kind: 'terrain'; readonly biome: BiomeKind }
+    | { readonly kind: 'floor'; readonly level: string };
 
 /** Where a teleport leads: a region in any scene, by id (a submap's other side). */
 interface RegionTarget {
@@ -146,16 +147,20 @@ interface RegionTarget {
 }
 
 /**
- * What a generated region does to a token that enters it:
- * - `teleport` moves it to one of `targets`, in this scene or another (a
- *   submap's entrance and exit);
- * - `changeLevel` is v14's way between floors of one scene: the region spans
- *   every level in `levels`, and a token entering it is offered each of them
- *   but its own, keeping its height above the floor.
+ * What a generated region does:
+ * - `teleport` moves a token that enters it to one of `targets`, in this
+ *   scene or another (a submap's entrance and exit);
+ * - `changeLevel` is v14's way between floors of one scene: a token entering
+ *   it is offered every other level the region sits on, keeping its height
+ *   above the floor;
+ * - `surface` is a solid floor at the region's bottom (v14 `defineSurface`):
+ *   it restricts light, movement, sight and sound and occludes, so the level
+ *   below cannot be seen or walked through.
  */
 export type RegionBehaviour =
     | { readonly kind: 'teleport'; readonly targets: readonly RegionTarget[] }
-    | { readonly kind: 'changeLevel'; readonly levels: readonly string[] };
+    | { readonly kind: 'changeLevel' }
+    | { readonly kind: 'surface' };
 
 /** A native Scene Region. The sink turns its targets into region UUIDs. */
 export interface RegionDoc {
@@ -166,8 +171,13 @@ export interface RegionDoc {
     /** Elevation band (scene distance units); null is open-ended. */
     readonly bottom: number | null;
     readonly top: number | null;
-    /** The level it sits on, or null for every level. A `changeLevel` region sits on all of its behaviour's levels instead. */
+    /** The level it sits on, or null for every level. */
     readonly level: string | null;
+    /**
+     * Other levels it also sits on, for a region joining floors: a stair's
+     * ends, or the level a floor is seen from below. Empty for most.
+     */
+    readonly spans: readonly string[];
     readonly behaviour: RegionBehaviour | null;
 }
 

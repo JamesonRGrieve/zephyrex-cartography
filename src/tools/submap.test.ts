@@ -31,6 +31,7 @@ describe('exitRegion', () => {
             bottom: null,
             top: null,
             level: null,
+            spans: [],
             behaviour: { kind: 'teleport', targets: [{ scene: 'here', region: 'in1' }] },
         });
     });

@@ -18,6 +18,7 @@ const REGION: RegionDoc = {
     bottom: null,
     top: null,
     level: null,
+    spans: [],
     behaviour: null,
 };
 

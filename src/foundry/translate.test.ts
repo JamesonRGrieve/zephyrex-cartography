@@ -209,7 +209,8 @@ describe('regionCreateData', () => {
             bottom: -10,
             top: 20,
             level: 'A',
-            behaviour: { kind: 'changeLevel', levels: ['A', 'B', 'C'] },
+            spans: ['B', 'C'],
+            behaviour: { kind: 'changeLevel' },
         };
         expect(regionCreateData([stair], ['r0'], nameOf)).toEqual([
             {
@@ -226,10 +227,42 @@ describe('regionCreateData', () => {
     });
 
     it('gives a region without a behaviour none, on its own level', () => {
-        const plain: RegionDoc = { id: null, label: { kind: 'terrain', biome: 'forest' }, polygon: square, bottom: 0, top: 10, level: 'C', behaviour: null };
+        const plain: RegionDoc = {
+            id: null,
+            label: { kind: 'terrain', biome: 'forest' },
+            polygon: square,
+            bottom: 0,
+            top: 10,
+            level: 'C',
+            spans: [],
+            behaviour: null,
+        };
         const [data] = regionCreateData([plain], ['r2'], nameOf);
         expect(data?.behaviors).toEqual([]);
         expect(data?.levels).toEqual(['C']);
+    });
+
+    it('makes a floor a solid defineSurface at its bottom, on its level and the one seen from below', () => {
+        const floor: RegionDoc = {
+            id: null,
+            label: { kind: 'floor', level: 'Upper' },
+            polygon: square,
+            bottom: 10,
+            top: 10,
+            level: 'B',
+            spans: ['A', 'B'],
+            behaviour: { kind: 'surface' },
+        };
+        const [data] = regionCreateData([floor], ['r4'], nameOf);
+        expect(data?.behaviors).toEqual([
+            {
+                type: 'defineSurface',
+                system: { placement: 'bottom', light: true, move: true, sight: true, sound: true, occlusion: true, exposure: false },
+            },
+        ]);
+        expect(data?.elevation).toEqual({ bottom: 10, top: 10 });
+        // Each level once, however it is listed.
+        expect(data?.levels).toEqual(['B', 'A']);
     });
 
     it('teleports to regions in another scene, relative, with a choice when there are several', () => {
@@ -240,6 +273,7 @@ describe('regionCreateData', () => {
             bottom: null,
             top: null,
             level: null,
+            spans: [],
             behaviour: {
                 kind: 'teleport',
                 targets: [
@@ -261,6 +295,7 @@ describe('regionCreateData', () => {
             bottom: null,
             top: null,
             level: null,
+            spans: [],
             behaviour: { kind: 'teleport', targets: [{ scene: 'hab', region: 'out1' }] },
         };
         const [data] = regionCreateData([entrance], ['in1'], nameOf);
@@ -270,7 +305,16 @@ describe('regionCreateData', () => {
     });
 
     it('locks regions drawn from features, but leaves an interior exit for the GM to move', () => {
-        const exit: RegionDoc = { id: 'out1', label: { kind: 'exit', scene: 'Town' }, polygon: square, bottom: null, top: null, level: null, behaviour: null };
+        const exit: RegionDoc = {
+            id: 'out1',
+            label: { kind: 'exit', scene: 'Town' },
+            polygon: square,
+            bottom: null,
+            top: null,
+            level: null,
+            spans: [],
+            behaviour: null,
+        };
         const [entrance, back] = regionCreateData([{ ...exit, id: 'in1', label: { kind: 'entrance', scene: 'Hab' } }, exit], ['in1', 'out1'], nameOf);
         expect([entrance?.locked, back?.locked]).toEqual([true, false]);
         expect([entrance?.visibility, back?.visibility]).toEqual([0, 0]);

@@ -26,6 +26,40 @@ test('a stair is one native changeLevel region spanning the floors it joins', as
     expect(result.levels).toEqual(expect.arrayContaining(result.joins));
 });
 
+test('a room on an upper level has a floor Foundry treats as a solid surface from both levels', async ({ world }) => {
+    const result = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const ground = await controller?.addLevel('above', 'Ground');
+        const upper = await controller?.addLevel('above', 'Upper');
+        controller?.setActiveLevel(upper ?? null);
+        controller?.begin({ type: 'room', floor: 'dirt' }, 'click');
+        for (const at of [
+            { x: 200, y: 200 },
+            { x: 600, y: 200 },
+            { x: 600, y: 600 },
+            { x: 200, y: 600 },
+        ]) {
+            controller?.addPoint(at);
+        }
+        await controller?.commit();
+        const scene = canvas?.scene;
+        const base = scene?.levels.contents.find((level) => level.id === upper)?.elevation.bottom ?? null;
+        // Foundry refreshes its surfaces when a surface comes into view, as it does when a GM views a level it is on.
+        const seen = async (level: string | null | undefined): Promise<{ elevation: number; move: boolean; sight: boolean }[]> => {
+            await scene?.view({ level: level ?? '' });
+            return (canvas?.scene?.getSurfaces({ level: level ?? '' }) ?? []).map((surface) => ({
+                elevation: surface.elevation,
+                move: surface.move,
+                sight: surface.sight,
+            }));
+        };
+        return { base, fromUpper: await seen(upper), fromGround: await seen(ground) };
+    });
+    const floor = { elevation: result.base, move: true, sight: true };
+    expect(result.fromUpper).toEqual([floor]);
+    expect(result.fromGround).toEqual([floor]);
+});
+
 test('levels are native Level documents, and a room on one has walls on that level only', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const api = game.modules?.get('zephyrex-cartography').api;

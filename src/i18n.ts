@@ -87,6 +87,7 @@ export const I18N = {
         transition: key('Regions.Transition'),
         entrance: key('Regions.Entrance'),
         exit: key('Regions.Exit'),
+        floor: key('Regions.Floor'),
     },
     submap: {
         title: key('Submap.Title'),

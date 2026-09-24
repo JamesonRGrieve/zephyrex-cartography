@@ -45,7 +45,7 @@ export class FoundryDocumentSink implements DocumentSink {
     async write(write: StagedWrite): Promise<void> {
         const scene = this.getScene();
         // A scene not yet saved has no id, and cannot hold embedded documents.
-        if (!scene || scene.id === null) {
+        if (scene?.id === null || scene === null) {
             return;
         }
         // A GM may have deleted a document by hand, and updating a missing one fails the whole batch: a missing tile is

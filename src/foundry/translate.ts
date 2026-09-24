@@ -187,6 +187,8 @@ export function regionUuid(scene: string, region: string): string {
  *   way to go.
  * - `changeLevel` has no options in v14: which levels it offers comes from
  *   the region's own level membership.
+ * - A floor is a `defineSurface` at the region's bottom that restricts every
+ *   sense and movement and occludes what is beneath.
  */
 function behaviourData(behaviour: RegionBehaviour | null): RegionCreateData['behaviors'] {
     if (behaviour === null) {
@@ -195,8 +197,24 @@ function behaviourData(behaviour: RegionBehaviour | null): RegionCreateData['beh
     if (behaviour.kind === 'changeLevel') {
         return [{ type: 'changeLevel', system: {} }];
     }
+    if (behaviour.kind === 'surface') {
+        return [
+            {
+                type: 'defineSurface',
+                system: { placement: 'bottom', light: true, move: true, sight: true, sound: true, occlusion: true, exposure: false },
+            },
+        ];
+    }
     const destinations = behaviour.targets.map((target) => regionUuid(target.scene, target.region));
     return [{ type: 'teleportToken', system: { destinations, placement: 'relative', choice: destinations.length > 1 } }];
+}
+
+/** The levels a region sits on: its own, and those it spans; none (every level) for a level-less region. */
+function regionLevels(region: RegionDoc): { readonly levels?: readonly string[] } {
+    if (region.level === null) {
+        return {};
+    }
+    return { levels: [...new Set([region.level, ...region.spans])] };
 }
 
 /**
@@ -214,7 +232,6 @@ export function regionCreateData(regions: readonly RegionDoc[], ids: readonly st
         // shown on the Regions layer. An interior exit is the GM's to place, so it stays free.
         locked: region.label.kind !== 'exit',
         visibility: REGION_VISIBILITY_LAYER,
-        // A way between levels exists on every level it joins.
-        ...(region.behaviour?.kind === 'changeLevel' ? { levels: [...region.behaviour.levels] } : levelsField(region.level)),
+        ...regionLevels(region),
     }));
 }

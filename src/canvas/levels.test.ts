@@ -132,6 +132,27 @@ describe('CartographyController levels', () => {
         expect(await c.setLevelBand('nope', 0, 5)).toBe(false);
     });
 
+    it('gives a room on an upper level a solid floor over the level below, and a ground-floor room none', async () => {
+        const { c, d } = makeHarness();
+        await c.addLevel('above', 'Ground');
+        await c.addLevel('above', 'Upper');
+        c.setActiveLevel('lv2');
+        await drawRoom(c);
+        expect(d.regions.flat()).toEqual([
+            expect.objectContaining({
+                label: { kind: 'floor', level: 'Upper' },
+                level: 'lv2',
+                spans: ['lv1'],
+                bottom: 10,
+                top: 10,
+                behaviour: { kind: 'surface' },
+            }),
+        ]);
+        c.setActiveLevel('lv1');
+        await drawRoom(c);
+        expect(d.regions.flat()).toHaveLength(1);
+    });
+
     it('joins a stair to the level above with one changeLevel region spanning both', async () => {
         const { c, d } = makeHarness(stairs);
         c.grid = { size: 100, originX: 0, originY: 0 };
@@ -144,7 +165,8 @@ describe('CartographyController levels', () => {
                 level: 'lv1',
                 bottom: 0,
                 top: 20,
-                behaviour: { kind: 'changeLevel', levels: ['lv1', 'lv2'] },
+                spans: ['lv2'],
+                behaviour: { kind: 'changeLevel' },
                 label: { kind: 'stairs', from: 'Ground', to: ['Upper'] },
             }),
         ]);
@@ -157,7 +179,7 @@ describe('CartographyController levels', () => {
         await c.placeStamp({ stamp: 'pack:stairs', x: 50, y: 50 });
         expect(d.regions).toEqual([]);
         await c.addLevel('above', 'Upper');
-        expect(d.regions[0]?.map((r) => r.behaviour)).toEqual([{ kind: 'changeLevel', levels: ['lv1', 'lv2'] }]);
+        expect(d.regions[0]?.map((r) => [r.level, r.spans, r.behaviour])).toEqual([['lv1', ['lv2'], { kind: 'changeLevel' }]]);
     });
 
     it('offers both ways from a stairwell, over all three bands', async () => {
@@ -168,6 +190,6 @@ describe('CartographyController levels', () => {
         c.setActiveLevel('lv1');
         await c.placeStamp({ stamp: 'pack:well', x: 50, y: 50 });
         const [well] = d.regions[d.regions.length - 1] ?? [];
-        expect(well).toMatchObject({ bottom: -10, top: 20, behaviour: { kind: 'changeLevel', levels: ['lv1', 'lv2', 'lv3'] } });
+        expect(well).toMatchObject({ bottom: -10, top: 20, level: 'lv1', spans: ['lv2', 'lv3'], behaviour: { kind: 'changeLevel' } });
     });
 });

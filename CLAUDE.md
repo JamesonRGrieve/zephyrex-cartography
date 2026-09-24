@@ -442,11 +442,18 @@ These make everything after them cheaper and safer, so they come first.
     which. In 14.359 the behaviour's schema is empty. Build this against a
     ≥14.361 reference release; the behaviour firing until the token leaves
     the region is also from 14.361.
-- **Floors and ceilings → `defineSurface`** [14.353]. It gives a region a
-  surface at its bottom, top or both that restricts light, movement, sight and
-  sound and causes occlusion or exposure. Rooms on upper levels get floors,
-  so the level below cannot be seen through them.
-  - **Reveal elevated surface** [14.355]: roofs and balconies stay hidden
+- **[done] Floors → `defineSurface`** [14.353]. It gives a region a surface
+  at its bottom, top or both that restricts light, movement, sight and sound
+  and causes occlusion or exposure.
+  - A room on a level with another below gets a floor: a flat region over
+    the room at its level's base, on both levels (`RegionDoc.spans`), whose
+    surface restricts everything and occludes. So the level below cannot be
+    seen, heard, lit or walked through.
+  - Foundry refreshes its surfaces when one comes into view, meaning a level
+    it is on is viewed, so the e2e check in `tests/e2e/levels.spec.ts` views
+    each level before `Scene#getSurfaces`.
+  - **Still open: ceilings and reveal.** A roof or ceiling surface, and
+    **reveal elevated surface** [14.355]: roofs and balconies stay hidden
     from observers almost directly below and show more to those further off.
     Roof stamps and room ceilings offer it.
   - It pairs with the tile **SURFACE** occlusion mode (Priority 4).

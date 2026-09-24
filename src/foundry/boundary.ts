@@ -79,6 +79,17 @@ interface TeleportSystem {
     readonly choice: boolean;
 }
 
+/** A surface at the region's bottom, top or both, and what it restricts (v14 `defineSurface`, 14.359). */
+interface SurfaceSystem {
+    readonly placement: 'bottom' | 'top' | 'both';
+    readonly light: boolean;
+    readonly move: boolean;
+    readonly sight: boolean;
+    readonly sound: boolean;
+    readonly occlusion: boolean;
+    readonly exposure: boolean;
+}
+
 export interface RegionCreateData extends OnLevels {
     readonly _id: string;
     readonly name: string;
@@ -89,6 +100,7 @@ export interface RegionCreateData extends OnLevels {
     readonly behaviors: readonly (
         | { readonly type: 'teleportToken'; readonly system: TeleportSystem }
         | { readonly type: 'changeLevel'; readonly system: Readonly<Record<string, never>> }
+        | { readonly type: 'defineSurface'; readonly system: SurfaceSystem }
     )[];
     readonly locked: boolean;
     /** A `CONST.REGION_VISIBILITY` value. */
