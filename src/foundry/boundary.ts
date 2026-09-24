@@ -367,16 +367,28 @@ export interface FoundryScene {
 }
 /* eslint-enable @typescript-eslint/method-signature-style */
 
+/** One lighting environment's values, as a partial update. */
+interface EnvironmentUpdate {
+    readonly hue?: number;
+    readonly intensity?: number;
+    readonly luminosity?: number;
+    readonly saturation?: number;
+    readonly shadows?: number;
+}
+
 /** The scene's own settings, as a partial update: only the keys given change. */
 export interface SceneSettingsUpdate {
     readonly environment?: {
         readonly darknessLevel?: number;
         readonly darknessLock?: boolean;
         readonly globalLight?: { readonly enabled: boolean };
+        readonly cycle?: boolean;
+        readonly base?: EnvironmentUpdate;
+        readonly dark?: EnvironmentUpdate;
     };
     readonly tokenVision?: boolean;
-    /** A `CONST.FOG_EXPLORATION_MODES` value. */
-    readonly fog?: { readonly mode: number };
+    /** `mode` is a `CONST.FOG_EXPLORATION_MODES` value. */
+    readonly fog?: { readonly mode?: number; readonly colors?: { readonly explored?: string; readonly unexplored?: string } };
     readonly weather?: string;
     readonly transition?: { readonly type: string | null; readonly duration?: number | undefined };
 }

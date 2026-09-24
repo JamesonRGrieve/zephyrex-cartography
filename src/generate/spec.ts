@@ -249,6 +249,18 @@ const levelSpec = z
 
 const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec]);
 
+const signed = z.number().min(-1).max(1);
+
+const environmentSpec = z
+    .object({
+        hue: alpha.optional().describe('0–1, a fraction of the colour wheel.'),
+        intensity: alpha.optional().describe('How strongly the hue tints the scene, 0–1.'),
+        luminosity: signed.optional(),
+        saturation: signed.optional(),
+        shadows: alpha.optional(),
+    })
+    .strict();
+
 const sceneSettingsSpec = z
     .object({
         darkness: z.number().min(0).max(1).optional().describe('Scene darkness, 0 (day) to 1 (night).'),
@@ -256,6 +268,14 @@ const sceneSettingsSpec = z
         globalLight: z.boolean().optional().describe("Foundry's global illumination, lighting the whole scene."),
         tokenVision: z.boolean().optional(),
         fog: z.enum(FOG_MODES).optional().describe('Fog of war exploration: disabled, individual (each user their own), or shared.'),
+        fogColours: z
+            .object({ explored: hexColour.optional(), unexplored: hexColour.optional() })
+            .strict()
+            .optional()
+            .describe("The fog's colours over explored and unexplored ground."),
+        cycle: z.boolean().optional().describe('Whether the lighting moves from the base environment to the dark one as darkness rises.'),
+        base: environmentSpec.optional().describe('The lighting environment by day.'),
+        dark: environmentSpec.optional().describe('The lighting environment at full darkness.'),
         weather: z.string().optional().describe('A Foundry weather effect key (CONFIG.weatherEffects), or "" for none.'),
         transition: z
             .object({

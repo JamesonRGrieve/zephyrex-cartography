@@ -244,6 +244,22 @@ describe('sceneSettingsData', () => {
         expect(sceneSettingsData({ fog: 'disabled' })).toEqual({ fog: { mode: 0 } });
         expect(sceneSettingsData({})).toEqual({});
     });
+
+    it('writes the environments and their cycle, and the fog’s colours, each value only if given', () => {
+        expect(
+            sceneSettingsData({
+                cycle: false,
+                base: { hue: 0.1, intensity: 0.3 },
+                dark: { luminosity: -0.5, shadows: 0.2, saturation: -0.4 },
+                fogColours: { unexplored: '#101820' },
+            }),
+        ).toEqual({
+            environment: { cycle: false, base: { hue: 0.1, intensity: 0.3 }, dark: { luminosity: -0.5, saturation: -0.4, shadows: 0.2 } },
+            fog: { colors: { unexplored: '#101820' } },
+        });
+        expect(sceneSettingsData({ fog: 'individual', fogColours: { explored: '#000000' } })).toEqual({ fog: { mode: 1, colors: { explored: '#000000' } } });
+        expect(sceneSettingsData({ fogColours: {} })).toEqual({});
+    });
 });
 
 describe('soundCreateData', () => {

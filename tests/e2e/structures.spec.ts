@@ -49,6 +49,37 @@ test('a spec sets the scene’s own darkness, fog, vision, weather and transitio
     expect(scene).toEqual({ darkness: 0.75, lock: true, globalLight: true, tokenVision: false, fog: 2, transition: { type: 'fade', duration: 800 } });
 });
 
+test('a spec sets the scene’s day and night environments, their cycle and the fog’s colours, leaving the rest', async ({ world }) => {
+    const scene = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            scene: {
+                cycle: false,
+                base: { hue: 0.1, intensity: 0.4 },
+                dark: { luminosity: -0.6, shadows: 0.3 },
+                fogColours: { unexplored: '#102030' },
+            },
+            features: [],
+        });
+        const s = canvas?.scene;
+        return (
+            s && {
+                cycle: s.environment.cycle,
+                base: { hue: s.environment.base.hue, intensity: s.environment.base.intensity, luminosity: s.environment.base.luminosity },
+                dark: { hue: s.environment.dark.hue, luminosity: s.environment.dark.luminosity, shadows: s.environment.dark.shadows },
+                unexplored: s.fog.colors.unexplored?.css ?? null,
+            }
+        );
+    });
+    // Values left out keep Foundry's defaults: the dark environment's hue is 257/360.
+    expect(scene?.cycle).toBe(false);
+    expect(scene?.base).toEqual({ hue: 0.1, intensity: 0.4, luminosity: 0 });
+    expect(scene?.dark.luminosity).toBe(-0.6);
+    expect(scene?.dark.shadows).toBe(0.3);
+    expect(scene?.dark.hue).toBeCloseTo(257 / 360);
+    expect(scene?.unexplored).toBe('#102030');
+});
+
 test('difficult painted ground becomes a Modify Movement Cost region, with terrain mirroring off', async ({ world }) => {
     const regions = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

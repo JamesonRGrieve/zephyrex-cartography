@@ -730,8 +730,11 @@ These make everything after them cheaper and safer, so they come first.
   - the transition on entering the scene, and its length [14.352].
   They go through the controller's `WorldScenes` port as one Scene update.
   They are the scene's, not features, so undo leaves them be.
-  - **Still open:** the environment's base and dark colours, and the fog
-    colours.
+  - **[done]** The day (`base`) and night (`dark`) lighting environments
+    (hue, intensity, luminosity, saturation, shadows) and their `cycle`, and
+    the fog's explored and unexplored colours (`fogColours`). Each value is
+    written only if given, and `tests/e2e/structures.spec.ts` checks them on
+    the real Scene.
 - **Compressed textures.** Tiles and backgrounds accept KTX2 and Basis files
   [14.362]. Asset packs can ship GPU-compressed art for large stamp sets, and
   the pack schema and loader accept those extensions.

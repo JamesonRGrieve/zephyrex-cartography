@@ -24,7 +24,7 @@ import type {
     WallThreshold,
 } from '../tools/documents';
 import { regionColour } from '../tools/region-colours';
-import { FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
+import { type Environment, FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
 import type {
     AreaEffectBehaviour,
     LightCreateData,
@@ -38,18 +38,38 @@ import type {
 
 /** A scene's settings as the partial Scene update Foundry takes; settings not given are left out, so they keep their values. */
 export function sceneSettingsData(settings: SceneSettings): SceneSettingsUpdate {
-    const { darkness, darknessLock, globalLight, tokenVision, fog, weather, transition } = settings;
+    const { darkness, darknessLock, globalLight, tokenVision, fog, fogColours, cycle, base, dark, weather, transition } = settings;
     const environment = {
         ...(darkness === undefined ? {} : { darknessLevel: darkness }),
         ...(darknessLock === undefined ? {} : { darknessLock }),
         ...(globalLight === undefined ? {} : { globalLight: { enabled: globalLight } }),
+        ...(cycle === undefined ? {} : { cycle }),
+        ...(base === undefined ? {} : { base: environmentData(base) }),
+        ...(dark === undefined ? {} : { dark: environmentData(dark) }),
     };
+    const colors = {
+        ...(fogColours?.explored === undefined ? {} : { explored: fogColours.explored }),
+        ...(fogColours?.unexplored === undefined ? {} : { unexplored: fogColours.unexplored }),
+    };
+    const fogData = { ...(fog === undefined ? {} : { mode: FOG_MODE_IDS[fog] }), ...(Object.keys(colors).length === 0 ? {} : { colors }) };
     return {
         ...(Object.keys(environment).length === 0 ? {} : { environment }),
         ...(tokenVision === undefined ? {} : { tokenVision }),
-        ...(fog === undefined ? {} : { fog: { mode: FOG_MODE_IDS[fog] } }),
+        ...(Object.keys(fogData).length === 0 ? {} : { fog: fogData }),
         ...(weather === undefined ? {} : { weather }),
         ...(transition === undefined ? {} : { transition }),
+    };
+}
+
+/** A lighting environment's given values; those left out keep theirs. */
+function environmentData(environment: Environment): NonNullable<NonNullable<SceneSettingsUpdate['environment']>['base']> {
+    const { hue, intensity, luminosity, saturation, shadows } = environment;
+    return {
+        ...(hue === undefined ? {} : { hue }),
+        ...(intensity === undefined ? {} : { intensity }),
+        ...(luminosity === undefined ? {} : { luminosity }),
+        ...(saturation === undefined ? {} : { saturation }),
+        ...(shadows === undefined ? {} : { shadows }),
     };
 }
 

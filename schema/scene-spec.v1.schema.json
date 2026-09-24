@@ -49,6 +49,93 @@
                         "shared"
                     ]
                 },
+                "fogColours": {
+                    "description": "The fog's colours over explored and unexplored ground.",
+                    "type": "object",
+                    "properties": {
+                        "explored": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                        },
+                        "unexplored": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "cycle": {
+                    "description": "Whether the lighting moves from the base environment to the dark one as darkness rises.",
+                    "type": "boolean"
+                },
+                "base": {
+                    "description": "The lighting environment by day.",
+                    "type": "object",
+                    "properties": {
+                        "hue": {
+                            "description": "0–1, a fraction of the colour wheel.",
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "intensity": {
+                            "description": "How strongly the hue tints the scene, 0–1.",
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "luminosity": {
+                            "type": "number",
+                            "minimum": -1,
+                            "maximum": 1
+                        },
+                        "saturation": {
+                            "type": "number",
+                            "minimum": -1,
+                            "maximum": 1
+                        },
+                        "shadows": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "dark": {
+                    "description": "The lighting environment at full darkness.",
+                    "type": "object",
+                    "properties": {
+                        "hue": {
+                            "description": "0–1, a fraction of the colour wheel.",
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "intensity": {
+                            "description": "How strongly the hue tints the scene, 0–1.",
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "luminosity": {
+                            "type": "number",
+                            "minimum": -1,
+                            "maximum": 1
+                        },
+                        "saturation": {
+                            "type": "number",
+                            "minimum": -1,
+                            "maximum": 1
+                        },
+                        "shadows": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "weather": {
                     "description": "A Foundry weather effect key (CONFIG.weatherEffects), or \"\" for none.",
                     "type": "string"

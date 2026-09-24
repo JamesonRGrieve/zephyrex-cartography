@@ -196,12 +196,17 @@ describe('realizeSpec', () => {
 
     it('sets the scene’s own settings, only those given, and none when the spec has none', async () => {
         const h = makeHarness();
-        await realizeSpec(h.c, spec({ scene: { darkness: 0.8, fog: 'shared', transition: { type: 'fade' } }, features: [] }), {
-            origin: ORIGIN,
-            gridSize: GRID,
-        });
+        const scene = {
+            darkness: 0.8,
+            fog: 'shared',
+            fogColours: { unexplored: '#101820' },
+            cycle: true,
+            dark: { hue: 0.7, intensity: 0.5 },
+            transition: { type: 'fade' },
+        };
+        await realizeSpec(h.c, spec({ scene, features: [] }), { origin: ORIGIN, gridSize: GRID });
         await realizeSpec(h.c, spec({ features: [] }), { origin: ORIGIN, gridSize: GRID });
-        expect(h.w.settings).toEqual([{ darkness: 0.8, fog: 'shared', transition: { type: 'fade' } }]);
+        expect(h.w.settings).toEqual([scene]);
     });
 
     it('creates levels bottom to top, puts features on them, and restores the level being edited', async () => {
