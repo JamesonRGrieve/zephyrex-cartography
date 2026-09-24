@@ -30,6 +30,7 @@ import { regionOutline, type RegionFeature } from './region';
 import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
+import { SWITCH_BLOCKS } from './switches';
 import { type PresetWall, presetWall } from './wall-presets';
 
 export interface DocumentPlan {
@@ -189,7 +190,9 @@ function stampDoorWall(stamp: StampFeature, floor: Floor): WallDoc | null {
     }
     const axis = stampDoorAxis(stamp);
     const look = { sound: door.sound ?? null, animation: door.animation ?? null };
-    return { a: axis.a, b: axis.b, door: door.type, doorState: stampDoorState(stamp), look, blocks: BLOCKS_ALL, level: floor.level };
+    // A light switch's wall only carries the door control players click; it blocks nothing.
+    const blocks = door.switch === true ? SWITCH_BLOCKS : BLOCKS_ALL;
+    return { a: axis.a, b: axis.b, door: door.type, doorState: stampDoorState(stamp), look, blocks, level: floor.level };
 }
 
 /**
@@ -349,7 +352,7 @@ function roomPlan(room: RoomFeature, context: PlanContext): DocumentPlan {
                 ),
             ),
         ),
-        lights: light.dim > 0 ? [{ source: { kind: 'room' }, ...light, elevation: floor.elevation, level: floor.level }] : [],
+        lights: room.lit && light.dim > 0 ? [{ source: { kind: 'room' }, ...light, elevation: floor.elevation, level: floor.level }] : [],
         tiles: [],
         regions: [roomFloor(room, context.levels)].filter((region): region is RegionDoc => region !== null),
         sounds: [],

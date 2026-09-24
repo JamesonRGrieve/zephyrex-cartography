@@ -23,6 +23,7 @@ export const I18N = {
         door: key('Tools.Door'),
         edit: key('Tools.Edit'),
         erase: key('Tools.Erase'),
+        link: key('Tools.Link'),
         undo: key('Tools.Undo'),
         redo: key('Tools.Redo'),
         stamp: key('Tools.Stamp'),

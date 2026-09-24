@@ -59,7 +59,7 @@ async function dragScene(page: Page, from: Point, path: readonly Point[], option
 }
 
 /** Where a module tool sits among Foundry's groups; any other is in the module's own group. */
-const NATIVE_HOME: Readonly<Record<string, string>> = { room: 'walls', door: 'walls', materials: 'walls', stamp: 'tiles' };
+const NATIVE_HOME: Readonly<Record<string, string>> = { room: 'walls', door: 'walls', materials: 'walls', stamp: 'tiles', link: 'lighting' };
 
 async function activate(page: Page, control: string, tool: string): Promise<void> {
     await page.evaluate(
@@ -293,4 +293,28 @@ test('the stamp tool places the stamp armed in the browser where the GM clicks',
             }),
         )
         .toEqual({ x: 350, y: 350 });
+});
+
+test('the link tool, with the Lighting tools, picks a switch and links a lamp and a plain light to it', async ({ world }) => {
+    const ids = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const switchId = (await controller?.placeStamp({ stamp: 'zc-e2e-pack:switch', x: 300, y: 300 })) ?? '';
+        const lampId = (await controller?.placeStamp({ stamp: 'zc-e2e-pack:lamp', x: 700, y: 300 })) ?? '';
+        const [plain] = (await canvas?.scene?.createEmbeddedDocuments('AmbientLight', [{ x: 1000, y: 600, config: { dim: 10, bright: 5 } }])) ?? [];
+        return { switchId, lampId, plainId: plain?.id ?? '' };
+    });
+    await useTool(world, 'link');
+    await holdView(world);
+    await clickScene(world, { x: 300, y: 300 });
+    await clickScene(world, { x: 700, y: 300 });
+    await clickScene(world, { x: 1000, y: 600 });
+    const targets = async (): Promise<readonly { kind: string; id: string }[]> =>
+        world.evaluate((id) => game.modules?.get('zephyrex-cartography').api.controller()?.switchTargets(id) ?? [], ids.switchId);
+    await expect.poll(targets).toEqual([
+        { kind: 'feature', id: ids.lampId },
+        { kind: 'light', id: ids.plainId },
+    ]);
+    // Clicking a linked target again unlinks it.
+    await clickScene(world, { x: 700, y: 300 });
+    await expect.poll(targets).toEqual([{ kind: 'light', id: ids.plainId }]);
 });

@@ -22,9 +22,12 @@ async function square(h: Harness, x: number): Promise<void> {
 /** The walls currently planned for a room: the last batch created for it. */
 function wallsOf(h: Harness, id: string): WallDoc[] {
     const ids = h.c.getFeature(id)?.docs.walls ?? [];
-    const all = h.d.walls.flat();
-    const issued = all.map((_, i) => `w${i}`);
-    return ids.map((wid) => all[issued.indexOf(wid)]).filter((w): w is WallDoc => w !== undefined);
+    // Created walls take ids w0, w1, ... in order; updates in place then replace them.
+    const current = new Map(h.d.walls.flat().map((wall, i) => [`w${i}`, wall]));
+    for (const update of h.d.wallUpdates.flat()) {
+        current.set(update.id, update.doc);
+    }
+    return ids.map((wid) => current.get(wid)).filter((w): w is WallDoc => w !== undefined);
 }
 
 const onSharedEdge = (w: WallDoc): boolean => w.a.x === 100 && w.b.x === 100;

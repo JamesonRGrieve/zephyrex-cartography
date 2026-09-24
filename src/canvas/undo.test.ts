@@ -56,12 +56,12 @@ describe('undo and redo with generated documents', () => {
     it('undoing an edit re-syncs from the live documents to the old geometry', async () => {
         const { c, d } = makeHarness();
         await roomAt(c, 0);
-        await c.moveVertex('p1', 1, { x: 200, y: 0 }); // live walls now w3-w5
+        await c.moveVertex('p1', 1, { x: 200, y: 0 }); // the live walls w0-w2 move in place
         await c.undo();
-        expect(d.deleted[d.deleted.length - 1]?.walls).toEqual(['w3', 'w4', 'w5']);
-        const restored = d.walls[d.walls.length - 1];
-        expect(restored?.[0]?.b).toEqual({ x: 100, y: 0 });
-        expect(c.getFeature('p1')?.docs.walls).toEqual(['w6', 'w7', 'w8']);
+        expect(d.deleted.flatMap((docs) => docs.walls)).toEqual([]);
+        const restored = d.wallUpdates[d.wallUpdates.length - 1];
+        expect(restored?.[0]).toMatchObject({ id: 'w0', doc: { b: { x: 100, y: 0 } } });
+        expect(c.getFeature('p1')?.docs.walls).toEqual(['w0', 'w1', 'w2']);
     });
 
     it('leaves untouched features and their documents alone', async () => {

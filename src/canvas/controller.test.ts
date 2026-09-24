@@ -115,9 +115,11 @@ describe('CartographyController', () => {
         c.addPoint({ x: 100, y: 100 });
         await c.commit(); // p1 — 3 walls
         await c.moveVertex('p1', 1, { x: 120, y: 0 });
-        expect(d.deletedIds()).toEqual(['w0', 'w1', 'w2', 'L0']); // old walls + light dropped
-        expect(d.walls.map((batch) => batch.length)).toEqual([3, 3]); // emitted on commit, then re-emitted on edit
-        expect(c.getFeature('p1')?.docs.walls).toEqual(['w3', 'w4', 'w5']);
+        expect(d.deletedIds()).toEqual(['L0']); // the light is replaced
+        expect(d.walls.map((batch) => batch.length)).toEqual([3]); // created on commit...
+        expect(d.wallUpdates[0]?.map((u) => u.id)).toEqual(['w0', 'w1', 'w2']); // ...then moved in place, keeping their ids
+        expect(d.wallUpdates[0]?.[0]?.doc.b).toEqual({ x: 120, y: 0 });
+        expect(c.getFeature('p1')?.docs.walls).toEqual(['w0', 'w1', 'w2']);
     });
 
     it('toggles a room wall segment into a Foundry door and back', async () => {
@@ -129,7 +131,7 @@ describe('CartographyController', () => {
         await c.commit(); // p1
         expect(c.pickWallSegment({ x: 50, y: 1 }, 8)).toEqual({ id: 'p1', index: 0 });
         await c.toggleDoor('p1', 0);
-        const lastSpecs = d.walls[d.walls.length - 1];
+        const lastSpecs = d.wallWrites[d.wallWrites.length - 1];
         expect(lastSpecs?.[0]?.door).toBe('door');
         expect(lastSpecs?.[1]?.door).toBe('none');
         await c.toggleDoor('p1', 0);
@@ -147,7 +149,7 @@ describe('CartographyController', () => {
         await c.commit();
         expect(await c.setRoomDoor('p1', 1, { ...NEW_DOOR, type: 'secret', state: 'locked', sound: 'woodCreaky', animation: 'slide' })).toBe(true);
         expect(c.roomDoor('p1', 1)).toEqual({ segment: 1, type: 'secret', state: 'locked', sound: 'woodCreaky', animation: 'slide' });
-        expect(d.walls[d.walls.length - 1]?.[1]).toMatchObject({
+        expect(d.wallWrites[d.wallWrites.length - 1]?.[1]).toMatchObject({
             door: 'secret',
             doorState: 'locked',
             look: { sound: 'woodCreaky', animation: { type: 'slide' } },

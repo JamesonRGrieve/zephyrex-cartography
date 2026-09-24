@@ -128,8 +128,8 @@ describe('CartographyController stamp occlusion', () => {
         c.grid = { size: 100, originX: 0, originY: 0 };
         await c.placeStamp({ stamp: 'pack:pillar', x: 50, y: 50 });
         await c.syncStampFrame('p1', { x: 200, y: 0, width: 100, height: 100, rotation: 0 });
-        expect(d.walls[1]?.[0]).toMatchObject({ a: { x: 200, y: 0 }, b: { x: 300, y: 0 } });
-        expect(c.getFeature('p1')?.docs.walls).toEqual(['w4', 'w5', 'w6', 'w7']);
+        expect(d.wallUpdates[0]?.[0]).toMatchObject({ id: 'w0', doc: { a: { x: 200, y: 0 }, b: { x: 300, y: 0 } } });
+        expect(c.getFeature('p1')?.docs.walls).toEqual(['w0', 'w1', 'w2', 'w3']);
     });
 });
 
@@ -185,10 +185,10 @@ describe('CartographyController door stamps', () => {
 
     it('does not touch rooms for changes to other stamps or door edits that leave the openings alone', async () => {
         const { c, d } = await roomWithDoor();
-        const batches = d.walls.length;
+        const batches = d.wallWrites.length;
         await c.setStampVariant('p2', 1); // same axis → the room keeps its walls
-        expect(d.walls.length).toBe(batches + 1);
-        expect(d.walls[d.walls.length - 1]?.[0]?.doorState).toBe('open');
+        expect(d.wallWrites.length).toBe(batches + 1);
+        expect(d.wallWrites[d.wallWrites.length - 1]).toEqual([expect.objectContaining({ doorState: 'open' })]);
     });
 
     it('follows a door opened in play by switching the stamp variant', async () => {

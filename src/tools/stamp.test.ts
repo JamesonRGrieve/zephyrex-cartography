@@ -71,6 +71,12 @@ describe('variants and frames', () => {
         expect(next?.docs.tiles).toEqual(['t0']);
     });
 
+    it('keeps everything the stamp carries beyond what the variant decides: its switch links, pile and level', () => {
+        const carried = { ...stampOf(lamp), switchTargets: [{ kind: 'light' as const, id: 'L1' }], pile: 'Scene.x.Token.y', level: 'lv1' };
+        const next = lamp ? withStampVariant(carried, lamp, 1, 50) : null;
+        expect(next).toMatchObject({ switchTargets: [{ kind: 'light', id: 'L1' }], pile: 'Scene.x.Token.y', level: 'lv1', variant: 1 });
+    });
+
     it('adopts a new frame', () => {
         const moved = withStampFrame(stampOf(lamp), { centre: { x: 1, y: 2 }, width: 3, height: 4, rotation: 5 });
         expect(moved).toMatchObject({ points: [{ x: 1, y: 2 }], width: 3, height: 4, rotation: 5 });

@@ -10,6 +10,7 @@
             "Door": "Doors (click a wall to add a door, click a door to edit it)",
             "Edit": "Edit points (drag to move, Shift-drag a road or river point to set its width, right-click to delete)",
             "Erase": "Erase",
+            "Link": "Link light switches (click a switch, then the lamps, rooms and lights it controls)",
             "Undo": "Undo",
             "Redo": "Redo",
             "Stamp": "Stamps (click the canvas to place the selected stamp)",

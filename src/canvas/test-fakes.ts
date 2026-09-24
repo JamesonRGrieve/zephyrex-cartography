@@ -21,7 +21,7 @@ import {
     type WorldScenes,
 } from './controller';
 import type { FeatureRenderer } from './renderer';
-import type { DocumentKind, StagedWrite } from './staged-changes';
+import type { DocumentKind, Staged, StagedWrite } from './staged-changes';
 
 class FakeRenderer implements FeatureRenderer {
     readonly setIds: string[] = [];
@@ -73,6 +73,9 @@ class FakeSink implements DocumentSink {
     readonly lights: LightDoc[][] = [];
     readonly tiles: TileDoc[][] = [];
     readonly tileUpdates: TileUpdate[][] = [];
+    readonly wallUpdates: Staged<WallDoc>[][] = [];
+    /** Every write's walls, created or updated in place: the walls as they now stand. */
+    readonly wallWrites: WallDoc[][] = [];
     readonly regions: RegionDoc[][] = [];
     readonly regionUpdates: RegionDoc[][] = [];
     readonly sounds: SoundDoc[][] = [];
@@ -111,6 +114,10 @@ class FakeSink implements DocumentSink {
         if (write.tileUpdates.length > 0) {
             this.tileUpdates.push(write.tileUpdates.map((s) => ({ id: s.id, tile: s.doc })));
         }
+        if (write.wallUpdates.length > 0) {
+            this.wallUpdates.push([...write.wallUpdates]);
+        }
+        record(this.wallWrites, [...write.walls, ...write.wallUpdates]);
         record(this.regionUpdates, write.regionUpdates);
         await Promise.resolve();
     }

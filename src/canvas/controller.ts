@@ -9,11 +9,11 @@
 import { nearestVertex } from '../geometry/hit';
 import { snapToGrid, type Grid } from '../geometry/snap';
 import type { Point } from '../geometry/spline';
-import { nearestSegment } from '../geometry/wall';
+import { centroid, nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
-import { hasDocs, type DoorState, type GeneratedDocs, type RegionDoc, type TileDoc } from '../tools/documents';
+import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type RegionDoc, type TileDoc } from '../tools/documents';
 import { isDoorStamp, snapDoorToRooms, stampDoorState } from '../tools/doors';
 import { DrawSession, type DrawMode } from '../tools/draw-session';
 import { deletePoint, movePoint, setHalfWidth } from '../tools/edit';
@@ -46,11 +46,14 @@ import {
     type RoomMaterials,
     roomMaterialsOf,
     withRoomDoor,
+    withRoomLit,
     withRoomMaterials,
 } from '../tools/room';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
+import { sameTarget, type SwitchTarget, toggleTarget } from '../tools/switch-targets';
+import { lampVariant, switchOf } from '../tools/switches';
 import type { WallPreset } from '../tools/wall-presets';
 import type { FeatureRenderer } from './renderer';
 import { type DocumentKind, StagedChanges, type StagedWrite } from './staged-changes';
@@ -160,16 +163,12 @@ function swap(arr: Feature[], a: number, b: number): void {
     }
 }
 
-/** Pair existing tile ids with their new specs, index by index. */
-function pairTiles(ids: readonly string[], tiles: readonly TileDoc[]): TileUpdate[] {
-    const updates: TileUpdate[] = [];
-    ids.forEach((id, i) => {
-        const tile = tiles[i];
-        if (tile) {
-            updates.push({ id, tile });
-        }
+/** Pair existing document ids with their new specs, index by index. */
+function pairDocs<T>(ids: readonly string[], docs: readonly T[]): { readonly id: string; readonly doc: T }[] {
+    return ids.flatMap((id, i) => {
+        const doc = docs[i];
+        return doc === undefined ? [] : [{ id, doc }];
     });
-    return updates;
 }
 
 /** Do two feature lists carry the same ids in the same order? */
@@ -506,7 +505,84 @@ export class CartographyController {
             return false;
         }
         const index = stamp.variants.findIndex((_, i) => (effectiveProperties(stamp, i).doorState ?? 'closed') === state);
-        return index >= 0 && this.setStampVariant(feature.id, index);
+        if (index < 0) {
+            return false;
+        }
+        const lightSwitch = switchOf(feature);
+        if (!lightSwitch) {
+            return this.setStampVariant(feature.id, index);
+        }
+        // A light switch flipped in play: the switch and everything it lights change together, as one undo step.
+        await this.batch(async () => {
+            await this.setStampVariant(lightSwitch.id, index);
+            await this.applySwitch(lightSwitch, state === 'open');
+        });
+        return true;
+    }
+
+    /** Turn everything `switchFeature` controls on or off. */
+    private async applySwitch(switchFeature: StampFeature, on: boolean): Promise<void> {
+        await switchFeature.switchTargets.reduce(async (previous, target) => {
+            await previous;
+            if (target.kind === 'light') {
+                this.staged.setLightVisibility(target.id, !on);
+                return;
+            }
+            const feature = this.getFeature(target.id);
+            if (feature?.type === 'room') {
+                if (feature.lit !== on) {
+                    await this.replaceFeature(feature.id, withRoomLit(feature, on));
+                }
+                return;
+            }
+            const lamp = feature?.type === 'stamp' ? this.catalog.get(feature.stamp) : null;
+            const variant = lamp ? lampVariant(lamp, on) : null;
+            if (feature?.type === 'stamp' && variant !== null && variant !== feature.variant) {
+                await this.setStampVariant(feature.id, variant);
+            }
+        }, Promise.resolve());
+    }
+
+    isLightSwitch(id: string): boolean {
+        return switchOf(this.getFeature(id)) !== null;
+    }
+
+    /** Where a switch or its target is, for drawing the link between them: a stamp's centre, a room's centroid. */
+    featureCentre(id: string): Point | null {
+        const feature = this.getFeature(id);
+        if (feature?.type === 'stamp') {
+            return stampCentre(feature);
+        }
+        return feature?.type === 'room' ? centroid(feature.points) : null;
+    }
+
+    /** What light switch `id` controls; empty for any other feature. */
+    switchTargets(id: string): readonly SwitchTarget[] {
+        return switchOf(this.getFeature(id))?.switchTargets ?? [];
+    }
+
+    /**
+     * Link `target` to light switch `id`, or unlink it if it is linked. A
+     * feature target must be a lamp stamp (one with lit and unlit variants) or
+     * a room; false for anything else, or when `id` is not a switch.
+     */
+    async toggleSwitchTarget(id: string, target: SwitchTarget): Promise<boolean> {
+        const switchFeature = switchOf(this.getFeature(id));
+        if (!switchFeature || (target.kind === 'feature' && !this.switchable(target.id))) {
+            return false;
+        }
+        await this.replaceFeature(id, { ...switchFeature, switchTargets: toggleTarget(switchFeature.switchTargets, target) });
+        return true;
+    }
+
+    /** Whether a switch can control feature `id`: a room, or a stamp with both lit and unlit variants. */
+    private switchable(id: string): boolean {
+        const feature = this.getFeature(id);
+        if (feature?.type === 'room') {
+            return true;
+        }
+        const lamp = feature?.type === 'stamp' ? this.catalog.get(feature.stamp) : null;
+        return lamp !== null && lampVariant(lamp, true) !== null && lampVariant(lamp, false) !== null;
     }
 
     /**
@@ -650,7 +726,14 @@ export class CartographyController {
         await this.transaction(async () => {
             this.snapshot();
             const before = this.features;
-            this.features = this.features.filter((f) => f.id !== id);
+            // What goes is no longer anything's to switch.
+            const unlinked: SwitchTarget = { kind: 'feature', id };
+            this.features = this.features
+                .filter((f) => f.id !== id)
+                .map((f) => {
+                    const lightSwitch = switchOf(f);
+                    return lightSwitch ? { ...lightSwitch, switchTargets: lightSwitch.switchTargets.filter((t) => !sameTarget(t, unlinked)) } : f;
+                });
             this.renderer.remove(id);
             await this.store.save(this.features);
             await this.discard(target);
@@ -661,7 +744,7 @@ export class CartographyController {
     /** Delete everything a feature owns outside the feature list: its documents, its interior exit, its container pile. */
     private async discard(feature: Feature): Promise<void> {
         if (hasDocs(feature.docs)) {
-            await this.transaction(() => this.staged.stage({ remove: feature.docs, create: NO_PLAN, updateTiles: [] }));
+            await this.transaction(() => this.staged.stage({ remove: feature.docs, create: NO_PLAN, updateTiles: [], updateWalls: [] }));
         }
         if (feature.type !== 'stamp') {
             return;
@@ -678,9 +761,11 @@ export class CartographyController {
     /**
      * Rebuild what `discard` deleted for a feature undo or redo brings back:
      * a fresh container pile, and the interior exit under its fixed id. Its
-     * documents are recreated by the sync that follows.
+     * documents were deleted, so it forgets their ids (the sync that follows
+     * would otherwise update them in place) and that sync recreates them.
      */
-    private async revive(feature: Feature): Promise<Feature> {
+    private async revive(revived: Feature): Promise<Feature> {
+        const feature = withDocs(revived, NO_DOCS);
         if (feature.type !== 'stamp') {
             return feature;
         }
@@ -1039,13 +1124,21 @@ export class CartographyController {
         if (planned === 0 && !hasDocs(old)) {
             return;
         }
+        // Tiles and walls whose count is unchanged are updated in place, keeping their ids:
+        // a door or switch a player just used must not be deleted from under them.
         const keepTiles = old.tiles.length > 0 && old.tiles.length === plan.tiles.length;
+        const keepWalls = old.walls.length > 0 && old.walls.length === plan.walls.length;
         const created = this.staged.stage({
-            remove: { ...old, tiles: keepTiles ? [] : old.tiles },
-            create: { ...plan, tiles: keepTiles ? [] : plan.tiles },
-            updateTiles: keepTiles ? pairTiles(old.tiles, plan.tiles) : [],
+            remove: { ...old, tiles: keepTiles ? [] : old.tiles, walls: keepWalls ? [] : old.walls },
+            create: { ...plan, tiles: keepTiles ? [] : plan.tiles, walls: keepWalls ? [] : plan.walls },
+            updateTiles: keepTiles ? pairDocs(old.tiles, plan.tiles).map(({ id, doc }) => ({ id, tile: doc })) : [],
+            updateWalls: keepWalls ? pairDocs(old.walls, plan.walls).map(({ id, doc }) => ({ id, wall: doc })) : [],
         });
-        const docs: GeneratedDocs = { ...created, tiles: keepTiles ? old.tiles : created.tiles };
+        const docs: GeneratedDocs = {
+            ...created,
+            tiles: keepTiles ? old.tiles : created.tiles,
+            walls: keepWalls ? old.walls : created.walls,
+        };
         this.features = this.features.map((f) => (f.id === feature.id ? withDocs(f, docs) : f));
         await this.store.save(this.features);
     }

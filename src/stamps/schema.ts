@@ -262,6 +262,12 @@ const doorSchema = z
             .optional()
             .describe('How the door animates open and closed.'),
         sound: text.optional().describe('A Foundry door sound key (CONFIG.Wall.doorSounds), e.g. "slidingMetal", "woodCreaky".'),
+        switch: z
+            .boolean()
+            .optional()
+            .describe(
+                'A light switch: its door wall blocks nothing and cuts no opening, and opening it (players use Foundry\'s own door control) turns on the lights linked to it; its "open" variant is on.',
+            ),
     })
     .strict()
     .describe('The stamp is a door: placing it on a wall makes that wall a Foundry door.');

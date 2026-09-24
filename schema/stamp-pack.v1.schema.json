@@ -1312,6 +1312,10 @@
                                 "description": "A Foundry door sound key (CONFIG.Wall.doorSounds), e.g. \"slidingMetal\", \"woodCreaky\".",
                                 "type": "string",
                                 "minLength": 1
+                            },
+                            "switch": {
+                                "description": "A light switch: its door wall blocks nothing and cuts no opening, and opening it (players use Foundry's own door control) turns on the lights linked to it; its \"open\" variant is on.",
+                                "type": "boolean"
                             }
                         },
                         "required": [

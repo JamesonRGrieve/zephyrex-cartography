@@ -29,6 +29,7 @@ import { FoundrySceneStore } from './foundry/scene-store';
 import { createWorldScenes } from './foundry/scenes';
 import { createSilhouetteSource } from './foundry/silhouette';
 import { registerSubmapRuntime } from './foundry/submap-runtime';
+import { createSwitchLinker, type SwitchLinker } from './foundry/switch-linker';
 import { distance, type Point } from './geometry/spline';
 import { BIOME_TITLE_KEYS, I18N } from './i18n';
 import { MODULE_ID } from './module-id';
@@ -43,6 +44,8 @@ interface DrawState {
     drag: { id: string; index: number; kind: 'move' | 'width'; anchor: Point } | null;
     down: Point | null;
     painting: boolean;
+    /** The link tool: the switch picked and its drawn links. */
+    linker: SwitchLinker;
 }
 
 let state: DrawState | null = null;
@@ -140,6 +143,10 @@ function enterMode(st: DrawState, mode: Mode): void {
     if (mode.kind === 'brush') {
         st.controller.begin(mode.brush, 'click');
     }
+    // Link lines show only while the link tool is in hand.
+    if (mode.kind !== 'link') {
+        st.linker.reset();
+    }
 }
 
 /** Finish the shape being drawn, then start the next one with the same brush. */
@@ -193,6 +200,9 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
         }
         case 'erase':
             void st.controller.erase(pt);
+            return;
+        case 'link':
+            void st.linker.click(pt);
             return;
         case 'brush':
             if (pointerEvent.button === SECONDARY_BUTTON) {
@@ -296,7 +306,7 @@ function setupDrawLayer(): void {
         void controller.setTerrainRegions(terrainRegionsEnabled());
     }
 
-    const st: DrawState = { controller, container, mode: IDLE, drag: null, down: null, painting: false };
+    const st: DrawState = { controller, container, mode: IDLE, drag: null, down: null, painting: false, linker: createSwitchLinker(controller, container) };
     state = st;
     // A redraw keeps Foundry's control group and tool (it re-activates the layer that was active), so a module tool
     // selected in Walls or Tiles is still in hand: pick it straight back up.
@@ -392,6 +402,7 @@ const NATIVE_TOOL_LOOKS: Readonly<Record<NativeTool, ToolLook>> = {
     stamp: { title: I18N.tools.stamp, icon: 'fa-solid fa-stamp' },
     edit: { title: I18N.tools.edit, icon: 'fa-solid fa-arrows-up-down-left-right' },
     erase: { title: I18N.tools.erase, icon: 'fa-solid fa-eraser' },
+    link: { title: I18N.tools.link, icon: 'fa-solid fa-link' },
 };
 
 /** Every pointer tool, by name, in toolbar order: paths, biomes, then the tools native groups share. */

@@ -29,16 +29,31 @@ function isModifyBatch(value: unknown): value is ModifyBatch {
  * transaction, all of it or none. Foundry reports a rejected batch only by
  * resolving to no results (the server's error is swallowed), so that is
  * thrown here: a caller must never believe a write landed that did not.
+ *
+ * A batch with nothing to change also resolves to no results: Foundry's
+ * dry run drops every update that changes nothing (a switch re-synced to
+ * the state it is already in) from the operation it is given. So each
+ * operation goes as a copy, and the batch is rejected only if a copy still
+ * held something to write.
  */
 export async function modifyBatch(operations: readonly BatchOperation[]): Promise<void> {
     const batch = foundry.documents.modifyBatch;
     if (!isModifyBatch(batch)) {
         throw new Error('foundry.documents.modifyBatch is unavailable');
     }
-    const results = await batch([...operations]);
-    if (operations.length > 0 && Array.isArray(results) && results.length === 0) {
+    const sent = operations.map((operation) => ({ ...operation }));
+    const results = await batch(sent);
+    if (sent.some((operation) => payloadSize(operation) > 0) && Array.isArray(results) && results.length === 0) {
         throw new Error(`Foundry rejected a batch of ${String(operations.length)} scene document operations`);
     }
+}
+
+/** How many documents an operation writes, as Foundry left it after its dry run. */
+function payloadSize(operation: BatchOperation): number {
+    if (operation.action === 'create') {
+        return operation.data.length;
+    }
+    return operation.action === 'update' ? operation.updates.length : operation.ids.length;
 }
 
 /** Any scene in the world, by id. */

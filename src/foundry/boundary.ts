@@ -182,7 +182,19 @@ export type BatchOperation =
           readonly keepId: true;
       }
     | { readonly action: 'update'; readonly documentName: 'Tile'; readonly parent: FoundryScene; readonly updates: readonly TileUpdateData[] }
+    | {
+          readonly action: 'update';
+          readonly documentName: 'Wall';
+          readonly parent: FoundryScene;
+          readonly updates: readonly (WallCreateData & { readonly _id: string })[];
+      }
     | { readonly action: 'update'; readonly documentName: 'Region'; readonly parent: FoundryScene; readonly updates: readonly RegionUpdateData[] }
+    | {
+          readonly action: 'update';
+          readonly documentName: 'AmbientLight';
+          readonly parent: FoundryScene;
+          readonly updates: readonly { readonly _id: string; readonly hidden: boolean }[];
+      }
     | { readonly action: 'delete'; readonly documentName: EmbeddedName; readonly parent: FoundryScene; readonly ids: readonly string[] };
 
 /** Applies a batch of operations in one transaction: all of them land, or none. */

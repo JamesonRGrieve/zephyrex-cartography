@@ -398,7 +398,13 @@ These make everything after them cheaper and safer, so they come first.
   - Operations cannot use each other's results, so every document gets its
     id up front and is created with `keepId`.
   - Removing a document created earlier in the same transaction cancels the
-    create. A tile is updated in place.
+    create. A re-sync that plans as many tiles, or walls, as the feature
+    has updates them in place, keeping their ids: a door or switch a player
+    just used is never deleted from under them. A revived feature forgets
+    its deleted ids first, so its documents are recreated.
+  - Foundry's dry run drops updates that change nothing, and a batch left
+    with nothing to write also resolves to no results; that is not a
+    rejection.
   - Foundry rejects a batch that deletes and recreates one id. So a written
     region replaced under its own fixed id (a submap entrance following its
     stamp) is an update that leaves its behaviours alone.
@@ -521,7 +527,7 @@ These make everything after them cheaper and safer, so they come first.
     animation.
   - **Still open:** `hidden` and the `darkness` range, which the pack schema
     does not yet declare.
-- **Light switches that players click.** A switch is a stamp the engine
+- **[done] Light switches that players click.** A switch is a stamp the engine
   treats as a door: its variants are its on and off states, and it has a
   native door wall that blocks nothing (every sense `none`, movement off).
   - **In play.** Players use Foundry's own door control. v14 lets a player
@@ -534,12 +540,13 @@ These make everything after them cheaper and safer, so they come first.
       particles and sound follow;
     - a room's generated light;
     - plain AmbientLights, through their native `hidden` field.
-  - **Linking.** A tool picks a switch, then clicks targets to add or remove
-    them, and draws link lines while it is active. The scene spec can
-    declare links too. Removing a target drops it from its switches, and
-    undo and redo follow the usual rules.
-  - **Open.** The door control shows Foundry's door icon. Check whether v14
-    can show a switch icon for one wall before building on it.
+  - **Linking.** The link tool, with the Lighting tools, picks a switch,
+    then clicks targets to add or remove them, and draws link lines while
+    it is active. Removing a target drops it from its switches, and undo
+    and redo follow the usual rules. `tests/e2e/switches.spec.ts` and
+    `pointer.spec.ts` prove it in Foundry.
+  - **Still open:** scene-spec links, and a switch icon in place of
+    Foundry's door icon (check whether v14 can show one for one wall).
 
 ### Priority 5: regions
 - **Shapes beyond polygons** [14.349, 14.352, 14.356]:

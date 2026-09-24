@@ -58,8 +58,18 @@ export class FoundryDocumentSink implements DocumentSink {
         if (tileUpdates.length > 0) {
             operations.push({ action: 'update', documentName: 'Tile', parent: scene, updates: tileUpdates });
         }
+        // A missing wall, likewise, is left to its feature's next sync.
+        const wallUpdates = write.wallUpdates.filter(({ id }) => scene.walls.has(id)).map(({ id, doc }) => ({ _id: id, ...wallCreateData(doc, scene.grid) }));
+        if (wallUpdates.length > 0) {
+            operations.push({ action: 'update', documentName: 'Wall', parent: scene, updates: wallUpdates });
+        }
         if (regionUpdates.length > 0) {
             operations.push({ action: 'update', documentName: 'Region', parent: scene, updates: regionUpdates });
+        }
+        // A light switch shows or hides plain lights; one a GM has deleted is simply gone.
+        const lightUpdates = write.lightVisibility.filter(({ id }) => scene.lights.has(id)).map(({ id, hidden }) => ({ _id: id, hidden }));
+        if (lightUpdates.length > 0) {
+            operations.push({ action: 'update', documentName: 'AmbientLight', parent: scene, updates: lightUpdates });
         }
         if (operations.length > 0) {
             await this.options.modifyBatch(operations);

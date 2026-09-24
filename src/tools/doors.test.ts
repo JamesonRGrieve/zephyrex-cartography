@@ -6,7 +6,7 @@ import { planDocuments } from './plan';
 import { makeRoom } from './room';
 import { makeStamp, stampDoorAxis, type StampFeature } from './stamp';
 
-const [door, crate] = catalogStamps([
+const [door, crate, lightSwitch] = catalogStamps([
     {
         id: 'door',
         name: 'Door',
@@ -26,6 +26,15 @@ const [door, crate] = catalogStamps([
         scale: 'interior',
         perspective: 'top-down',
         variants: [{ state: 'x', image: 'c.png', width: 100, height: 100 }],
+    },
+    {
+        id: 'switch',
+        name: 'Switch',
+        category: 'Lighting',
+        scale: 'interior',
+        perspective: 'top-down',
+        door: { type: 'door', switch: true },
+        variants: [{ state: 'off', image: 'off.png', width: 100, height: 20, doorState: 'closed' }],
     },
 ]);
 
@@ -53,6 +62,8 @@ describe('door stamps', () => {
         expect(stampDoorState(place(door, 200, 0, { variant: 1 }))).toBe('closed');
         expect(stampDoorAxis(d)).toEqual({ a: { x: 150, y: 0 }, b: { x: 250, y: 0 } });
         expect(doorOpenings([d, place(crate, 0, 0)])).toEqual([stampDoorAxis(d)]);
+        // A light switch sits on a wall without opening it.
+        expect(doorOpenings([d, place(lightSwitch, 100, 0)])).toEqual([stampDoorAxis(d)]);
     });
 
     it('take the tall axis of a tall door', () => {

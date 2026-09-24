@@ -14,6 +14,7 @@ import { type PlacedBehaviour, placedBehaviourSchema } from '../stamps/schema';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
 import { isPoint, isRecord, numberOr, stringOrNull } from './guards';
 import { parseSubmapLink, type SubmapLink } from './submap';
+import { parseSwitchTargets, type SwitchTarget } from './switch-targets';
 
 /** A stamp placement request: everything a human or a generator states to place one. */
 export interface StampPlacement {
@@ -58,6 +59,8 @@ export interface StampFeature extends FeatureCommon {
     readonly submap: SubmapLink | null;
     /** UUID of the Item Piles container token backing a container stamp, or null. */
     readonly pile: string | null;
+    /** For a light switch, what it turns on and off; empty for every other stamp. */
+    readonly switchTargets: readonly SwitchTarget[];
 }
 
 /** Grid size assumed for a persisted stamp that predates the field. */
@@ -127,6 +130,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         silhouette: null,
         submap: null,
         pile: null,
+        switchTargets: [],
         ...NEW_FEATURE,
     };
 }
@@ -140,14 +144,18 @@ export function stampCentre(feature: StampFeature): Point {
 export function withStampVariant(feature: StampFeature, stamp: CatalogStamp, index: number, gridSize: number): StampFeature {
     const centre = stampCentre(feature);
     const placed = makeStamp(feature.id, stamp, { stamp: stamp.key, variant: index, x: centre.x, y: centre.y, scale: feature.scale }, gridSize);
+    // Only what the variant decides changes; everything else the stamp carries (its links, pile, documents, level…) stays.
     return {
-        ...placed,
-        rotation: feature.rotation,
-        elevation: feature.elevation,
-        docs: feature.docs,
-        level: feature.level,
-        submap: feature.submap,
-        pile: feature.pile,
+        ...feature,
+        name: placed.name,
+        variant: placed.variant,
+        src: placed.src,
+        points: placed.points,
+        width: placed.width,
+        height: placed.height,
+        gridSize: placed.gridSize,
+        behaviour: placed.behaviour,
+        silhouette: placed.silhouette,
     };
 }
 
@@ -235,6 +243,7 @@ export function parseStamp(v: unknown): StampFeature | null {
         silhouette: parseSilhouette(v['silhouette']),
         submap: parseSubmapLink(v['submap']),
         pile: stringOrNull(v['pile']),
+        switchTargets: parseSwitchTargets(v['switchTargets']),
         ...parseFeatureCommon(v),
     };
 }

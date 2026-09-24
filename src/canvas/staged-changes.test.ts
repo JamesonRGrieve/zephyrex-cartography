@@ -36,7 +36,7 @@ function staging(): StagedChanges {
 }
 
 function change(partial: Partial<DocumentChange>): DocumentChange {
-    return { remove: NO_DOCS, create: NO_PLAN, updateTiles: [], ...partial };
+    return { remove: NO_DOCS, create: NO_PLAN, updateTiles: [], updateWalls: [], ...partial };
 }
 
 describe('StagedChanges', () => {
@@ -121,6 +121,19 @@ describe('StagedChanges', () => {
         expect(write.tileUpdates).toEqual([{ id: 'live', doc: MOVED }]);
     });
 
+    it('shows or hides a plain light, the last request for it winning', () => {
+        const staged = staging();
+        staged.setLightVisibility('L1', true);
+        expect(staged.empty).toBe(false);
+        staged.setLightVisibility('L2', false);
+        staged.setLightVisibility('L1', false);
+        expect(staged.take().lightVisibility).toEqual([
+            { id: 'L2', hidden: false },
+            { id: 'L1', hidden: false },
+        ]);
+        expect(staged.empty).toBe(true);
+    });
+
     it('deletes a written tile without its pending update, which would fail the batch after the delete', () => {
         const staged = staging();
         staged.stage(change({ updateTiles: [{ id: 'live', tile: MOVED }] }));
@@ -128,5 +141,21 @@ describe('StagedChanges', () => {
         const write = staged.take();
         expect(write.tileUpdates).toEqual([]);
         expect(write.deletes.tiles).toEqual(['live']);
+    });
+
+    it('updates walls in place like tiles, and drops a wall update when that wall is deleted', () => {
+        const staged = staging();
+        const created = staged.stage(change({ create: { ...NO_PLAN, walls: [WALL] } }));
+        const pendingId = created.walls[0] ?? '';
+        const door: WallDoc = { ...WALL, door: 'door' };
+        staged.stage(change({ updateWalls: [{ id: pendingId, wall: door }] }));
+        staged.stage(change({ updateWalls: [{ id: 'live', wall: door }] }));
+        expect(staged.empty).toBe(false);
+        const write = staged.take();
+        expect(write.walls).toEqual([{ id: pendingId, doc: door }]);
+        expect(write.wallUpdates).toEqual([{ id: 'live', doc: door }]);
+        staged.stage(change({ updateWalls: [{ id: 'live', wall: door }] }));
+        staged.stage(change({ remove: { ...NO_DOCS, walls: ['live'] } }));
+        expect(staged.take()).toMatchObject({ wallUpdates: [], deletes: { ...NO_DOCS, walls: ['live'] } });
     });
 });

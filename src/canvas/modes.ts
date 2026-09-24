@@ -15,7 +15,8 @@ export type Mode =
     | { readonly kind: 'edit' }
     | { readonly kind: 'door' }
     | { readonly kind: 'stamp' }
-    | { readonly kind: 'materials' };
+    | { readonly kind: 'materials' }
+    | { readonly kind: 'link' };
 
 export const IDLE: Mode = { kind: 'idle' };
 
@@ -37,7 +38,7 @@ export function modeForTool(toolName: string, active: boolean): Mode {
     if (!active) {
         return IDLE;
     }
-    if (toolName === 'erase' || toolName === 'edit' || toolName === 'door' || toolName === 'stamp' || toolName === 'materials') {
+    if (toolName === 'erase' || toolName === 'edit' || toolName === 'door' || toolName === 'stamp' || toolName === 'materials' || toolName === 'link') {
         return { kind: toolName };
     }
     const brush = brushFor(toolName);

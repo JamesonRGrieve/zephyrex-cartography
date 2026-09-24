@@ -22,7 +22,18 @@ const REGION: RegionDoc = {
     behaviour: null,
 };
 
-const NOTHING: StagedWrite = { deletes: NO_DOCS, walls: [], lights: [], tiles: [], sounds: [], regions: [], tileUpdates: [], regionUpdates: [] };
+const NOTHING: StagedWrite = {
+    deletes: NO_DOCS,
+    walls: [],
+    lights: [],
+    tiles: [],
+    sounds: [],
+    regions: [],
+    tileUpdates: [],
+    wallUpdates: [],
+    regionUpdates: [],
+    lightVisibility: [],
+};
 
 /** A scene holding the given ids, with every embedded write unused (the sink writes only through modifyBatch). */
 function scene(present: readonly string[], id: string | null = 'sc'): FoundryScene {
@@ -103,6 +114,20 @@ describe('FoundryDocumentSink', () => {
         expect(batch?.[4]).toHaveProperty('updates.length', 1);
     });
 
+    it('updates walls in place, skipping one deleted by hand', async () => {
+        const { sink: s, batches } = sink(scene(['w1']));
+        await s.write({
+            ...NOTHING,
+            wallUpdates: [
+                { id: 'w1', doc: WALL },
+                { id: 'gone', doc: WALL },
+            ],
+        });
+        expect(batches[0]).toEqual([
+            expect.objectContaining({ action: 'update', documentName: 'Wall', updates: [expect.objectContaining({ _id: 'w1', c: [0, 0, 100, 0] })] }),
+        ]);
+    });
+
     it('redraws a kept-id region in place without touching its behaviours, and recreates one deleted by hand', async () => {
         const { sink: s, batches } = sink(scene(['kept']));
         await s.write({
@@ -120,6 +145,18 @@ describe('FoundryDocumentSink', () => {
         expect(batch?.[0]).toMatchObject({ data: [{ _id: 'gone', behaviors: [] }] });
         expect(batch?.[1]).toMatchObject({ updates: [{ _id: 'kept', shapes: [{ type: 'polygon' }] }] });
         expect(batch?.[1]).not.toHaveProperty('updates.0.behaviors');
+    });
+
+    it('shows and hides the plain lights a switch controls, skipping one deleted by hand', async () => {
+        const { sink: s, batches } = sink(scene(['L1']));
+        await s.write({
+            ...NOTHING,
+            lightVisibility: [
+                { id: 'L1', hidden: true },
+                { id: 'gone', hidden: false },
+            ],
+        });
+        expect(batches[0]).toEqual([expect.objectContaining({ action: 'update', documentName: 'AmbientLight', updates: [{ _id: 'L1', hidden: true }] })]);
     });
 
     it('creates staged regions under their ids, leaving out cancelled ones', async () => {

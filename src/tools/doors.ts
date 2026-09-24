@@ -25,7 +25,11 @@ export function isDoorStamp(feature: Feature): feature is StampFeature {
 
 /** Every door stamp's axis: the openings door stamps cut into room walls. */
 export function doorOpenings(features: readonly Feature[]): Segment[] {
-    return features.filter(isDoorStamp).map(stampDoorAxis);
+    // A light switch sits on a wall without opening it.
+    return features
+        .filter(isDoorStamp)
+        .filter((stamp) => stamp.behaviour.door?.switch !== true)
+        .map(stampDoorAxis);
 }
 
 /** The door state a door stamp's current variant shows (closed when the variant does not say). */

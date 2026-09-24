@@ -10,8 +10,9 @@ describe('tool placement', () => {
         expect(NATIVE_TOOLS.tiles).toContain('stamp');
     });
 
-    it('places tools in the Walls and Tiles groups only', () => {
-        expect(NATIVE_GROUPS).toEqual(['walls', 'tiles']);
+    it('places tools in the Walls, Tiles and Lighting groups only', () => {
+        expect(NATIVE_GROUPS).toEqual(['walls', 'tiles', 'lighting']);
+        expect(NATIVE_TOOLS.lighting).toEqual(['link']);
         expect(Object.keys(NATIVE_TOOLS).sort()).toEqual([...NATIVE_GROUPS].sort());
     });
 
@@ -21,7 +22,7 @@ describe('tool placement', () => {
     });
 
     it('keeps a native-only tool out of the module group, and the rest in it', () => {
-        expect(['room', 'door', 'materials', 'stamp'].map(inOwnGroup)).toEqual([false, false, false, false]);
+        expect(['room', 'door', 'materials', 'stamp', 'link'].map(inOwnGroup)).toEqual([false, false, false, false, false]);
         expect(['road', 'river', 'forest', 'edit', 'erase', 'undo', 'levels'].map(inOwnGroup)).toEqual([true, true, true, true, true, true, true]);
     });
 

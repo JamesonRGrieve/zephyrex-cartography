@@ -59,6 +59,8 @@ export interface RoomFeature extends FeatureCommon {
     /** What kind of walls the room has, as Foundry's Walls palette names them: solid, window, terrain… */
     readonly wallKind: WallPreset;
     readonly doors: RoomDoor[];
+    /** Whether its centre light is on; a light switch linked to the room turns it on and off. */
+    readonly lit: boolean;
 }
 
 /** What a room is made of: its floor, its drawn walls, and the kind of walls they are. */
@@ -85,7 +87,12 @@ export function makeRoom(
     if (points.length < 3) {
         return null;
     }
-    return { type: 'room', id, floor, wall, wallKind, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], ...NEW_FEATURE };
+    return { type: 'room', id, floor, wall, wallKind, points: points.map((p) => ({ x: p.x, y: p.y })), doors: [], lit: true, ...NEW_FEATURE };
+}
+
+/** The same room with its light on or off. */
+export function withRoomLit(room: RoomFeature, lit: boolean): RoomFeature {
+    return { ...room, lit };
 }
 
 /** The same room in other materials. */
@@ -177,6 +184,8 @@ export function parseRoom(v: unknown): RoomFeature | null {
         wall: parseWallMaterial(v['wall']),
         // Rooms saved before wall kinds existed have solid walls, as they always did.
         wallKind: isWallPreset(v['wallKind']) ? v['wallKind'] : DEFAULT_WALL_PRESET,
+        // A room saved before switches existed is lit, as it always was.
+        lit: v['lit'] !== false,
         points: points.map((p) => ({ x: p.x, y: p.y })),
         doors,
         ...parseFeatureCommon(v),

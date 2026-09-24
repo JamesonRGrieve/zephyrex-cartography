@@ -15,11 +15,16 @@ import type { GeneratedDocs, LightDoc, RegionDoc, SoundDoc, TileDoc, WallDoc } f
 import { NO_DOCS } from '../tools/documents';
 import type { DocumentPlan } from '../tools/plan';
 
-/** One feature's change: its old documents to remove, the new ones to create, and tiles updated in place. */
+/**
+ * One feature's change: its old documents to remove, the new ones to create,
+ * and tiles and walls updated in place (keeping their ids, so a door a player
+ * is using is never deleted from under them).
+ */
 export interface DocumentChange {
     readonly remove: GeneratedDocs;
     readonly create: DocumentPlan;
     readonly updateTiles: readonly { readonly id: string; readonly tile: TileDoc }[];
+    readonly updateWalls: readonly { readonly id: string; readonly wall: WallDoc }[];
 }
 
 /** A document to create, with the id it will have. */
@@ -54,7 +59,16 @@ export interface StagedWrite {
     readonly sounds: readonly Staged<SoundDoc>[];
     readonly regions: readonly StagedRegions[];
     readonly tileUpdates: readonly Staged<TileDoc>[];
+    readonly wallUpdates: readonly Staged<WallDoc>[];
     readonly regionUpdates: readonly Staged<RegionDoc>[];
+    /** Plain Foundry lights (not the plugin's) a light switch shows or hides. */
+    readonly lightVisibility: readonly LightVisibility[];
+}
+
+/** Show (`hidden: false`) or hide a Foundry light by id. */
+export interface LightVisibility {
+    readonly id: string;
+    readonly hidden: boolean;
 }
 
 /** A kind of generated document. */
@@ -72,9 +86,16 @@ export class StagedChanges {
     private sounds: Staged<SoundDoc>[] = [];
     private regions: StagedRegions[] = [];
     private tileUpdates: Staged<TileDoc>[] = [];
+    private wallUpdates: Staged<WallDoc>[] = [];
     private regionUpdates: Staged<RegionDoc>[] = [];
+    private lightVisibility: LightVisibility[] = [];
 
     constructor(private readonly makeId: (kind: DocumentKind) => string) {}
+
+    /** Show or hide a plain Foundry light; a later call for the same light wins. */
+    setLightVisibility(id: string, hidden: boolean): void {
+        this.lightVisibility = [...this.lightVisibility.filter((v) => v.id !== id), { id, hidden }];
+    }
 
     /** Whether anything is waiting to be written. */
     get empty(): boolean {
@@ -86,7 +107,9 @@ export class StagedChanges {
                 this.sounds.length +
                 this.regions.length +
                 this.tileUpdates.length +
-                this.regionUpdates.length ===
+                this.wallUpdates.length +
+                this.regionUpdates.length +
+                this.lightVisibility.length ===
                 0
         );
     }
@@ -99,7 +122,10 @@ export class StagedChanges {
             }
         }
         for (const update of change.updateTiles) {
-            this.updateTile(update.id, update.tile);
+            this.tileUpdates = this.updateInPlace(this.tiles, this.tileUpdates, update.id, update.tile);
+        }
+        for (const update of change.updateWalls) {
+            this.wallUpdates = this.updateInPlace(this.walls, this.wallUpdates, update.id, update.wall);
         }
         const walls = this.push('walls', this.walls, change.create.walls);
         const lights = this.push('lights', this.lights, change.create.lights);
@@ -131,7 +157,9 @@ export class StagedChanges {
             sounds: this.sounds,
             regions: this.regions,
             tileUpdates: this.tileUpdates,
+            wallUpdates: this.wallUpdates,
             regionUpdates: this.regionUpdates,
+            lightVisibility: this.lightVisibility,
         };
         this.deletes = emptyIds();
         this.walls = [];
@@ -140,7 +168,9 @@ export class StagedChanges {
         this.sounds = [];
         this.regions = [];
         this.tileUpdates = [];
+        this.wallUpdates = [];
         this.regionUpdates = [];
+        this.lightVisibility = [];
         return write;
     }
 
@@ -157,6 +187,9 @@ export class StagedChanges {
         // Deletes run before updates, and updating a deleted document would fail the whole batch.
         if (kind === 'tiles') {
             this.tileUpdates = this.tileUpdates.filter((update) => update.id !== id);
+        }
+        if (kind === 'walls') {
+            this.wallUpdates = this.wallUpdates.filter((update) => update.id !== id);
         }
         if (kind === 'regions') {
             this.regionUpdates = this.regionUpdates.filter((update) => update.id !== id);
@@ -182,14 +215,18 @@ export class StagedChanges {
         this.deletes[kind].push(id);
     }
 
-    /** Update a tile in place: its pending create when it has not been written yet, otherwise the live tile. */
-    private updateTile(id: string, tile: TileDoc): void {
-        const pending = this.tiles.findIndex((staged) => staged.id === id);
-        if (pending >= 0) {
-            this.tiles[pending] = { id, doc: tile };
-            return;
+    /**
+     * Update a document in place: its pending create (in `pending`) when it has
+     * not been written yet, otherwise queue an update of the live one. Returns
+     * the updates with this one queued.
+     */
+    private updateInPlace<T>(pending: Staged<T>[], updates: readonly Staged<T>[], id: string, doc: T): Staged<T>[] {
+        const at = pending.findIndex((staged) => staged.id === id);
+        if (at >= 0) {
+            pending[at] = { id, doc };
+            return [...updates];
         }
-        this.tileUpdates = [...this.tileUpdates.filter((update) => update.id !== id), { id, doc: tile }];
+        return [...updates.filter((update) => update.id !== id), { id, doc }];
     }
 
     private pendingOf(kind: Exclude<Kind, 'regions'>): Staged<WallDoc | LightDoc | TileDoc | SoundDoc>[] {
