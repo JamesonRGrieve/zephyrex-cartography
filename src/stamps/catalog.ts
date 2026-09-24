@@ -103,6 +103,7 @@ function servedVariant(variant: StampVariant, url: AssetUrl): StampVariant {
     return {
         ...variant,
         image: url(variant.image),
+        ...(variant.preview === undefined ? {} : { preview: url(variant.preview) }),
         ...(variant.particles === undefined || variant.particles === null ? {} : { particles: servedEmitters(variant.particles, url) }),
         ...(variant.sound === undefined || variant.sound === null ? {} : { sound: servedSound(variant.sound, url) }),
         ...(variant.container === undefined ? {} : { container: servedContainer(variant.container, url) }),
@@ -140,7 +141,8 @@ export function loadPacks(sources: readonly PackSource[]): LoadedPacks {
                 ...set,
                 key: `${moduleId}:${set.id}`,
                 moduleId,
-                textures: Object.fromEntries(Object.entries(set.textures).map(([role, path]) => [role, moduleAssetUrl(moduleId, path)])),
+                textures: Object.fromEntries(Object.entries(set.textures).map(([role, path]) => [role, url(path)])),
+                ...(set.previews === undefined ? {} : { previews: Object.fromEntries(Object.entries(set.previews).map(([role, path]) => [role, url(path)])) }),
                 ...(set.credits === undefined ? {} : { credits: moduleAssetUrl(moduleId, set.credits) }),
             });
         }

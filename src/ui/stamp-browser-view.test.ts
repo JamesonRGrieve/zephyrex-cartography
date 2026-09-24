@@ -105,6 +105,32 @@ describe('renderBrowser', () => {
         expect(root.querySelector('label[for="zc-stamp-search"]')).not.toBeNull();
     });
 
+    it('shows compressed art by its preview, and none without one', () => {
+        const gpu = catalogStamps([
+            {
+                id: 'crate',
+                name: 'Crate',
+                category: 'Storage',
+                scale: 'interior',
+                perspective: 'top-down',
+                variants: [{ state: 'shut', image: 'crate.ktx2', preview: 'crate.webp', width: 10, height: 10 }],
+            },
+            {
+                id: 'barrel',
+                name: 'Barrel',
+                category: 'Storage',
+                scale: 'interior',
+                perspective: 'top-down',
+                variants: [{ state: 'whole', image: 'barrel.basis', width: 10, height: 10 }],
+            },
+        ]);
+        const root = document.createElement('div');
+        renderBrowser(root, browserView(gpu, INITIAL_BROWSER), labels, { dispatch: () => undefined, place: () => undefined });
+        const imageOf = (label: string): string | null => button(root, label).querySelector('img')?.getAttribute('src') ?? null;
+        // The pack serves its preview; the compressed barrel has none, so its card shows only its name.
+        expect([imageOf('Crate'), imageOf('Barrel')]).toEqual(['modules/pack/crate.webp', null]);
+    });
+
     it('filters by category, then shows and toggles its tags', () => {
         const m = mount();
         button(m.root, 'Lighting (2)').click();

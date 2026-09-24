@@ -17,7 +17,16 @@ import { MODULE_ID } from '../module-id';
 import { type CatalogStamp, loadPacks, resolveVariant } from '../stamps/catalog';
 import { parseStampDrop } from '../stamps/drop';
 import { isRecord, stringOrNull } from '../tools/guards';
-import { pickTextureSet, textureResolver, textureSetChoices, type TextureResolver, type TextureSetRef } from '../tools/texture';
+import {
+    compressedTextures,
+    pickTextureSet,
+    previewResolver,
+    shownImage,
+    textureResolver,
+    textureSetChoices,
+    type TextureResolver,
+    type TextureSetRef,
+} from '../tools/texture';
 import type { BrowserLabels } from '../ui/stamp-browser-view';
 import { format, localize } from './localize';
 import { fetchPacks } from './packs';
@@ -48,6 +57,8 @@ export interface PackRuntime {
     readonly placeArmedAt: (point: Point) => void;
     /** Resolves texture roles against the GM's chosen texture set (flat colour until packs load). */
     readonly textures: () => TextureResolver;
+    /** Resolves texture roles to the images panels show: a compressed texture's preview, or none. */
+    readonly previews: () => TextureResolver;
     /** Every texture role the chosen texture set provides (biomes, `road`, `floor.*`, `wall.*`). */
     readonly textureRoles: () => string[];
     /** Run `listener` whenever the loaded packs or the chosen texture set change. */
@@ -119,10 +130,22 @@ export function registerPackRuntime(controller: () => CartographyController | nu
     let byKey = new Map<string, CatalogStamp>();
     let textureSets: readonly TextureSetRef[] = [];
     const listeners: (() => void)[] = [];
+    /** The chosen texture set, loaded: its compressed images are in Foundry's texture cache before anything redraws with them. */
     const notifyChange = (): void => {
-        for (const listener of listeners) {
-            listener();
-        }
+        void (async (): Promise<void> => {
+            // Foundry's loader decodes KTX2 and Basis (14.362); a failed one logs and the fill falls back to its colour.
+            await Promise.all(
+                compressedTextures(activeSet()).map(async (url) =>
+                    // eslint-disable-next-line no-restricted-syntax -- boundary: a rejection's reason is untyped, and is only logged
+                    foundry.canvas.loadTexture(url).catch((error: unknown) => {
+                        console.error(`${MODULE_ID} | could not load the compressed texture ${url}`, error);
+                    }),
+                ),
+            );
+            for (const listener of listeners) {
+                listener();
+            }
+        })();
     };
     // Foundry keeps a reference to this object; filling it once packs load populates the settings dropdown.
     const textureChoices: Record<string, string> = {};
@@ -217,10 +240,16 @@ export function registerPackRuntime(controller: () => CartographyController | nu
             button.setAttribute('aria-pressed', String(index === feature.variant));
             button.setAttribute('aria-label', format(I18N.hud.variant, { state: resolveVariant(stamp, index).state }));
             button.title = button.getAttribute('aria-label') ?? '';
-            const img = document.createElement('img');
-            img.src = variant.image;
-            img.alt = '';
-            button.append(img);
+            // Compressed art with no preview has no image a browser can show; the button keeps its label.
+            const shown = shownImage(variant.image, variant.preview);
+            if (shown !== null) {
+                const img = document.createElement('img');
+                img.src = shown;
+                img.alt = '';
+                button.append(img);
+            } else {
+                button.textContent = String(index + 1);
+            }
             const choose = async (): Promise<void> => {
                 await active.setStampVariant(feature.id, index);
                 await hud.render();
@@ -275,6 +304,7 @@ export function registerPackRuntime(controller: () => CartographyController | nu
 
     return {
         textures: () => textureResolver(activeSet(), patternImage),
+        previews: () => previewResolver(activeSet(), patternImage),
         textureRoles: () => Object.keys(activeSet()?.textures ?? {}),
         onChange: (listener) => {
             listeners.push(listener);

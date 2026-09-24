@@ -296,7 +296,12 @@ const transitionSchema = z
 const variantSchema = z
     .object({
         state: text.describe('Display label for this variant, e.g. "intact", "open", "lit".'),
-        image: text.describe('Image path relative to the pack module root.'),
+        image: text.describe(
+            'Image path relative to the pack module root. GPU-compressed art (.ktx2, .basis) is drawn by the canvas, which browsers cannot show as an image, so give it a preview.',
+        ),
+        preview: text
+            .optional()
+            .describe('A browser image (PNG, WebP, ...) the stamp browser and the tile HUD show for compressed art; left out, they show the image.'),
         width: z.number().int().positive().describe('Pixel width at the pack referenceGridSize.'),
         height: z.number().int().positive().describe('Pixel height at the pack referenceGridSize.'),
         perspective: z.enum(STAMP_PERSPECTIVES).optional().describe('Overrides the stamp perspective.'),
@@ -354,8 +359,12 @@ const textureSetSchema = z
         textures: z
             .record(text, text)
             .describe(
-                'Texture role → image path. Roles: a biome name or "road" (terrain), "floor.<name>" (a room floor material) or "wall.<name>" (a room wall material).',
+                'Texture role → image path. Roles: a biome name or "road" (terrain), "floor.<name>" (a room floor material) or "wall.<name>" (a room wall material). GPU-compressed images (.ktx2, .basis) are loaded for the canvas before it draws.',
             ),
+        previews: z
+            .record(text, text)
+            .optional()
+            .describe('Texture role → a browser image the panels show for a compressed texture; a compressed role without one shows its colour.'),
     })
     .strict();
 

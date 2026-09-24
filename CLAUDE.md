@@ -891,9 +891,20 @@ These make everything after them cheaper and safer, so they come first.
     the fog's explored and unexplored colours (`fogColours`). Each value is
     written only if given, and `tests/e2e/structures.spec.ts` checks them on
     the real Scene.
-- **Compressed textures.** Tiles and backgrounds accept KTX2 and Basis files
-  [14.362]. Asset packs can ship GPU-compressed art for large stamp sets, and
-  the pack schema and loader accept those extensions.
+- **[done] Compressed textures** [14.362]. Packs can ship GPU-compressed
+  art (`.ktx2`, `.basis`) for stamps and texture sets.
+  - A stamp's image becomes a native Tile, which Foundry's own loader
+    decodes. The engine's own canvas draws texture-set fills and blends: the
+    pack runtime loads a set's compressed images through
+    `foundry.canvas.loadTexture` before anything redraws with them, and
+    `canvasTexture` takes them from Foundry's cache (PIXI alone cannot decode
+    them).
+  - Browsers cannot show them as images, so a variant's `preview` and a
+    texture set's `previews` (additive v1 fields) give the stamp browser, the
+    tile HUD and the paint swatches a PNG or WebP to show. Without one the
+    card shows only its name and the swatch its colour.
+  - Unit-tested; not yet proven in Foundry, as no KTX2 encoder is available
+    here to make a fixture (Foundry ships only the decoders).
 
 ### Priority 8: RGBA mask texture painting
 Terrain today is polygons and brush strokes, each one biome with a

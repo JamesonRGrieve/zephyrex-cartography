@@ -86,6 +86,31 @@ describe('loadPacks', () => {
         ]);
     });
 
+    it('serves the previews packs give their compressed art', () => {
+        const loaded = loadPacks([
+            {
+                moduleId: 'gpu',
+                manifest: manifest(
+                    [stampDef('crate', { variants: [{ state: 'shut', image: 'crate.ktx2', preview: 'crate.webp', width: 100, height: 100 }] })],
+                    {
+                        textureSets: [
+                            {
+                                id: 'gpu',
+                                name: 'GPU',
+                                license: 'CC0-1.0',
+                                textures: { grassland: 'tex/grass.ktx2' },
+                                previews: { grassland: 'tex/grass.webp' },
+                            },
+                        ],
+                    },
+                ),
+            },
+        ]);
+        expect(loaded.errors).toEqual([]);
+        expect(loaded.stamps[0]?.variants[0]).toMatchObject({ image: 'modules/gpu/crate.ktx2', preview: 'modules/gpu/crate.webp' });
+        expect(loaded.textureSets[0]?.previews).toEqual({ grassland: 'modules/gpu/tex/grass.webp' });
+    });
+
     it('reports an invalid pack instead of dropping it silently, and keeps the valid ones', () => {
         const loaded = loadPacks([
             { moduleId: 'bad', manifest: { schemaVersion: 2 } },

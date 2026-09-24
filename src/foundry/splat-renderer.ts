@@ -11,6 +11,7 @@ import { biomeLook } from '../canvas/renderer';
 import { isBiomeKind } from '../tools/biome';
 import { MAX_SPLAT_LAYERS, type SplatLayer } from '../tools/splat';
 import type { TextureResolver } from '../tools/texture';
+import { canvasTexture } from './pixi-surface';
 
 const VERTEX = `
 precision mediump float;
@@ -116,7 +117,7 @@ function tileSizes(textures: readonly PIXI.Texture[]): number[] {
 /** Each channel's texture, tile size, tint and alpha for `layer`'s roles; an unused channel draws nothing. */
 function channelTextures(layer: SplatLayer, resolve: TextureResolver): { readonly textures: PIXI.Texture[]; readonly uniforms: ChannelUniforms } {
     const looks = layer.roles.map((role) => (role !== null && isBiomeKind(role) ? biomeLook(role, resolve) : null));
-    const textures = looks.map((look) => (look && look.texture !== null ? PIXI.Texture.from(look.texture) : PIXI.Texture.WHITE));
+    const textures = looks.map((look) => (look && look.texture !== null ? canvasTexture(look.texture) : PIXI.Texture.WHITE));
     // The sampler wraps, so tiles meet without the seam a fract() of the coordinate leaves under linear filtering.
     for (const texture of textures.filter((t) => t !== PIXI.Texture.WHITE)) {
         texture.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;

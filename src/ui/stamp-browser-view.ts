@@ -10,6 +10,7 @@ import type { BrowserAction, BrowserView, CardEntry } from '../stamps/browser';
 import { resolveVariant } from '../stamps/catalog';
 import { stampDropPayload } from '../stamps/drop';
 import type { Stamp } from '../stamps/schema';
+import { shownImage } from '../tools/texture';
 import { el, focusKey, pressable, replacePreservingFocus } from './dom';
 
 export interface BrowserLabels {
@@ -176,7 +177,11 @@ function card(entry: CardEntry, view: BrowserView, labels: BrowserLabels, handle
     button.dataset['stampKey'] = stamp.key;
     focusKey(button, `card:${stamp.key}`);
     const frame = el('div', 'tw-flex tw-items-center tw-justify-center tw-w-20 tw-h-20');
-    frame.append(thumbnail(image.image, ''));
+    // Compressed art with no preview has nothing a browser can show; the card's name still says what it is.
+    const shown = shownImage(image.image, image.preview);
+    if (shown !== null) {
+        frame.append(thumbnail(shown, ''));
+    }
     button.append(frame, el('span', 'tw-truncate tw-w-full tw-text-center', stamp.name));
     button.addEventListener('click', () => {
         handlers.dispatch({ type: 'select', key: stamp.key });

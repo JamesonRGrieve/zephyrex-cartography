@@ -6,6 +6,7 @@
  * the only module that touches PIXI directly.
  */
 import type { DrawSurface } from '../canvas/renderer';
+import { isCompressedTexture } from '../tools/texture';
 
 /** Blur strength (px) for a feathered (soft-edged) region boundary. */
 const FEATHER_BLUR = 6;
@@ -15,6 +16,21 @@ interface Bounds {
     readonly y: number;
     readonly w: number;
     readonly h: number;
+}
+
+/**
+ * The texture the canvas draws `url` with. PIXI decodes ordinary images
+ * itself; GPU-compressed art (KTX2, Basis) only Foundry's loader decodes, so
+ * the pack runtime loads a texture set's compressed images before anything
+ * redraws with them, and they come from Foundry's cache here (empty until
+ * then).
+ */
+export function canvasTexture(url: string): PIXI.Texture {
+    if (!isCompressedTexture(url)) {
+        return PIXI.Texture.from(url);
+    }
+    const loaded = foundry.canvas.getTexture(url);
+    return loaded instanceof PIXI.Texture ? loaded : PIXI.Texture.EMPTY;
 }
 
 /** Soften a node's edges with a blur filter (region coastline/terrain blend), or clear it. */
@@ -66,7 +82,7 @@ export function createPixiSurface(container: PIXI.Container): DrawSurface {
             drop(id);
             const b = bounds(polygon);
             const wrap = new PIXI.Container();
-            const sprite = new PIXI.TilingSprite(PIXI.Texture.from(textureUrl), b.w, b.h);
+            const sprite = new PIXI.TilingSprite(canvasTexture(textureUrl), b.w, b.h);
             sprite.x = b.x;
             sprite.y = b.y;
             sprite.tint = tint;

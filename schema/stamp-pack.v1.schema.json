@@ -96,7 +96,12 @@
                                 "image": {
                                     "type": "string",
                                     "minLength": 1,
-                                    "description": "Image path relative to the pack module root."
+                                    "description": "Image path relative to the pack module root. GPU-compressed art (.ktx2, .basis) is drawn by the canvas, which browsers cannot show as an image, so give it a preview."
+                                },
+                                "preview": {
+                                    "description": "A browser image (PNG, WebP, ...) the stamp browser and the tile HUD show for compressed art; left out, they show the image.",
+                                    "type": "string",
+                                    "minLength": 1
                                 },
                                 "width": {
                                     "type": "integer",
@@ -1988,7 +1993,19 @@
                             "type": "string",
                             "minLength": 1
                         },
-                        "description": "Texture role → image path. Roles: a biome name or \"road\" (terrain), \"floor.<name>\" (a room floor material) or \"wall.<name>\" (a room wall material)."
+                        "description": "Texture role → image path. Roles: a biome name or \"road\" (terrain), \"floor.<name>\" (a room floor material) or \"wall.<name>\" (a room wall material). GPU-compressed images (.ktx2, .basis) are loaded for the canvas before it draws."
+                    },
+                    "previews": {
+                        "description": "Texture role → a browser image the panels show for a compressed texture; a compressed role without one shows its colour.",
+                        "type": "object",
+                        "propertyNames": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1
+                        }
                     }
                 },
                 "required": [

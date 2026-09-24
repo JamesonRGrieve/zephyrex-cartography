@@ -87,7 +87,7 @@ const generator = registerGeneratorRuntime(() => state?.controller ?? null, mate
 
 // A new brush size is the next stroke's; a new texture is picked up at once by a paint tool in hand.
 const paint = registerPaintRuntime(
-    packs.textures,
+    packs.previews,
     (settings) => {
         if (!state) {
             return;

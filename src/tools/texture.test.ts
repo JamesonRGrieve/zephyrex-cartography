@@ -1,12 +1,55 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { BIOMES } from './biome';
-import { BIOME_TEXTURE, BIOME_TINT, biomeSwatches, pickTextureSet, textureResolver, textureSetChoices } from './texture';
+import {
+    BIOME_TEXTURE,
+    BIOME_TINT,
+    biomeSwatches,
+    compressedTextures,
+    isCompressedTexture,
+    pickTextureSet,
+    previewResolver,
+    shownImage,
+    textureResolver,
+    textureSetChoices,
+} from './texture';
 
 const sets = [
     { key: 'a:photo', name: 'Photo (CC0)', textures: { grassland: 'modules/a/grass.jpg', road: 'modules/a/road.jpg' } },
     { key: 'b:paint', name: 'Painted', textures: { grassland: 'modules/b/grass.png' } },
 ];
+
+describe('compressed textures', () => {
+    const compressed = {
+        key: 'c:gpu',
+        name: 'GPU',
+        textures: { grassland: 'modules/c/grass.ktx2', forest: 'modules/c/forest.basis', road: 'modules/c/road.webp' },
+        previews: { grassland: 'modules/c/grass-preview.webp' },
+    };
+
+    it('knows KTX2 and Basis files, whatever their case and query', () => {
+        expect(['a.ktx2', 'B.KTX2', 'c.basis?v=2', 'd.basis#x', 'e.webp', 'ktx2.png'].map(isCompressedTexture)).toEqual([true, true, true, true, false, false]);
+    });
+
+    it('shows a panel a preview, else a browser image, and nothing for compressed art without one', () => {
+        expect(shownImage('a.ktx2', 'a.webp')).toBe('a.webp');
+        expect(shownImage('a.png', undefined)).toBe('a.png');
+        expect(shownImage('a.ktx2', undefined)).toBeNull();
+        const shown = previewResolver(compressed, PATTERNS);
+        expect([shown('grassland'), shown('forest'), shown('road'), shown('snow'), shown('procedural.ripple')]).toEqual([
+            'modules/c/grass-preview.webp',
+            null,
+            'modules/c/road.webp',
+            null,
+            'pattern:ripple',
+        ]);
+    });
+
+    it('lists the compressed images the canvas must load first', () => {
+        expect(compressedTextures(compressed)).toEqual(['modules/c/grass.ktx2', 'modules/c/forest.basis']);
+        expect(compressedTextures(null)).toEqual([]);
+    });
+});
 
 describe('BIOME_TEXTURE / BIOME_TINT', () => {
     it('has a texture role and a tint for every biome', () => {

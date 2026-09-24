@@ -12,15 +12,31 @@ import { BIOMES, BIOME_STYLES, type BiomeKind } from './biome';
 import { cssHex } from './colour';
 import { patternOf, type Pattern } from './procedural';
 
-/** A pack texture set as the renderer needs it: role → module-served image URL. */
+/**
+ * A pack texture set as the renderer needs it: role → module-served image
+ * URL, and, for a GPU-compressed one, the image a panel shows instead.
+ */
 export interface TextureSetRef {
     readonly key: string;
     readonly name: string;
     readonly textures: Readonly<Record<string, string>>;
+    readonly previews?: Readonly<Record<string, string>> | undefined;
 }
 
 /** Resolves a texture role to an image URL, or null to use the flat colour. */
 export type TextureResolver = (role: string) => string | null;
+
+/** GPU-compressed art (KTX2, Basis; Foundry 14.362): the canvas loads it, a browser cannot show it as an image. */
+const COMPRESSED_TEXTURE = /\.(?:ktx2|basis)(?:[?#]|$)/iu;
+
+export function isCompressedTexture(path: string): boolean {
+    return COMPRESSED_TEXTURE.test(path);
+}
+
+/** What a panel can show for `image`: its preview, else the image itself unless it is compressed (then nothing). */
+export function shownImage(image: string, preview: string | undefined): string | null {
+    return preview ?? (isCompressedTexture(image) ? null : image);
+}
 
 /** Texture role per biome, or null for an untextured (translucent) biome. */
 export const BIOME_TEXTURE: Record<BiomeKind, string | null> = {
@@ -93,6 +109,28 @@ export function textureResolver(set: TextureSetRef | null, patterns: (pattern: P
         const pattern = patternOf(role);
         return pattern === null ? set?.textures[role] ?? null : patterns(pattern);
     };
+}
+
+/**
+ * The images panels show for one texture set's roles: each role's preview, or
+ * its image when a browser can show it, and the procedural patterns as they
+ * are. A compressed image with no preview resolves to null, and the panel
+ * shows the fill's colour instead.
+ */
+export function previewResolver(set: TextureSetRef | null, patterns: (pattern: Pattern) => string): TextureResolver {
+    return (role) => {
+        const pattern = patternOf(role);
+        if (pattern !== null) {
+            return patterns(pattern);
+        }
+        const image = set?.textures[role];
+        return image === undefined ? null : shownImage(image, set?.previews?.[role]);
+    };
+}
+
+/** Every GPU-compressed image in a texture set, for the canvas to load before it draws with them. */
+export function compressedTextures(set: TextureSetRef | null): string[] {
+    return Object.values(set?.textures ?? {}).filter(isCompressedTexture);
 }
 
 /** Setting choices: texture set key → display name. */

@@ -41,9 +41,9 @@ export interface PaintBaking {
     readonly unbake: () => Promise<unknown>;
 }
 
-/** `onChange` runs after every choice, to put it in the tool's hand. */
+/** `onChange` runs after every choice, to put it in the tool's hand; `previews` gives each texture's swatch image. */
 export function registerPaintRuntime(
-    textures: () => TextureResolver,
+    previews: () => TextureResolver,
     onChange: (settings: PaintSettings) => void,
     baking: PaintBaking,
 ): SettingsWindow<PaintSettings> {
@@ -55,7 +55,7 @@ export function registerPaintRuntime(
         initial: { biome: DEFAULT_PAINT, radius: DEFAULT_BRUSH_RADIUS, movementCost: NORMAL_COST, mode: 'shapes', strength: DEFAULT_STRENGTH },
         onChange,
         render: (root, settings, choose) => {
-            const choices = biomeSwatches(textures()).map((swatch) => ({ ...swatch, label: localize(BIOME_TITLE_KEYS[swatch.biome]) }));
+            const choices = biomeSwatches(previews()).map((swatch) => ({ ...swatch, label: localize(BIOME_TITLE_KEYS[swatch.biome]) }));
             const p = I18N.paint;
             renderPaintPanel(
                 root,
