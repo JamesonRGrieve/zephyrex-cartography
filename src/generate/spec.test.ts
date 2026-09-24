@@ -82,6 +82,26 @@ describe('parseSceneSpec', () => {
         expect(paths([{ kind: 'pause' }, { kind: 'toggle', enable: [0], disable: [0] }])).toEqual(['features.0.effects.1']);
     });
 
+    it('takes zones in Foundry’s shapes, and reports a shape Foundry would refuse', () => {
+        const zone = (shape: object): ReturnType<typeof parseSceneSpec> =>
+            parseSceneSpec({ schemaVersion: 1, features: [{ type: 'zone', x: 1, y: 1, shape }] });
+        const good = zone({ kind: 'cone', radius: 3, angle: 60 });
+        expect(good.ok ? good.spec.features[0] : null).toMatchObject({
+            shape: { kind: 'cone', radius: 3, angle: 60, curvature: 'round' },
+            name: '',
+            rotation: 0,
+            gridBased: false,
+            attachedTo: null,
+        });
+        const issues = (shape: object): string[] => {
+            const result = zone(shape);
+            return result.ok ? [] : result.issues.map((i) => i.path);
+        };
+        expect(issues({ kind: 'ring', radius: 2, innerWidth: 3, outerWidth: 1 })).toEqual(['features.0.shape']);
+        expect(issues({ kind: 'cone', radius: 2, angle: 120, curvature: 'flat' })).toEqual(['features.0.shape']);
+        expect(issues({ kind: 'circle', radius: 0 })).toEqual(['features.0.shape.radius']);
+    });
+
     it('parses JSON text, reporting text that is not JSON at the root', () => {
         expect(parseSceneSpecJson('{"schemaVersion": 1, "features": []}').ok).toBe(true);
         const broken = parseSceneSpecJson('{"schemaVersion": 1,');

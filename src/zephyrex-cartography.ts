@@ -39,6 +39,7 @@ import { createSplatStore } from './foundry/splat-store';
 import { registerSubmapRuntime } from './foundry/submap-runtime';
 import { registerSwitchDoorControl } from './foundry/switch-door-control';
 import { createSwitchLinker, type SwitchLinker } from './foundry/switch-linker';
+import { registerZoneRuntime } from './foundry/zone-runtime';
 import { distance, type Point } from './geometry/spline';
 import { I18N } from './i18n';
 import { MODULE_ID } from './module-id';
@@ -77,6 +78,8 @@ const effects = registerEffectsRuntime(() => state?.controller ?? null);
 const pins = registerPinRuntime(() => state?.controller ?? null);
 
 const labels = registerLabelRuntime(() => state?.controller ?? null);
+
+const zones = registerZoneRuntime(() => state?.controller ?? null);
 
 const generator = registerGeneratorRuntime(() => state?.controller ?? null, materials.forNewRooms);
 
@@ -252,6 +255,15 @@ function onPointerDown(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
                 labels.edit,
             );
             return;
+        case 'zone':
+            void placeOrOpen(
+                st.controller,
+                pt,
+                (id) => st.controller.zoneSettings(id) !== null,
+                async (at) => st.controller.placeZone(at),
+                zones.edit,
+            );
+            return;
         case 'erase':
             void st.controller.erase(pt);
             return;
@@ -281,16 +293,19 @@ function doorAt(controller: CartographyController, pt: Point): void {
     }
 }
 
-/** A click with the pin or label tool: open the one clicked, or place a new one there and open that. */
+/** A click with the pin, label or zone tool: open the one clicked, or place a new one there and open that. */
 async function placeOrOpen(
     controller: CartographyController,
     pt: Point,
     isOne: (id: string) => boolean,
-    place: (at: Point) => Promise<string>,
+    place: (at: Point) => Promise<string | null>,
     openPanel: (id: string) => void,
 ): Promise<void> {
     const hit = controller.hitTest(pt);
-    openPanel(hit !== null && isOne(hit) ? hit : await place(pt));
+    const id = hit !== null && isOne(hit) ? hit : await place(pt);
+    if (id !== null) {
+        openPanel(id);
+    }
 }
 
 /** A press with a drawing brush in hand. */
@@ -546,6 +561,7 @@ const NATIVE_TOOL_LOOKS: Readonly<Record<NativeTool, ToolLook>> = {
     effects: { title: I18N.tools.effects, icon: 'fa-solid fa-wand-sparkles' },
     pin: { title: I18N.tools.pin, icon: 'fa-solid fa-map-pin' },
     label: { title: I18N.tools.label, icon: 'fa-solid fa-font' },
+    zone: { title: I18N.tools.zone, icon: 'fa-solid fa-circle-radiation' },
 };
 
 /** Every pointer tool, by name, in toolbar order: paths, painting, then the tools native groups share. */

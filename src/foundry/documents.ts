@@ -96,7 +96,7 @@ export class FoundryDocumentSink implements DocumentSink {
             ['Tile', write.tiles.map(({ id, doc }) => ({ _id: id, ...tileCreateData(doc) }))],
             ['Note', write.notes.map(({ id, doc }) => ({ _id: id, ...noteCreateData(doc) }))],
             ['Drawing', write.drawings.map(({ id, doc }) => ({ _id: id, ...drawingCreateData(doc) }))],
-            ['Region', regions],
+            ['Region', regions.map((region) => attachable(scene, region))],
         ];
         return creates
             .filter(([, data]) => data.length > 0)
@@ -114,6 +114,12 @@ function behaviourUpdates(scene: FoundryScene, regions: readonly RegionCreateDat
         });
         return live && updates.length > 0 ? [{ action: 'update' as const, documentName: 'RegionBehavior' as const, parent: live, updates }] : [];
     });
+}
+
+/** A region attached only to a token still on the scene: a zone's token may since have been deleted, and Foundry would refuse the whole batch over it. */
+function attachable(scene: FoundryScene, region: RegionCreateData): RegionCreateData {
+    const { attachment, ...unattached } = region;
+    return attachment === undefined || scene.tokens.has(attachment.token) ? region : unattached;
 }
 
 /** Deletes of what is still on the scene: a GM may already have deleted some by hand, and deleting a missing id makes Foundry throw. */

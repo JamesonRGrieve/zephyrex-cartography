@@ -54,6 +54,7 @@ function scene(present: readonly string[], id: string | null = 'sc'): FoundrySce
         notes: collection,
         drawings: collection,
         tiles: collection,
+        tokens: collection,
         // Each live region holds one teleport behaviour, `b-<region id>`.
         regions: {
             ...collection,
@@ -190,6 +191,26 @@ describe('FoundryDocumentSink', () => {
         const { sink: s, batches } = sink(scene([]));
         await s.write({ ...NOTHING, regions: [{ ids: ['r1', 'r2'], regions: [REGION, REGION], cancelled: ['r1'] }] });
         expect(batches[0]).toEqual([expect.objectContaining({ action: 'create', documentName: 'Region', data: [expect.objectContaining({ _id: 'r2' })] })]);
+    });
+
+    it('attaches a zone’s region to its token only while that token is on the scene', async () => {
+        const { sink: s, batches } = sink(scene(['tk1']));
+        await s.write({
+            ...NOTHING,
+            regions: [
+                {
+                    ids: ['r1', 'r2'],
+                    regions: [
+                        { ...REGION, attachedTo: 'tk1' },
+                        { ...REGION, attachedTo: 'gone' },
+                    ],
+                    cancelled: [],
+                },
+            ],
+        });
+        const [attached, orphaned] = batches[0]?.[0]?.action === 'create' ? batches[0][0].data : [];
+        expect(attached).toMatchObject({ _id: 'r1', attachment: { token: 'tk1' } });
+        expect(orphaned).not.toHaveProperty('attachment');
     });
 
     it('writes nothing for an empty transaction, a transaction of missing ids, or no scene', async () => {

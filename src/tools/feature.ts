@@ -2,7 +2,7 @@
 /**
  * The unified persisted feature model: roads/rivers (paths), biome regions
  * (closed fills), biome brush strokes (freehand swaths), rooms, stamps, map
- * pins and map labels, discriminated by `type`. `parseFeatures` validates the mixed
+ * pins, map labels and zones, discriminated by `type`. `parseFeatures` validates the mixed
  * scene-flag blob.
  */
 import type { GeneratedDocs } from './documents';
@@ -13,12 +13,13 @@ import { parseRegion, type RegionFeature } from './region';
 import { parseRoom, type RoomFeature } from './room';
 import { parseStamp, type StampFeature } from './stamp';
 import { parseStroke, type StrokeFeature } from './stroke';
+import { parseZone, type ZoneFeature } from './zone';
 
-export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature | StampFeature | PinFeature | LabelFeature;
+export type Feature = CartographyPath | RegionFeature | StrokeFeature | RoomFeature | StampFeature | PinFeature | LabelFeature | ZoneFeature;
 
-/** A map pin or label: one point, where it stands, that moves it whole. */
-export function isAnchored(f: Feature): f is PinFeature | LabelFeature {
-    return f.type === 'pin' || f.type === 'label';
+/** A map pin, label or zone: one point, where it stands, that moves it whole. */
+export function isAnchored(f: Feature): f is PinFeature | LabelFeature | ZoneFeature {
+    return f.type === 'pin' || f.type === 'label' || f.type === 'zone';
 }
 
 export function isRegion(f: Feature): f is RegionFeature {
@@ -51,7 +52,14 @@ export function parseFeatures(raw: unknown): Feature[] {
     const out: Feature[] = [];
     for (const entry of raw) {
         const feature =
-            parseStamp(entry) ?? parsePath(entry) ?? parseRegion(entry) ?? parseStroke(entry) ?? parseRoom(entry) ?? parsePin(entry) ?? parseLabel(entry);
+            parseStamp(entry) ??
+            parsePath(entry) ??
+            parseRegion(entry) ??
+            parseStroke(entry) ??
+            parseRoom(entry) ??
+            parsePin(entry) ??
+            parseLabel(entry) ??
+            parseZone(entry);
         if (feature) {
             out.push(feature);
         }

@@ -205,6 +205,31 @@ test('a toggle names its area’s other behaviours by UUID, and a token walking 
     await expect.poll(darknessDisabled).toBe(false);
 });
 
+test('a zone attached to a token moves with it, and the zone follows its region', async ({ world }) => {
+    const placed = await world.evaluate(async () => {
+        const [token] = (await canvas?.scene?.createEmbeddedDocuments('Token', [{ name: 'Servitor', x: 400, y: 400 }])) ?? [];
+        const api = game.modules?.get('zephyrex-cartography').api;
+        const outcome = await api?.buildSpec({
+            schemaVersion: 1,
+            units: 'px',
+            features: [{ type: 'zone', x: 450, y: 450, shape: { kind: 'circle', radius: 150 }, name: 'Aura', attachedTo: token?.id ?? null }],
+        });
+        const zoneId = outcome?.ok === true ? outcome.report.features[0] : undefined;
+        const region = canvas?.scene?.regions.contents.find((r) => r.name === 'Aura');
+        await token?.update({ x: 600, y: 400 });
+        return { zoneId: zoneId ?? '', attached: region?.toObject().attachment.token === token?.id };
+    });
+    expect(placed.attached).toBe(true);
+    const where = async (): Promise<{ region: number[]; zone: number[] }> =>
+        world.evaluate((zoneId) => {
+            const [shape] = canvas?.scene?.regions.contents.find((r) => r.name === 'Aura')?.shapes ?? [];
+            const point = game.modules?.get('zephyrex-cartography').api.controller()?.getFeature(zoneId)?.points[0];
+            return { region: shape && 'x' in shape ? [shape.x, shape.y] : [], zone: point ? [point.x, point.y] : [] };
+        }, placed.zoneId);
+    // The token moved 200 px right: Foundry moved the region with it, and the zone followed.
+    await expect.poll(where).toEqual({ region: [650, 450], zone: [650, 450] });
+});
+
 test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
     const walls = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

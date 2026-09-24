@@ -19,12 +19,13 @@ export type Mode =
     | { readonly kind: 'link' }
     | { readonly kind: 'effects' }
     | { readonly kind: 'pin' }
-    | { readonly kind: 'label' };
+    | { readonly kind: 'label' }
+    | { readonly kind: 'zone' };
 
 export const IDLE: Mode = { kind: 'idle' };
 
 /** The tools whose mode is just their name: they act on what is clicked. */
-const PLAIN_MODES = ['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects', 'pin', 'label'] as const satisfies readonly Exclude<
+const PLAIN_MODES = ['erase', 'edit', 'door', 'stamp', 'materials', 'link', 'effects', 'pin', 'label', 'zone'] as const satisfies readonly Exclude<
     Mode['kind'],
     'idle' | 'brush'
 >[];

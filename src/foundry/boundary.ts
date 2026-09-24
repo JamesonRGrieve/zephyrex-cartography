@@ -151,7 +151,18 @@ export type RegionShape =
           readonly anchorY: number;
           readonly rotation: number;
           readonly hole: boolean;
-      };
+          readonly gridBased?: boolean;
+      }
+    | ZoneShapeData;
+
+/** A zone's shape, as 14.359's `CircleShapeData` … `LineShapeData` hold it: at `x`, `y`, sizes in px. */
+type ZoneShapeData = { readonly hole: boolean; readonly gridBased: boolean; readonly x: number; readonly y: number } & (
+    | { readonly type: 'circle'; readonly radius: number }
+    | { readonly type: 'ellipse'; readonly radiusX: number; readonly radiusY: number; readonly rotation: number }
+    | { readonly type: 'ring'; readonly radius: number; readonly innerWidth: number; readonly outerWidth: number }
+    | { readonly type: 'cone'; readonly radius: number; readonly angle: number; readonly rotation: number; readonly curvature: string }
+    | { readonly type: 'line'; readonly length: number; readonly width: number; readonly rotation: number }
+);
 
 /**
  * The behaviour an area effect becomes, with its id chosen up front (so a
@@ -212,6 +223,8 @@ export interface RegionCreateData extends OnLevels {
     readonly restriction?: { readonly enabled: boolean; readonly type: string; readonly priority: number };
     /** `CONST.DOCUMENT_OWNERSHIP_LEVELS` for every user; left out, Foundry's (the GM's alone). */
     readonly ownership?: { readonly default: number };
+    /** The token it moves with (14.356). */
+    readonly attachment?: { readonly token: string };
 }
 
 /** A region redrawn in place: everything but its behaviours, which are embedded documents of their own. */
@@ -424,6 +437,8 @@ export interface FoundryScene {
     readonly notes: EmbeddedCollection;
     readonly drawings: EmbeddedCollection;
     readonly tiles: EmbeddedCollection;
+    /** Read only, for the tokens a zone can attach to. */
+    readonly tokens: EmbeddedCollection;
     readonly regions: RegionCollection;
     readonly levels: { readonly contents: readonly NativeLevel[]; readonly size: number };
     // eslint-disable-next-line no-restricted-syntax -- boundary: a Foundry flag value is arbitrary serialised JSON; getFlag returns unknown by contract and is narrowed at the parse boundary

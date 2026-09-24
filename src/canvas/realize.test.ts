@@ -355,6 +355,38 @@ describe('realizeSpec', () => {
         expect(marsh && 'display' in marsh ? marsh.display : undefined).toBeUndefined();
     });
 
+    it('puts zones where the spec says, sized in its units, with their area settings', async () => {
+        const h = makeHarness();
+        await realizeSpec(
+            h.c,
+            spec({
+                features: [
+                    {
+                        type: 'zone',
+                        x: 2,
+                        y: 3,
+                        shape: { kind: 'cone', radius: 3, angle: 60, curvature: 'flat' },
+                        name: 'Flamer',
+                        rotation: 90,
+                        attachedTo: 'tk1',
+                        movementCost: 2,
+                    },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        const [zone] = h.s.last();
+        expect(zone).toMatchObject({
+            type: 'zone',
+            points: [{ x: 1200, y: 800 }],
+            shape: { kind: 'cone', radius: 300, angle: 60, curvature: 'flat' },
+            name: 'Flamer',
+            rotation: 90,
+            attachedTo: 'tk1',
+            movementCost: 2,
+        });
+    });
+
     it('puts map pins where the spec says, opening their journal page, and a lamp switch can be keyed beside them', async () => {
         const h = makeHarness();
         await realizeSpec(

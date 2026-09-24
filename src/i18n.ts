@@ -33,6 +33,7 @@ export const I18N = {
         effects: key('Tools.Effects'),
         pin: key('Tools.Pin'),
         label: key('Tools.Label'),
+        zone: key('Tools.Zone'),
         generator: key('Tools.Generator'),
     },
     generator: {
@@ -142,6 +143,10 @@ export const I18N = {
         none: key('Pins.None'),
         browse: key('Pins.Browse'),
     },
+    zones: {
+        title: key('Zones.Title'),
+        none: key('Zones.None'),
+    },
     effects: {
         title: key('Effects.Title'),
         effects: key('Effects.Effects'),
@@ -188,6 +193,7 @@ export const I18N = {
         floor: key('Regions.Floor'),
         ceiling: key('Regions.Ceiling'),
         room: key('Regions.Room'),
+        zone: key('Regions.Zone'),
         terrain: key('Regions.Terrain'),
         surface: key('Regions.Surface'),
     },

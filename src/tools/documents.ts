@@ -12,6 +12,7 @@ import type { PlacedBehaviour, StampLight, StampTile } from '../stamps/schema';
 import type { AreaDisplay, AreaEffect } from './area-effects';
 import type { BiomeKind } from './biome';
 import { isRecord, stringArray } from './guards';
+import type { ZoneShape } from './zone';
 
 export type DoorType = 'none' | 'door' | 'secret';
 
@@ -179,7 +180,12 @@ type RegionLabel =
     | { readonly kind: 'terrain'; readonly biome: BiomeKind }
     | { readonly kind: 'floor' | 'ceiling'; readonly level: string }
     | { readonly kind: 'room' }
-    | { readonly kind: 'stamp-terrain' | 'stamp-surface'; readonly name: string };
+    | { readonly kind: 'stamp-terrain' | 'stamp-surface'; readonly name: string }
+    /** A zone: named as the GM named it, or the module's own name when `title` is "". */
+    | { readonly kind: 'zone'; readonly title: string };
+
+/** A region's own Foundry shape, placed at `x`, `y` and turned by `rotation` (degrees): a zone's. */
+export type RegionGeometry = ZoneShape & { readonly x: number; readonly y: number; readonly rotation: number; readonly gridBased: boolean };
 
 /** Where a teleported token lands in the region it arrives in (v14 `teleportToken` placement). */
 export const TRAVEL_PLACEMENTS = ['relative', 'center', 'random'] as const;
@@ -247,6 +253,10 @@ export interface RegionDoc {
     readonly effects?: readonly AreaEffect[];
     /** How the region shows and whether walls shape it, as the GM set it on the area; absent for the engine's default. */
     readonly display?: AreaDisplay;
+    /** A shape of Foundry's own in place of `polygon`: a zone's. */
+    readonly geometry?: RegionGeometry;
+    /** The token (by id) the region moves with. */
+    readonly attachedTo?: string;
 }
 
 /** A native map Note (a pin): its text, the journal page it opens, and its icon. */

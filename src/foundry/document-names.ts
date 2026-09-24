@@ -28,6 +28,9 @@ export function regionName(region: RegionDoc): string {
     if (label.kind === 'room') {
         return localize(I18N.regions.room);
     }
+    if (label.kind === 'zone') {
+        return label.title === '' ? localize(I18N.regions.zone) : label.title;
+    }
     return format(I18N.regions.transition, { kind: localize(TRANSITION_KIND_KEYS[label.kind]), from: label.from, to: label.to.join(' / ') });
 }
 

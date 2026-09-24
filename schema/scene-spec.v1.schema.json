@@ -2321,6 +2321,630 @@
                         ],
                         "additionalProperties": false,
                         "description": "A map label: text on the map, as a native Drawing."
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "zone"
+                            },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "x": {
+                                "type": "number"
+                            },
+                            "y": {
+                                "type": "number"
+                            },
+                            "shape": {
+                                "oneOf": [
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "const": "circle"
+                                            },
+                                            "radius": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "radius"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "const": "ellipse"
+                                            },
+                                            "radiusX": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            },
+                                            "radiusY": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "radiusX",
+                                            "radiusY"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "const": "ring"
+                                            },
+                                            "radius": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            },
+                                            "innerWidth": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            },
+                                            "outerWidth": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "radius",
+                                            "innerWidth",
+                                            "outerWidth"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "The band runs from radius − innerWidth to radius + outerWidth."
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "const": "cone"
+                                            },
+                                            "radius": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            },
+                                            "angle": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0,
+                                                "maximum": 360,
+                                                "description": "Its spread, in degrees: 90 at most when flat, 180 when a semicircle."
+                                            },
+                                            "curvature": {
+                                                "default": "round",
+                                                "type": "string",
+                                                "enum": [
+                                                    "round",
+                                                    "flat",
+                                                    "semicircle"
+                                                ]
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "radius",
+                                            "angle"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "const": "line"
+                                            },
+                                            "length": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            },
+                                            "width": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "length",
+                                            "width"
+                                        ],
+                                        "additionalProperties": false
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "kind": {
+                                                "type": "string",
+                                                "const": "rectangle"
+                                            },
+                                            "width": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            },
+                                            "height": {
+                                                "type": "number",
+                                                "exclusiveMinimum": 0
+                                            }
+                                        },
+                                        "required": [
+                                            "kind",
+                                            "width",
+                                            "height"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                ],
+                                "description": "One of Foundry's region shapes, sized in the spec's units. A cone or line starts at the zone's point; the rest are centred on it."
+                            },
+                            "name": {
+                                "default": "",
+                                "description": "The region's name; \"\" for \"Zone\".",
+                                "type": "string"
+                            },
+                            "rotation": {
+                                "default": 0,
+                                "description": "Degrees; a cone or line points this way.",
+                                "type": "number"
+                            },
+                            "gridBased": {
+                                "default": false,
+                                "description": "Have Foundry measure the shape in grid units, conforming to the grid.",
+                                "type": "boolean"
+                            },
+                            "attachedTo": {
+                                "default": null,
+                                "description": "Id of a token on the scene the region moves with; null: none.",
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "movementCost": {
+                                "default": 1,
+                                "description": "Difficult ground: what crossing it on foot costs, times the distance (1 ordinary, 2 mud), as Foundry's Modify Movement Cost.",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5
+                            },
+                            "effects": {
+                                "default": [],
+                                "description": "Region behaviours on the area's Scene Region.",
+                                "type": "array",
+                                "items": {
+                                    "description": "A region behaviour on the area, as Foundry's: Adjust Darkness Level, Suppress Weather, Display Scrolling Text, Pause Game, Execute Macro, Execute Script, Apply Active Effect or Toggle Behavior.",
+                                    "oneOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "darkness"
+                                                },
+                                                "mode": {
+                                                    "default": "override",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "override",
+                                                        "brighten",
+                                                        "darken"
+                                                    ]
+                                                },
+                                                "modifier": {
+                                                    "default": 0,
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "suppressWeather"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "text"
+                                                },
+                                                "text": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "colour": {
+                                                    "default": "#ffffff",
+                                                    "type": "string",
+                                                    "pattern": "^#[0-9a-fA-F]{6}$"
+                                                },
+                                                "visibility": {
+                                                    "default": "anyone",
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "gamemaster",
+                                                        "observer",
+                                                        "anyone"
+                                                    ]
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "pause"
+                                                },
+                                                "once": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "macro"
+                                                },
+                                                "uuid": {
+                                                    "default": null,
+                                                    "description": "The Macro to run, by UUID.",
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        {
+                                                            "type": "null"
+                                                        }
+                                                    ]
+                                                },
+                                                "everyone": {
+                                                    "default": false,
+                                                    "type": "boolean"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "script"
+                                                },
+                                                "source": {
+                                                    "default": "",
+                                                    "type": "string"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "description": "Foundry's region events the behaviour runs on.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "regionBoundary",
+                                                            "regionAnimation",
+                                                            "behaviorActivated",
+                                                            "behaviorDeactivated",
+                                                            "behaviorViewed",
+                                                            "behaviorUnviewed",
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenMoveWithin",
+                                                            "tokenAnimateIn",
+                                                            "tokenAnimateOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "activeEffect"
+                                                },
+                                                "effects": {
+                                                    "default": [],
+                                                    "description": "ActiveEffect UUIDs.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "disabled": {
+                                                    "default": false,
+                                                    "description": "Start disabled, for a toggle to enable.",
+                                                    "type": "boolean"
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "const": "toggle"
+                                                },
+                                                "events": {
+                                                    "default": [],
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "tokenEnter",
+                                                            "tokenExit",
+                                                            "tokenMoveIn",
+                                                            "tokenMoveOut",
+                                                            "tokenTurnStart",
+                                                            "tokenTurnEnd",
+                                                            "tokenRoundStart",
+                                                            "tokenRoundEnd"
+                                                        ]
+                                                    }
+                                                },
+                                                "enable": {
+                                                    "default": [],
+                                                    "description": "The behaviours it enables, by their place in this area’s `effects` (from 0).",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "maximum": 9007199254740991
+                                                    }
+                                                },
+                                                "disable": {
+                                                    "default": [],
+                                                    "description": "The behaviours it disables, likewise.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "maximum": 9007199254740991
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "kind"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            },
+                            "display": {
+                                "default": {
+                                    "visibility": "layer",
+                                    "highlight": "shapes",
+                                    "measurements": false,
+                                    "observed": false,
+                                    "restriction": null
+                                },
+                                "description": "How the area's Scene Region shows, and whether walls shape it.",
+                                "type": "object",
+                                "properties": {
+                                    "visibility": {
+                                        "default": "layer",
+                                        "description": "Who sees the region, as Foundry's Region visibility.",
+                                        "type": "string",
+                                        "enum": [
+                                            "layer",
+                                            "gamemaster",
+                                            "observer",
+                                            "always"
+                                        ]
+                                    },
+                                    "highlight": {
+                                        "default": "shapes",
+                                        "description": "Highlight its true shapes, or the grid spaces it covers.",
+                                        "type": "string",
+                                        "enum": [
+                                            "shapes",
+                                            "coverage"
+                                        ]
+                                    },
+                                    "measurements": {
+                                        "default": false,
+                                        "description": "Show its measurements.",
+                                        "type": "boolean"
+                                    },
+                                    "observed": {
+                                        "default": false,
+                                        "description": "Make every player an observer of the region, so the \"observer\" visibility shows it to them.",
+                                        "type": "boolean"
+                                    },
+                                    "restriction": {
+                                        "default": null,
+                                        "description": "Shape the region by walls of this type, cast from its origin, so effects stop at walls. Needs a feature on one level.",
+                                        "anyOf": [
+                                            {
+                                                "type": "object",
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "light",
+                                                            "darkness",
+                                                            "sight",
+                                                            "sound",
+                                                            "move"
+                                                        ]
+                                                    },
+                                                    "priority": {
+                                                        "default": 0,
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "maximum": 9007199254740991
+                                                    }
+                                                },
+                                                "required": [
+                                                    "type"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            {
+                                                "type": "null"
+                                            }
+                                        ]
+                                    }
+                                },
+                                "additionalProperties": false
+                            },
+                            "level": {
+                                "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "x",
+                            "y",
+                            "shape"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A zone: a Scene Region in one of Foundry's shapes, with a movement cost, behaviours and a display like any area."
                     }
                 ]
             },

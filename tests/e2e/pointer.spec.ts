@@ -68,6 +68,7 @@ const NATIVE_HOME: Readonly<Record<string, string>> = {
     effects: 'regions',
     pin: 'notes',
     label: 'drawings',
+    zone: 'regions',
 };
 
 async function activate(page: Page, control: string, tool: string): Promise<void> {
@@ -80,7 +81,7 @@ async function activate(page: Page, control: string, tool: string): Promise<void
 }
 
 /** The panels tools open when picked. */
-const TOOL_PANELS = ['paint', 'paths', 'pin', 'label'] as const;
+const TOOL_PANELS = ['paint', 'paths', 'pin', 'label', 'zone'] as const;
 
 /** Tuck the tool panels away, as a GM would, so clicks land on the canvas; the choices made in them stand. */
 async function tuckPanels(page: Page): Promise<void> {
@@ -430,6 +431,39 @@ test('the effects tool, with the Regions tools, gives a room difficult ground an
         { type: 'modifyMovementCost', mode: null },
         { type: 'adjustDarknessLevel', mode: 2 },
     ]);
+});
+
+test('the zone tool, with the Regions tools, places a native Region in Foundry’s own shape, and erase removes it', async ({ world }) => {
+    await useTool(world, 'zone');
+    await holdView(world);
+    await clickScene(world, { x: 700, y: 500 });
+    const panel = world.locator(`#${MODULE_ID}-zone`);
+    await expect(panel).toBeVisible();
+    // Named as Foundry's own shape strings name them.
+    await panel.getByLabel('Type').selectOption({ label: 'Cone' });
+    await panel.getByLabel('Radius').fill('200');
+    await panel.getByLabel('Radius').press('Enter');
+    await panel.getByLabel('Name', { exact: true }).fill('Promethium wash');
+    await panel.getByLabel('Name', { exact: true }).press('Enter');
+    const zones = async (): Promise<{ name: string; shapes: { type: string; x: number; y: number; radius: number | null }[] }[]> =>
+        world.evaluate(() =>
+            (canvas?.scene?.regions.contents ?? []).map((region) => ({
+                name: region.name,
+                shapes: region.shapes.map((shape) => ({
+                    type: shape.type,
+                    // The click lands a hair off the whole pixel through the canvas transform.
+                    x: 'x' in shape ? Math.round(shape.x) : Number.NaN,
+                    y: 'y' in shape ? Math.round(shape.y) : Number.NaN,
+                    radius: 'radius' in shape ? shape.radius : null,
+                })),
+            })),
+        );
+    await expect.poll(zones).toEqual([{ name: 'Promethium wash', shapes: [{ type: 'cone', x: 700, y: 500, radius: 200 }] }]);
+
+    await useTool(world, 'erase');
+    // Inside the cone, below where its tucked-away panel's title bar sits.
+    await clickScene(world, { x: 800, y: 560 });
+    await expect.poll(zones).toEqual([]);
 });
 
 test('the pin tool, with the Notes tools, places a native Note that opens a journal page, and erase removes it', async ({ world }) => {

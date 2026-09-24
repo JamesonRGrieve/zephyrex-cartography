@@ -2,11 +2,13 @@
 import { describe, expect, it } from 'vitest';
 import { BLOCKS_ALL, type RegionDoc } from '../tools/documents';
 import { DEFAULT_TRAVEL } from '../tools/submap';
+import type { ZoneShape } from '../tools/zone';
 import {
     doorStateFromDs,
     drawingCreateData,
     effectBehaviourId,
     effectBehaviours,
+    geometryShape,
     lightCreateData,
     noteCreateData,
     pxToDistance,
@@ -476,6 +478,40 @@ describe('regionCreateData', () => {
             ]),
         ).toMatchObject({ type: 'rectangle', x: -25, y: 50, width: 100, height: 50, rotation: 90 });
         expect(regionShape(square)).toEqual({ type: 'polygon', points: [0, 0, 10, 0, 10, 10], hole: false });
+    });
+
+    it('sends a zone’s shape as Foundry’s own shape data, and attaches it to its token', () => {
+        const placed = { x: 10, y: 20, rotation: 30, gridBased: true };
+        const on = { x: 10, y: 20, gridBased: true, hole: false };
+        const shapes: ZoneShape[] = [
+            { kind: 'circle', radius: 5 },
+            { kind: 'ellipse', radiusX: 5, radiusY: 3 },
+            { kind: 'ring', radius: 5, innerWidth: 1, outerWidth: 2 },
+            { kind: 'cone', radius: 5, angle: 60, curvature: 'flat' },
+            { kind: 'line', length: 8, width: 2 },
+            { kind: 'rectangle', width: 8, height: 4 },
+        ];
+        expect(shapes.map((shape) => geometryShape({ ...shape, ...placed }))).toEqual([
+            { type: 'circle', ...on, radius: 5 },
+            { type: 'ellipse', ...on, radiusX: 5, radiusY: 3, rotation: 30 },
+            { type: 'ring', ...on, radius: 5, innerWidth: 1, outerWidth: 2 },
+            { type: 'cone', ...on, radius: 5, angle: 60, rotation: 30, curvature: 'flat' },
+            { type: 'line', ...on, length: 8, width: 2, rotation: 30 },
+            { type: 'rectangle', ...on, width: 8, height: 4, anchorX: 0.5, anchorY: 0.5, rotation: 30 },
+        ]);
+        const zone: RegionDoc = {
+            id: null,
+            label: { kind: 'zone', title: '' },
+            polygon: [],
+            bottom: null,
+            top: null,
+            level: null,
+            spans: [],
+            behaviour: null,
+            geometry: { kind: 'circle', radius: 5, ...placed },
+            attachedTo: 'tk1',
+        };
+        expect(regionCreateData([zone], ['z1'], nameOf, SCENE)[0]).toMatchObject({ shapes: [{ type: 'circle', radius: 5 }], attachment: { token: 'tk1' } });
     });
 
     it('gives a region without a behaviour none, on its own level', () => {

@@ -20,6 +20,7 @@
             "Effects": "Area effects (click painted ground or a room to set its movement cost and region behaviours)",
             "Pin": "Map pin (click to place a note, or click a pin to set what it shows and opens)",
             "Label": "Map label (click to place text on the map, or click a label to change it)",
+            "Zone": "Zone (click to place a region in one of Foundry's shapes, or click a zone to reshape it or attach it to a token)",
             "Generator": "Map builder (generate a floor plan, or build a scene spec)"
         },
         "Generator": {
@@ -89,6 +90,10 @@
             "Title": "Map pin",
             "None": "None",
             "Browse": "Browse for the icon"
+        },
+        "Zones": {
+            "Title": "Zone",
+            "None": "None"
         },
         "Effects": {
             "Title": "Area effects",
@@ -215,6 +220,7 @@
             "Floor": "Floor of {level}",
             "Ceiling": "Ceiling of {level}",
             "Room": "Room",
+            "Zone": "Zone",
             "Terrain": "{name} terrain",
             "Surface": "{name} surface",
             "Transition": "{kind}: {from} → {to}",

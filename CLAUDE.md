@@ -205,9 +205,10 @@ plus a link flag. It never rewrites content the plugin did not create.
 that type's own control group, after Foundry's tools
 (`canvas/tool-placement.ts`).
 - **Walls:** room, door and materials. **Tiles:** stamp. **Lighting:**
-  link. **Regions:** effects. **Notes:** pin, with edit and erase.
-  **Drawings:** label, with edit and erase. Edit and erase appear in the Walls and Tiles
-  groups too, so what a group draws can be reshaped there.
+  link. **Regions:** zone and effects, with edit and erase. **Notes:** pin,
+  with edit and erase. **Drawings:** label, with edit and erase. Edit and
+  erase appear in the Walls and Tiles groups too, so what a group draws can
+  be reshaped there.
 - **The module's own group** keeps what has no native home: roads, rivers,
   the paint tool, edit, erase, undo/redo, levels and the generator.
 - **Tool panels.** A tool with choices opens its panel when picked, and the
@@ -627,9 +628,28 @@ These make everything after them cheaper and safer, so they come first.
     covers rooms, a door's split points and all, and every stamp footprint
     region, rotated ones included. So the GM edits it as a rectangle.
     Anything else stays a polygon.
+  - **[done] Zones.** A `zone` feature (`tools/zone.ts`) is a Scene Region
+    in one of Foundry's own shapes, placed at a point: circle, ellipse,
+    ring, cone (round, flat or semicircle), line or rectangle.
+    - It has a rotation, `gridBased`, a name and sizes in px. A cone or
+      line starts at the point; the rest are centred on it.
+    - It is an area, so it takes a movement cost, effects and a display,
+      and its region is always there.
+    - Sizes Foundry refuses are rejected: a ring's band reaching past its
+      centre, or a cone wider than its curvature allows (90° flat, 180°
+      semicircle).
+    - It is picked by its exact shape, moved by its point with edit, and
+      erased like any feature.
+    - The **zone tool** sits with Foundry's Regions tools, beside effects,
+      edit and erase. Its panel is named in Foundry's shape and Region sheet
+      strings, and picking another shape keeps about the same size.
+    - The scene spec takes `zone` entries sized in its units, and rejects a
+      shape Foundry would refuse.
+    - Proven in `tests/e2e/pointer.spec.ts`.
   - **Still open:** grid cells for terrain painted on the grid (painted
     terrain is smoothed today, so it has no cell outline to give), and the
-    other shape types.
+    emanation and token shapes (a token's own footprint, which Foundry
+    builds with `createTokenEmanation`).
 - **Region fields**:
   - **[done]** `color`: every generated region is coloured by what it is
     (`tools/region-colours.ts`), terrain in its biome's colour, instead of
@@ -661,8 +681,15 @@ These make everything after them cheaper and safer, so they come first.
       `tests/e2e/structures.spec.ts` checks the real Region.
   - `hidden` [14.360]: GM-only, with behaviours off. Blocked: not in the
     14.359 schema;
-  - `attachment.token`: a region that moves with a token [14.353, renamed
-    14.356].
+  - **[done] `attachment.token`**: a region that moves with a token
+    [14.353, renamed 14.356]. A zone's `attachedTo` names a token on the
+    scene, and its region is created attached to it.
+    - Foundry moves the region with the token. An `updateRegion` hook on the
+      active GM records where the zone now is, without recreating the region
+      (`followZone`).
+    - A zone whose token has gone is created unattached, since Foundry would
+      refuse the whole batch.
+    - `tests/e2e/structures.spec.ts` moves the token and checks both.
 - **Region behaviours** on terrain regions and rooms. Generated today:
   `teleportToken` (submaps), `changeLevel` (stairs), `defineSurface` (room
   floors, roof stamps) and **[done] `modifyMovementCost`**: a stamp's

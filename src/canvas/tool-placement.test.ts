@@ -14,7 +14,7 @@ describe('tool placement', () => {
         expect(NATIVE_GROUPS).toEqual(['walls', 'tiles', 'lighting', 'regions', 'notes', 'drawings']);
         expect(NATIVE_TOOLS.drawings).toEqual(['label', 'edit', 'erase']);
         expect(NATIVE_TOOLS.lighting).toEqual(['link']);
-        expect(NATIVE_TOOLS.regions).toEqual(['effects']);
+        expect(NATIVE_TOOLS.regions).toEqual(['zone', 'effects', 'edit', 'erase']);
         expect(NATIVE_TOOLS.notes).toEqual(['pin', 'edit', 'erase']);
         expect(moduleTool('notes', 'zephyrex-pin', OWN)).toBe('pin');
         expect(Object.keys(NATIVE_TOOLS).sort()).toEqual([...NATIVE_GROUPS].sort());

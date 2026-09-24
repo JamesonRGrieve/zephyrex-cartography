@@ -18,6 +18,7 @@ import type {
     NoteDoc,
     RegionBehaviour,
     RegionDoc,
+    RegionGeometry,
     SenseLevel,
     SoundDoc,
     TileDoc,
@@ -365,6 +366,28 @@ export function regionShape(polygon: readonly Point[]): RegionShape {
 /** A shape anchored at its centre. */
 const CENTRE_ANCHOR = 0.5;
 
+/** A zone's shape as Foundry's own shape data; a rectangle is centred on the zone's point. */
+export function geometryShape(geometry: RegionGeometry): RegionShape {
+    const { x, y, rotation, gridBased } = geometry;
+    const placed = { x, y, gridBased, hole: false };
+    switch (geometry.kind) {
+        case 'circle':
+            return { type: 'circle', ...placed, radius: geometry.radius };
+        case 'ellipse':
+            return { type: 'ellipse', ...placed, radiusX: geometry.radiusX, radiusY: geometry.radiusY, rotation };
+        case 'ring':
+            return { type: 'ring', ...placed, radius: geometry.radius, innerWidth: geometry.innerWidth, outerWidth: geometry.outerWidth };
+        case 'cone':
+            return { type: 'cone', ...placed, radius: geometry.radius, angle: geometry.angle, rotation, curvature: geometry.curvature };
+        case 'line':
+            return { type: 'line', ...placed, length: geometry.length, width: geometry.width, rotation };
+        case 'rectangle':
+            break;
+    }
+    const { width, height } = geometry;
+    return { type: 'rectangle', ...placed, width, height, anchorX: CENTRE_ANCHOR, anchorY: CENTRE_ANCHOR, rotation };
+}
+
 /** A Scene Region's UUID. */
 export function regionUuid(scene: string, region: string): string {
     return `Scene.${scene}.Region.${region}`;
@@ -505,7 +528,8 @@ export function regionCreateData(
         _id: ids[i] ?? '',
         name: nameOf(region),
         color: regionColour(region),
-        shapes: [regionShape(region.polygon)],
+        shapes: [region.geometry === undefined ? regionShape(region.polygon) : geometryShape(region.geometry)],
+        ...(region.attachedTo === undefined ? {} : { attachment: { token: region.attachedTo } }),
         elevation: { bottom: region.bottom, top: region.top },
         behaviors: [...behaviourData(region.behaviour), ...effectBehaviours(region.effects ?? [], { scene, region: ids[i] ?? '' })],
         // A region drawn from a feature is edited through the feature, so it is locked and

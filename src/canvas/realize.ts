@@ -22,6 +22,7 @@ import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { SwitchTarget } from '../tools/switch-targets';
 import { type Costed, storedCost } from '../tools/terrain-cost';
 import { DEFAULT_WALL_PRESET } from '../tools/wall-presets';
+import { makeZone, scaledZoneShape, withZoneSettings } from '../tools/zone';
 import type { CartographyController } from './controller';
 
 export interface RealizeOptions {
@@ -68,6 +69,16 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         const settings = { text: spec.text, entry: spec.entry, page: spec.page, icon: spec.icon, global: spec.global };
         return { ...withPinSettings(makePin(id, scale.point(spec)), settings), level };
     }
+    if (spec.type === 'zone') {
+        const zone = withZoneSettings(makeZone(id, scale.point(spec)), {
+            name: spec.name,
+            shape: scaledZoneShape(spec.shape, scale.length(1)),
+            rotation: spec.rotation,
+            gridBased: spec.gridBased,
+            attachedTo: spec.attachedTo,
+        });
+        return zone && { ...zone, ...areaOf(spec), level };
+    }
     const points = spec.points.map(scale.point);
     let feature: Feature | null;
     if (spec.type === 'region') {
@@ -95,7 +106,7 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
 }
 
 /** A spec area's own fields. */
-type AreaSpec = Extract<FeatureSpec, { type: 'region' | 'stroke' | 'room' }>;
+type AreaSpec = Extract<FeatureSpec, { type: 'region' | 'stroke' | 'room' | 'zone' }>;
 
 /** What a spec area costs to cross, the effects on it and its region's display, as a feature stores them. */
 function areaOf(spec: AreaSpec): Costed & Affected {

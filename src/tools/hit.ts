@@ -12,6 +12,7 @@ import { labelCorners } from './label';
 import { PIN_HIT_RADIUS, pinPoint } from './pin';
 import { regionOutline } from './region';
 import { stampCorners } from './stamp';
+import { zoneHit } from './zone';
 
 /** Extra tolerance (scene px) so thin paths/strokes are still comfortably clickable. */
 const PATH_HIT_PADDING = 4;
@@ -38,6 +39,9 @@ export function featureHit(feature: Feature, pt: Point): boolean {
     }
     if (feature.type === 'pin') {
         return distance(pt, pinPoint(feature)) <= PIN_HIT_RADIUS;
+    }
+    if (feature.type === 'zone') {
+        return zoneHit(feature, pt);
     }
     if (feature.type === 'label') {
         return pointInPolygon(

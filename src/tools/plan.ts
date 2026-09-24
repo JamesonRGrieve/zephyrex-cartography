@@ -38,6 +38,7 @@ import type { StrokeFeature } from './stroke';
 import { SWITCH_BLOCKS } from './switches';
 import { type Costed, movementCostOf, NORMAL_COST } from './terrain-cost';
 import { type PresetWall, presetWall, type WallPreset } from './wall-presets';
+import { type ZoneFeature, zonePoint } from './zone';
 
 export interface DocumentPlan {
     readonly walls: readonly WallDoc[];
@@ -519,6 +520,9 @@ export function planDocuments(feature: Feature, context: PlanContext = NO_CONTEX
         const { elevation, level } = floorOf(feature, context);
         return { ...NO_PLAN, drawings: [{ ...labelPoint(feature), ...labelBox(feature), elevation, level, ...labelSettingsOf(feature) }] };
     }
+    if (feature.type === 'zone') {
+        return { ...NO_PLAN, regions: [zoneRegion(feature, context.levels)] };
+    }
     if (feature.type === 'path' && feature.walls !== null) {
         return { ...NO_PLAN, walls: pathWalls(feature, feature.walls, floorOf(feature, context)) };
     }
@@ -581,6 +585,16 @@ function areaRegion(feature: Feature & Costed & Affected, label: RegionDoc['labe
         behaviour: cost === NORMAL_COST ? null : { kind: 'terrain', difficulties: { walk: cost } },
         ...(effects.length > 0 ? { effects } : {}),
         ...(customDisplay(display) ? { display } : {}),
+    };
+}
+
+/** A zone's region: always there, in its own Foundry shape, moving with its token if it has one. */
+function zoneRegion(zone: ZoneFeature, levels: readonly Level[]): RegionDoc {
+    const { x, y } = zonePoint(zone);
+    return {
+        ...areaRegion(zone, { kind: 'zone', title: zone.name }, [], levels),
+        geometry: { ...zone.shape, x, y, rotation: zone.rotation, gridBased: zone.gridBased },
+        ...(zone.attachedTo === null ? {} : { attachedTo: zone.attachedTo }),
     };
 }
 

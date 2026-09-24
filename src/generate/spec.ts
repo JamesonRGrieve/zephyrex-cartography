@@ -31,6 +31,7 @@ import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
 import { FOG_MODES } from '../tools/scene-settings';
 import { DEFAULT_WALL_PRESET, WALL_PRESETS } from '../tools/wall-presets';
+import { CONE_CURVATURES, FULL_TURN, validZoneShape } from '../tools/zone';
 
 export const SCENE_SPEC_SCHEMA_VERSION = 1;
 
@@ -342,7 +343,47 @@ const labelSpec = z
     .strict()
     .describe('A map label: text on the map, as a native Drawing.');
 
-const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec, pinSpec, labelSpec]);
+const zoneShapeSpec = z
+    .discriminatedUnion('kind', [
+        z.object({ kind: z.literal('circle'), radius: positive }).strict(),
+        z.object({ kind: z.literal('ellipse'), radiusX: positive, radiusY: positive }).strict(),
+        z
+            .object({ kind: z.literal('ring'), radius: positive, innerWidth: positive, outerWidth: positive })
+            .strict()
+            .describe('The band runs from radius − innerWidth to radius + outerWidth.'),
+        z
+            .object({
+                kind: z.literal('cone'),
+                radius: positive,
+                angle: z.number().positive().max(FULL_TURN).describe('Its spread, in degrees: 90 at most when flat, 180 when a semicircle.'),
+                curvature: z.enum(CONE_CURVATURES).default('round'),
+            })
+            .strict(),
+        z.object({ kind: z.literal('line'), length: positive, width: positive }).strict(),
+        z.object({ kind: z.literal('rectangle'), width: positive, height: positive }).strict(),
+    ])
+    .describe("One of Foundry's region shapes, sized in the spec's units. A cone or line starts at the zone's point; the rest are centred on it.");
+
+const zoneSpec = z
+    .object({
+        type: z.literal('zone'),
+        key: featureKey,
+        x: z.number(),
+        y: z.number(),
+        shape: zoneShapeSpec,
+        name: z.string().default('').describe('The region\'s name; "" for "Zone".'),
+        rotation: z.number().default(0).describe('Degrees; a cone or line points this way.'),
+        gridBased: z.boolean().default(false).describe('Have Foundry measure the shape in grid units, conforming to the grid.'),
+        attachedTo: text.nullable().default(null).describe('Id of a token on the scene the region moves with; null: none.'),
+        movementCost,
+        effects: areaEffects,
+        display: areaDisplay,
+        level,
+    })
+    .strict()
+    .describe("A zone: a Scene Region in one of Foundry's shapes, with a movement cost, behaviours and a display like any area.");
+
+const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec, pinSpec, labelSpec, zoneSpec]);
 
 const signed = z.number().min(-1).max(1);
 
@@ -467,10 +508,22 @@ function doorIssues(f: FeatureSpec, i: number): SpecIssue[] {
     );
 }
 
+/** A zone shape Foundry would refuse: a ring whose band reaches past its centre, or a cone wider than its curvature allows. */
+function zoneIssues(f: FeatureSpec, i: number): SpecIssue[] {
+    return f.type === 'zone' && !validZoneShape(f.shape)
+        ? [
+              {
+                  path: `features.${i}.shape`,
+                  message: 'Foundry does not take this shape: a ring must not reach past its centre, nor a cone spread wider than its curvature allows',
+              },
+          ]
+        : [];
+}
+
 /**
  * What JSON Schema cannot express: unique level and feature keys, references
  * to them that resolve (a feature's level, a level's visible levels, a
- * switch's controls), and doors on real segments.
+ * switch's controls), doors on real segments, and zone shapes Foundry takes.
  */
 function referenceIssues(spec: SceneSpec): SpecIssue[] {
     const levels = declaredKeys(spec.levels, 'levels', 'level');
@@ -484,6 +537,7 @@ function referenceIssues(spec: SceneSpec): SpecIssue[] {
             ...unresolved(f.level === undefined ? [] : [f.level], levels.keys, () => `features.${i}.level`, 'level'),
             ...(f.type === 'stamp' ? unresolved(f.controls, features.keys, (j) => `features.${i}.controls.${j}`, 'feature') : []),
             ...doorIssues(f, i),
+            ...zoneIssues(f, i),
         ]),
     ];
 }

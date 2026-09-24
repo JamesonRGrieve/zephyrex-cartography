@@ -74,6 +74,7 @@ import { sameTarget, type SwitchTarget, toggleTarget } from '../tools/switch-tar
 import { lampVariant, switchOf } from '../tools/switches';
 import { NORMAL_COST, storedCost, validCost } from '../tools/terrain-cost';
 import type { WallPreset } from '../tools/wall-presets';
+import { makeZone, NEW_ZONE, withZonePlace, withZoneSettings, type ZoneFeature, zonePoint, type ZoneSettings, zoneSettingsOf } from '../tools/zone';
 import type { FeatureRenderer } from './renderer';
 import { type DocumentKind, StagedChanges, type StagedWrite } from './staged-changes';
 
@@ -717,6 +718,52 @@ export class CartographyController {
             return false;
         }
         await this.replaceFeature(id, { ...f, ...settings });
+        return true;
+    }
+
+    /** Put a zone at `at` on the level being edited; returns its feature id, or null if its shape is not one Foundry takes. */
+    async placeZone(at: Point, settings: ZoneSettings = NEW_ZONE): Promise<string | null> {
+        const zone = withZoneSettings(makeZone(this.makeId(), at), settings);
+        if (zone === null) {
+            return null;
+        }
+        await this.add(zone);
+        return zone.id;
+    }
+
+    /** A zone's shape, name and token, or null for anything else. */
+    zoneSettings(id: string): ZoneSettings | null {
+        const f = this.getFeature(id);
+        return f?.type === 'zone' ? zoneSettingsOf(f) : null;
+    }
+
+    /** Reshape, rename or attach a zone, re-syncing its region; false if it is not a zone or the shape is not one Foundry takes. */
+    async setZoneSettings(id: string, settings: ZoneSettings): Promise<boolean> {
+        const f = this.getFeature(id);
+        const next = f?.type === 'zone' ? withZoneSettings(f, settings) : null;
+        if (next === null) {
+            return false;
+        }
+        await this.replaceFeature(id, next);
+        return true;
+    }
+
+    /**
+     * Follow a zone's region that Foundry moved with its token: record where
+     * the zone now is and how it is turned, without recreating the region
+     * (Foundry already moved it). False when the region is no zone's, or the
+     * zone is already there.
+     */
+    async followZone(regionId: string, at: Point, rotation: number): Promise<boolean> {
+        const zone = this.features.find((f): f is ZoneFeature => f.type === 'zone' && f.docs.regions.includes(regionId));
+        const was = zone && zonePoint(zone);
+        if (!zone || !was || (was.x === at.x && was.y === at.y && zone.rotation === rotation)) {
+            return false;
+        }
+        const next = withZonePlace(zone, at, rotation);
+        this.features = this.features.map((f) => (f.id === zone.id ? next : f));
+        await this.store.save(this.features);
+        this.redraw();
         return true;
     }
 
