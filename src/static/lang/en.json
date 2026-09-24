@@ -106,7 +106,17 @@
             "Region": "Region",
             "Unrestricted": "Not shaped by walls",
             "Observed": "Players observe it",
-            "Untouched": "Left as it is"
+            "Untouched": "Left as it is",
+            "Spawn": {
+                "Title": "Spawn",
+                "Actors": "Actors, one per line: a UUID, or a count then a UUID",
+                "Snap": "Snap to the grid",
+                "AvoidOccupied": "Avoid occupied spaces",
+                "Now": "Spawn now",
+                "Spawned": "Spawned {count} tokens.",
+                "Missing": "No Actor has the UUID {uuid}.",
+                "Failed": "The tokens could not be spawned: {message}"
+            }
         },
         "Materials": {
             "Title": "Room materials",

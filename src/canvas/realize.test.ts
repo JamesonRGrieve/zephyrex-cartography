@@ -7,6 +7,7 @@ import { areaSettingsOf, isArea } from '../tools/areas';
 import type { WallDoc } from '../tools/documents';
 import { NO_LEVEL_ART } from '../tools/levels';
 import { LIQUID_LOOKS } from '../tools/path';
+import { NO_SPAWN } from '../tools/spawn';
 import { realizeSpec } from './realize';
 import { catalogStamps, makeHarness, SWITCH_STAMPS } from './test-fakes';
 
@@ -320,6 +321,7 @@ describe('realizeSpec', () => {
             movementCost: 2,
             effects: [{ kind: 'darkness', mode: 'override', modifier: 0.7 }],
             display: DEFAULT_AREA_DISPLAY,
+            spawn: NO_SPAWN,
         });
         expect(marsh && isArea(marsh) ? areaSettingsOf(marsh).effects : null).toEqual([
             { kind: 'text', text: 'Squelch', colour: '#ffffff', visibility: 'anyone', once: false, events: ['tokenTurnEnd'] },

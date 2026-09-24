@@ -230,6 +230,31 @@ test('a zone attached to a token moves with it, and the zone follows its region'
     await expect.poll(where).toEqual({ region: [650, 450], zone: [650, 450] });
 });
 
+test('a spawn zone spawns its actors’ tokens inside its region, snapped and apart', async ({ world }) => {
+    // The e2e system's Actor type is not one fvtt-types knows, so the Actor is made from plain script.
+    const actorUuid = await world.evaluate<string>("Actor.create({ name: 'Cultist', type: 'npc' }).then((actor) => actor.uuid)");
+    expect(actorUuid).toMatch(/^Actor\.\w+$/u);
+    const result = await world.evaluate(async (uuid) => {
+        const api = game.modules?.get('zephyrex-cartography').api;
+        const outcome = await api?.buildSpec({
+            schemaVersion: 1,
+            features: [{ type: 'zone', key: 'ambush', x: 6, y: 6, shape: { kind: 'circle', radius: 2 }, spawn: { actors: [{ uuid, count: 3 }] } }],
+        });
+        const zoneId = outcome?.ok === true ? outcome.report.features[0] ?? '' : '';
+        const spawned = await api?.spawn(zoneId);
+        const tokens = (canvas?.scene?.tokens.contents ?? []).map((token) => ({ x: token.x, y: token.y }));
+        return { spawned, tokens };
+    }, actorUuid);
+    expect(result.spawned).toEqual({ spawned: 3, missing: [] });
+    expect(result.tokens).toHaveLength(3);
+    // Each on its own grid square (100 px), inside the circle 200 px about (600, 600).
+    expect(new Set(result.tokens.map((t) => `${t.x},${t.y}`)).size).toBe(3);
+    for (const token of result.tokens) {
+        expect(token.x % 100).toBe(0);
+        expect(Math.hypot(token.x + 50 - 600, token.y + 50 - 600)).toBeLessThanOrEqual(200);
+    }
+});
+
 test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
     const walls = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

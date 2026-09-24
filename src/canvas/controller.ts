@@ -55,6 +55,7 @@ import {
     withRoomMaterials,
 } from '../tools/room';
 import { hasSceneSettings, type SceneSettings } from '../tools/scene-settings';
+import { storedSpawn } from '../tools/spawn';
 import {
     bakedImagePath,
     blankMask,
@@ -241,6 +242,9 @@ const MAX_HISTORY = 50;
 
 /** A door stamp placed within this many grid squares of a room wall snaps onto it. */
 const DOOR_SNAP_SQUARES = 0.5;
+
+/** The labels of the regions areas carry their settings on: a room's own, painted ground's and a zone's. */
+const AREA_REGION_KINDS: ReadonlySet<string> = new Set(['room', 'terrain', 'zone']);
 
 function swap(arr: Feature[], a: number, b: number): void {
     const first = arr[a];
@@ -1238,8 +1242,20 @@ export class CartographyController {
             movementCost: storedCost(settings.movementCost),
             effects: storedEffects(settings.effects),
             display: storedDisplay(settings.display),
+            spawn: storedSpawn(settings.spawn),
         });
         return true;
+    }
+
+    /** The id of the Scene Region an area's settings live on, or null if it is not an area or has none yet. */
+    areaRegionId(id: string): string | null {
+        const f = this.getFeature(id);
+        if (!f || !isArea(f)) {
+            return null;
+        }
+        // An area's own region sits among the others its feature plans (a room's floor and ceiling) in plan order.
+        const index = planDocuments(f, this.planContext()).regions.findIndex((region) => AREA_REGION_KINDS.has(region.label.kind));
+        return f.docs.regions[index] ?? null;
     }
 
     /** Put a door with `settings` on a room's perimeter segment, or clear it with null; re-syncs the native walls. */

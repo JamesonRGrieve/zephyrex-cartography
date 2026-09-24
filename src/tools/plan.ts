@@ -33,6 +33,7 @@ import type { CartographyPath } from './path';
 import { pinPoint, pinSettingsOf } from './pin';
 import { regionOutline, type RegionFeature } from './region';
 import { roomDoorLook, roomLight, roomWalls, type RoomDoor, type RoomFeature } from './room';
+import { customSpawn, spawnOf } from './spawn';
 import { stampCentre, stampCorners, stampDoorAxis, stampPoint, type StampFeature } from './stamp';
 import type { StrokeFeature } from './stroke';
 import { SWITCH_BLOCKS } from './switches';
@@ -598,7 +599,7 @@ function zoneRegion(zone: ZoneFeature, levels: readonly Level[]): RegionDoc {
     };
 }
 
-/** Whether an area needs its own Scene Region whatever the world's terrain setting: difficult ground, effects on it, or a display of its own. */
+/** Whether an area needs its own Scene Region whatever the world's terrain setting: difficult ground, effects on it, a display of its own, or tokens to spawn into it. */
 function needsArea(feature: Costed & Affected): boolean {
-    return movementCostOf(feature) !== NORMAL_COST || effectsOf(feature).length > 0 || customDisplay(displayOf(feature));
+    return movementCostOf(feature) !== NORMAL_COST || effectsOf(feature).length > 0 || customDisplay(displayOf(feature)) || customSpawn(spawnOf(feature));
 }

@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_AREA_DISPLAY } from '../tools/area-effects';
 import type { AreaSettings } from '../tools/areas';
+import { NO_SPAWN } from '../tools/spawn';
 import type { Brush } from './controller';
 import { makeHarness } from './test-fakes';
 
@@ -28,7 +29,7 @@ async function scene(): Promise<ReturnType<typeof makeHarness>> {
 }
 
 /** An area left as it was drawn. */
-const PLAIN: AreaSettings = { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY };
+const PLAIN: AreaSettings = { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY, spawn: NO_SPAWN };
 
 describe('area settings', () => {
     it('are a room’s or painted ground’s movement cost, effects and region display, and nothing else’s', async () => {
@@ -54,6 +55,20 @@ describe('area settings', () => {
         expect(c.getFeature('p1')?.docs.regions).toEqual([]);
         await c.undo();
         expect(c.areaSettings('p1')).toEqual({ ...PLAIN, movementCost: 2, effects: [dark] });
+    });
+
+    it('give an area its own region for tokens to spawn into, and name that region among a room’s others', async () => {
+        const { c } = await scene();
+        expect(c.areaRegionId('p2')).toBeNull();
+        const spawn = { ...NO_SPAWN, actors: [{ uuid: 'Actor.cultist', count: 2 }] };
+        expect(await c.setAreaSettings('p2', { ...PLAIN, spawn })).toBe(true);
+        expect(c.areaSettings('p2')?.spawn).toEqual(spawn);
+        const painted = c.getFeature('p2')?.docs.regions;
+        expect(painted).toHaveLength(1);
+        expect(c.areaRegionId('p2')).toBe(painted?.[0]);
+        expect(await c.setAreaSettings('p1', { ...PLAIN, spawn })).toBe(true);
+        expect(c.areaRegionId('p1')).toBe(c.getFeature('p1')?.docs.regions[0]);
+        expect(c.areaRegionId('nope')).toBeNull();
     });
 
     it('give an area a region of its own for a display of its own alone', async () => {

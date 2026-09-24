@@ -29,6 +29,7 @@ describe('parseSceneSpec', () => {
                         movementCost: 1,
                         effects: [],
                         display: { visibility: 'layer', highlight: 'shapes', measurements: false, observed: false, restriction: null },
+                        spawn: { actors: [], placement: 'random', snap: true, avoidOccupied: true },
                         doors: [{ segment: 1, type: 'door', state: 'closed', sound: null, animation: null }],
                     },
                 ],

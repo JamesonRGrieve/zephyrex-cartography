@@ -17,6 +17,7 @@ import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath } from '../tools/path';
 import { makePin, withPinSettings } from '../tools/pin';
 import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
+import { storedSpawn } from '../tools/spawn';
 import type { StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import type { SwitchTarget } from '../tools/switch-targets';
@@ -108,10 +109,15 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
 /** A spec area's own fields. */
 type AreaSpec = Extract<FeatureSpec, { type: 'region' | 'stroke' | 'room' | 'zone' }>;
 
-/** What a spec area costs to cross, the effects on it and its region's display, as a feature stores them. */
+/** What a spec area costs to cross, the effects on it, its region's display and what it spawns, as a feature stores them. */
 function areaOf(spec: AreaSpec): Costed & Affected {
     const effects = spec.effects.map(({ disabled, ...effect }): AreaEffect => withDisabled(effect, disabled));
-    return { movementCost: storedCost(spec.movementCost), effects: storedEffects(effects), display: storedDisplay(spec.display) };
+    return {
+        movementCost: storedCost(spec.movementCost),
+        effects: storedEffects(effects),
+        display: storedDisplay(spec.display),
+        spawn: storedSpawn(spec.spawn),
+    };
 }
 
 function placement(spec: Extract<FeatureSpec, { type: 'stamp' }>, scale: Scale): StampPlacement {

@@ -30,6 +30,7 @@ import { NO_LEVEL_ART, TEXTURE_FITS } from '../tools/levels';
 import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
 import { FOG_MODES } from '../tools/scene-settings';
+import { MAX_SPAWN_COUNT, NO_SPAWN, SPAWN_PLACEMENTS } from '../tools/spawn';
 import { DEFAULT_WALL_PRESET, WALL_PRESETS } from '../tools/wall-presets';
 import { CONE_CURVATURES, FULL_TURN, validZoneShape } from '../tools/zone';
 
@@ -139,6 +140,21 @@ const areaDisplay = z
     .default(DEFAULT_AREA_DISPLAY)
     .describe("How the area's Scene Region shows, and whether walls shape it.");
 
+const areaSpawn = z
+    .object({
+        actors: z
+            .array(z.object({ uuid: text.describe("An Actor's UUID."), count: z.number().int().min(1).max(MAX_SPAWN_COUNT).default(1) }).strict())
+            .default([]),
+        placement: z.enum(SPAWN_PLACEMENTS).default(NO_SPAWN.placement).describe('Anywhere inside, or at the centre.'),
+        snap: z.boolean().default(NO_SPAWN.snap).describe('Snap each token to the grid.'),
+        avoidOccupied: z.boolean().default(NO_SPAWN.avoidOccupied).describe('Keep off spaces other tokens hold.'),
+    })
+    .strict()
+    .default({ ...NO_SPAWN, actors: [] })
+    .describe(
+        "Tokens to spawn into the area's Scene Region, for an encounter or reinforcements: the GM spawns them from the area effects panel or the module API.",
+    );
+
 const regionSpec = z
     .object({
         type: z.literal('region'),
@@ -148,6 +164,7 @@ const regionSpec = z
         movementCost,
         effects: areaEffects,
         display: areaDisplay,
+        spawn: areaSpawn,
         level,
     })
     .strict()
@@ -163,6 +180,7 @@ const strokeSpec = z
         movementCost,
         effects: areaEffects,
         display: areaDisplay,
+        spawn: areaSpawn,
         level,
     })
     .strict()
@@ -222,6 +240,7 @@ const roomSpec = z
         movementCost,
         effects: areaEffects,
         display: areaDisplay,
+        spawn: areaSpawn,
         doors: z.array(doorSpec).default([]),
         level,
     })
@@ -378,6 +397,7 @@ const zoneSpec = z
         movementCost,
         effects: areaEffects,
         display: areaDisplay,
+        spawn: areaSpawn,
         level,
     })
     .strict()

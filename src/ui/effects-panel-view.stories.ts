@@ -3,6 +3,7 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { type AreaEffectKind, DEFAULT_AREA_DISPLAY, type RegionEvent } from '../tools/area-effects';
 import type { AreaSettings } from '../tools/areas';
+import { NO_SPAWN, spawnCount } from '../tools/spawn';
 import { parseCostInput } from '../tools/terrain-cost';
 import { renderEffectsPanel, type EffectsLabels } from './effects-panel-view';
 
@@ -67,6 +68,15 @@ const LABELS: EffectsLabels = {
     disabled: 'Disabled',
     toggleActions: { enable: 'Enable Behaviors', disable: 'Disable Behaviors' },
     untouched: 'Left as it is',
+    spawn: {
+        title: 'Spawn',
+        actors: 'Actors, one per line: a UUID, or a count then a UUID',
+        placement: 'Arrive',
+        placements: { random: 'Anywhere inside', center: 'At the centre' },
+        snap: 'Snap to the grid',
+        avoidOccupied: 'Avoid occupied spaces',
+        spawnNow: 'Spawn now',
+    },
     region: {
         title: 'Region',
         visibility: 'Visibility',
@@ -123,6 +133,13 @@ export function mountEffectsPanel(args: EffectsPanelArgs): HTMLElement {
                 settings = { ...settings, display };
                 render();
             },
+            setSpawn: (spawn) => {
+                settings = { ...settings, spawn };
+                render();
+            },
+            spawnNow: () => {
+                windowEl.dataset['spawned'] = String(spawnCount(settings.spawn));
+            },
         });
     };
     render();
@@ -133,7 +150,7 @@ const meta: Meta<EffectsPanelArgs> = {
     title: 'Regions/Area Effects Panel',
     excludeStories: ['mountEffectsPanel'],
     render: mountEffectsPanel,
-    args: { settings: { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY } },
+    args: { settings: { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY, spawn: NO_SPAWN } },
 };
 
 export default meta;
@@ -149,6 +166,7 @@ export const DarkMireRoom: Story = {
             effects: [{ kind: 'darkness', mode: 'darken', modifier: 0.4 }, { kind: 'suppressWeather' }],
             // The darkness stops at the walls, and players see where it lies.
             display: { visibility: 'always', highlight: 'coverage', measurements: false, observed: false, restriction: { type: 'light', priority: 0 } },
+            spawn: NO_SPAWN,
         },
     },
 };
@@ -165,6 +183,7 @@ export const TrappedCorridor: Story = {
                 { kind: 'activeEffect', effects: ['Compendium.world.effects.ActiveEffect.poisoned'] },
             ],
             display: DEFAULT_AREA_DISPLAY,
+            spawn: NO_SPAWN,
         },
     },
 };
@@ -180,6 +199,27 @@ export const LightsOutRoom: Story = {
                 { kind: 'toggle', events: ['tokenExit'], enable: [], disable: [0] },
             ],
             display: DEFAULT_AREA_DISPLAY,
+            spawn: NO_SPAWN,
+        },
+    },
+};
+
+/** Reinforcements that pour out of a hab block: three cultists and their leader, anywhere inside. */
+export const CultAmbush: Story = {
+    args: {
+        settings: {
+            movementCost: 1,
+            effects: [],
+            display: DEFAULT_AREA_DISPLAY,
+            spawn: {
+                actors: [
+                    { uuid: 'Actor.cultistNeophyte', count: 3 },
+                    { uuid: 'Actor.cultMagus', count: 1 },
+                ],
+                placement: 'random',
+                snap: true,
+                avoidOccupied: true,
+            },
         },
     },
 };

@@ -11,7 +11,8 @@ import { I18N } from '../i18n';
 import type { AreaEffectKind } from '../tools/area-effects';
 import { parseCostInput } from '../tools/terrain-cost';
 import { renderEffectsPanel, type EffectsLabels, type RegionDisplayLabels } from '../ui/effects-panel-view';
-import { localize } from './localize';
+import { format, localize } from './localize';
+import { spawnInto } from './spawner';
 import { createViewWindow } from './view-window';
 
 const PANEL_WIDTH = 460;
@@ -65,7 +66,35 @@ function labels(): EffectsLabels {
         toggleActions: { enable: behaviour('toggleBehavior.FIELDS.enable.label'), disable: behaviour('toggleBehavior.FIELDS.disable.label') },
         untouched: localize(I18N.effects.untouched),
         region: regionLabels(),
+        spawn: {
+            title: localize(I18N.effects.spawn.title),
+            actors: localize(I18N.effects.spawn.actors),
+            placement: localize(I18N.submap.placement),
+            placements: { random: localize(I18N.submap.placements.random), center: localize(I18N.submap.placements.center) },
+            snap: localize(I18N.effects.spawn.snap),
+            avoidOccupied: localize(I18N.effects.spawn.avoidOccupied),
+            spawnNow: localize(I18N.effects.spawn.now),
+        },
     };
+}
+
+/** Spawn area `areaId`'s tokens into its region, and tell the GM what came of it. */
+async function spawnArea(controller: CartographyController, areaId: string): Promise<void> {
+    const settings = controller.areaSettings(areaId);
+    const regionId = controller.areaRegionId(areaId);
+    if (!settings || regionId === null) {
+        return;
+    }
+    try {
+        const { spawned, missing } = await spawnInto(regionId, settings.spawn);
+        for (const uuid of missing) {
+            ui.notifications?.warn(format(I18N.effects.spawn.missing, { uuid }));
+        }
+        ui.notifications?.info(format(I18N.effects.spawn.spawned, { count: String(spawned) }));
+    } catch (error) {
+        // Foundry throws when there is no room left inside, or the GM may not create tokens.
+        ui.notifications?.warn(format(I18N.effects.spawn.failed, { message: error instanceof Error ? error.message : String(error) }));
+    }
 }
 
 /** The region display's fields, as Foundry's Region sheet names them. */
@@ -142,6 +171,12 @@ export function registerEffectsRuntime(controller: () => CartographyController |
                 },
                 setDisplay: (display) => {
                     save({ ...settings, display });
+                },
+                setSpawn: (spawn) => {
+                    save({ ...settings, spawn });
+                },
+                spawnNow: () => {
+                    void spawnArea(active, id);
                 },
             });
         },

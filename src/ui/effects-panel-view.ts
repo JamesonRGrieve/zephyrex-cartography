@@ -39,7 +39,8 @@ import {
     type ToggleAction,
 } from '../tools/area-effects';
 import type { AreaSettings } from '../tools/areas';
-import { button, choice, el, labelledCheckbox, labelledInput, labelledTextArea, replacePreservingFocus } from './dom';
+import { type AreaSpawn, parseSpawnLines, SPAWN_PLACEMENTS, spawnCount, spawnLines, type SpawnPlacement } from '../tools/spawn';
+import { button, checkedTextArea, choice, el, labelledCheckbox, labelledInput, labelledTextArea, replacePreservingFocus } from './dom';
 
 export interface EffectsPanel {
     readonly settings: AreaSettings;
@@ -79,6 +80,19 @@ export interface EffectsLabels {
     readonly toggleActions: Readonly<Record<ToggleAction, string>>;
     readonly untouched: string;
     readonly region: RegionDisplayLabels;
+    readonly spawn: SpawnLabels;
+}
+
+/** The spawn section's fields. */
+export interface SpawnLabels {
+    readonly title: string;
+    /** The actors, one per line, each a UUID or a count then a UUID. */
+    readonly actors: string;
+    readonly placement: string;
+    readonly placements: Readonly<Record<SpawnPlacement, string>>;
+    readonly snap: string;
+    readonly avoidOccupied: string;
+    readonly spawnNow: string;
 }
 
 /** The region's display fields, named as Foundry's Region sheet names them. */
@@ -105,6 +119,9 @@ export interface EffectsHandlers {
     readonly setEffects: (effects: readonly AreaEffect[]) => void;
     readonly setAdding: (kind: AreaEffectKind) => void;
     readonly setDisplay: (display: AreaDisplay) => void;
+    readonly setSpawn: (spawn: AreaSpawn) => void;
+    /** Spawn the area's tokens now. */
+    readonly spawnNow: () => void;
 }
 
 /** Select value standing for "not restricted" (no restriction type is empty). */
@@ -375,5 +392,43 @@ export function renderEffectsPanel(root: HTMLElement, panel: EffectsPanel, label
         displaySection(panel.settings.display, labels.region, handlers.setDisplay),
         list,
         adder,
+        spawnSection(panel.settings.spawn, labels.spawn, handlers),
     ]);
+}
+
+/** Lines of the actors' text area. */
+const SPAWN_ROWS = 3;
+
+/** What the area spawns and how Foundry places it, and the button that spawns it now (only while there is something to spawn). */
+function spawnSection(spawn: AreaSpawn, labels: SpawnLabels, handlers: EffectsHandlers): HTMLElement {
+    const section = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    const now = button('tw-text-xs', labels.spawnNow, 'spawn-now', handlers.spawnNow);
+    now.disabled = spawnCount(spawn) === 0;
+    section.append(
+        el('legend', 'tw-text-xs tw-font-bold', labels.title),
+        checkedTextArea(labels.actors, spawnLines(spawn.actors), 'spawn-actors', SPAWN_ROWS, (typed) => {
+            const actors = parseSpawnLines(typed);
+            if (actors !== null) {
+                handlers.setSpawn({ ...spawn, actors });
+            }
+            return actors !== null;
+        }),
+        choice(
+            'zc-spawn-placement',
+            labels.placement,
+            SPAWN_PLACEMENTS.map((placement) => [placement, labels.placements[placement]] as const),
+            spawn.placement,
+            (placement) => {
+                handlers.setSpawn({ ...spawn, placement });
+            },
+        ),
+        labelledCheckbox(labels.snap, spawn.snap, 'spawn-snap', (snap) => {
+            handlers.setSpawn({ ...spawn, snap });
+        }),
+        labelledCheckbox(labels.avoidOccupied, spawn.avoidOccupied, 'spawn-avoid', (avoidOccupied) => {
+            handlers.setSpawn({ ...spawn, avoidOccupied });
+        }),
+        now,
+    );
+    return section;
 }

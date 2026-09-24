@@ -65,6 +65,14 @@ export function labelledInput(
 
 /** A labelled monospace text area, full width; `onChange` gets its text once edited. */
 export function labelledTextArea(label: string, value: string, key: string, rows: number, onChange: (text: string) => void): HTMLLabelElement {
+    return checkedTextArea(label, value, key, rows, (text) => {
+        onChange(text);
+        return true;
+    });
+}
+
+/** A labelled monospace text area whose edit `accept` may refuse, putting the text back as it was. */
+export function checkedTextArea(label: string, value: string, key: string, rows: number, accept: (text: string) => boolean): HTMLLabelElement {
     const wrap = el('label', 'tw-flex tw-flex-col tw-gap-1 tw-text-xs tw-w-full', label);
     const area = el('textarea', 'tw-text-xs tw-font-mono tw-w-full');
     area.rows = rows;
@@ -72,7 +80,9 @@ export function labelledTextArea(label: string, value: string, key: string, rows
     area.value = value;
     focusKey(area, key);
     area.addEventListener('change', () => {
-        onChange(area.value);
+        if (!accept(area.value)) {
+            area.value = value;
+        }
     });
     wrap.append(area);
     return wrap;

@@ -159,6 +159,16 @@ export const I18N = {
         unrestricted: key('Effects.Unrestricted'),
         observed: key('Effects.Observed'),
         untouched: key('Effects.Untouched'),
+        spawn: {
+            title: key('Effects.Spawn.Title'),
+            actors: key('Effects.Spawn.Actors'),
+            snap: key('Effects.Spawn.Snap'),
+            avoidOccupied: key('Effects.Spawn.AvoidOccupied'),
+            now: key('Effects.Spawn.Now'),
+            spawned: key('Effects.Spawn.Spawned'),
+            missing: key('Effects.Spawn.Missing'),
+            failed: key('Effects.Spawn.Failed'),
+        },
     },
     materials: {
         title: key('Materials.Title'),

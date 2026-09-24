@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_AREA_DISPLAY } from '../tools/area-effects';
+import { NO_SPAWN } from '../tools/spawn';
 import * as stories from './effects-panel-view.stories';
 
 function mount(story: { readonly args?: Partial<stories.EffectsPanelArgs> }): HTMLElement {
     const el = stories.mountEffectsPanel({
-        settings: story.args?.settings ?? stories.default.args?.settings ?? { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY },
+        settings: story.args?.settings ?? stories.default.args?.settings ?? { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY, spawn: NO_SPAWN },
     });
     document.body.replaceChildren(el);
     return el;
@@ -32,11 +33,11 @@ function select(root: HTMLElement, id: string): HTMLSelectElement {
     return found;
 }
 
-/** Each behaviour's legend, after the region display's own. */
+/** Each behaviour's legend, between the region display's own and the spawn section's. */
 function legends(root: HTMLElement): string[] {
-    const [region, ...behaviours] = [...root.querySelectorAll('fieldset > legend.tw-font-bold')].map((legend) => legend.textContent);
-    expect(region).toBe('Region');
-    return behaviours;
+    const [region, ...rest] = [...root.querySelectorAll('fieldset > legend.tw-font-bold')].map((legend) => legend.textContent);
+    expect([region, rest.at(-1)]).toEqual(['Region', 'Spawn']);
+    return rest.slice(0, -1);
 }
 
 describe('area effects panel', () => {
@@ -142,8 +143,32 @@ describe('area effects panel', () => {
         expect(select(root, 'effect-1-target-0').value).toBe('disable');
     });
 
+    it('lists the actors to spawn, takes typed lines or reverts a malformed one, and spawns only when there is something to', () => {
+        const nothing = mount(stories.OrdinaryGround);
+        expect(nothing.querySelector<HTMLButtonElement>('button[data-zc-focus="spawn-now"]')?.disabled).toBe(true);
+        const root = mount(stories.CultAmbush);
+        const actors = (): HTMLTextAreaElement | null => root.querySelector<HTMLTextAreaElement>('textarea[data-zc-focus="spawn-actors"]');
+        expect(actors()?.value).toBe('3 Actor.cultistNeophyte\nActor.cultMagus');
+        const typed = actors();
+        if (typed) {
+            change(typed, '2 Actor.a\n\nActor.b');
+        }
+        expect(actors()?.value).toBe('2 Actor.a\nActor.b');
+        const bad = actors();
+        if (bad) {
+            change(bad, 'lots Actor.a');
+        }
+        expect(actors()?.value).toBe('2 Actor.a\nActor.b');
+        change(select(root, 'zc-spawn-placement'), 'center');
+        expect(select(root, 'zc-spawn-placement').value).toBe('center');
+        root.querySelector<HTMLInputElement>('input[data-zc-focus="spawn-avoid"]')?.click();
+        expect(root.querySelector<HTMLInputElement>('input[data-zc-focus="spawn-avoid"]')?.checked).toBe(false);
+        root.querySelector<HTMLButtonElement>('button[data-zc-focus="spawn-now"]')?.click();
+        expect(root.dataset['spawned']).toBe('3');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.OrdinaryGround, stories.DarkMireRoom, stories.TrappedCorridor, stories.LightsOutRoom]) {
+        for (const story of [stories.OrdinaryGround, stories.DarkMireRoom, stories.TrappedCorridor, stories.LightsOutRoom, stories.CultAmbush]) {
             expect(mount(story).querySelector('#zc-effect-kind')).not.toBeNull();
         }
     });

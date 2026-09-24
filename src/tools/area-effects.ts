@@ -9,6 +9,7 @@
  */
 import { parseCssHex } from './colour';
 import { isRecord, stringArray } from './guards';
+import { parseAreaSpawn, type Spawning } from './spawn';
 import { type Costed, parseMovementCost } from './terrain-cost';
 
 /** v14 `CONST.REGION_EVENTS`: what a region behaviour can subscribe to. */
@@ -227,8 +228,8 @@ export interface AreaDisplay {
 /** A region as the engine makes one: on the Regions layer, its true shapes, no measurements, the GM's alone, unrestricted. */
 export const DEFAULT_AREA_DISPLAY: AreaDisplay = { visibility: 'layer', highlight: 'shapes', measurements: false, observed: false, restriction: null };
 
-/** What an area carries: its effects and its region's display, each left out of the stored JSON while it has none. */
-export interface Affected {
+/** What an area carries: its effects, its region's display and what it spawns, each left out of the stored JSON while it has none. */
+export interface Affected extends Spawning {
     readonly effects?: readonly AreaEffect[] | undefined;
     readonly display?: AreaDisplay | undefined;
 }
@@ -261,10 +262,15 @@ export function parsePriority(typed: string): number | null {
     return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
-/** An area's persisted cost, effects and region display, as its parser spreads them. */
+/** An area's persisted cost, effects, region display and spawn, as its parser spreads them. */
 // eslint-disable-next-line no-restricted-syntax -- boundary: reads an area's fields from one untyped scene-flag entry
 export function parseAreaFields(v: Record<string, unknown>): Costed & Affected {
-    return { movementCost: parseMovementCost(v['movementCost']), effects: parseAreaEffects(v['effects']), display: parseAreaDisplay(v['display']) };
+    return {
+        movementCost: parseMovementCost(v['movementCost']),
+        effects: parseAreaEffects(v['effects']),
+        display: parseAreaDisplay(v['display']),
+        spawn: parseAreaSpawn(v['spawn']),
+    };
 }
 
 /** The persisted display of an area: each field valid or the default; none when it is the default. */

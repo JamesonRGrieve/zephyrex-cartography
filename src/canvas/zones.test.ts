@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_AREA_DISPLAY } from '../tools/area-effects';
+import { NO_SPAWN } from '../tools/spawn';
 import { NEW_ZONE } from '../tools/zone';
 import { makeHarness } from './test-fakes';
 
@@ -45,8 +46,9 @@ describe('zones', () => {
         const id = (await c.placeZone({ x: 0, y: 0 })) ?? '';
         expect(await c.setZoneSettings(id, { ...NEW_ZONE, shape: { kind: 'rectangle', width: 40, height: 20 } })).toBe(true);
         expect(d.deletedIds()).toEqual(['r0']);
-        expect(c.areaSettings(id)).toEqual({ movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY });
-        expect(await c.setAreaSettings(id, { movementCost: 3, effects: [], display: DEFAULT_AREA_DISPLAY })).toBe(true);
+        const plain = { movementCost: 1, effects: [], display: DEFAULT_AREA_DISPLAY, spawn: NO_SPAWN };
+        expect(c.areaSettings(id)).toEqual(plain);
+        expect(await c.setAreaSettings(id, { ...plain, movementCost: 3 })).toBe(true);
         expect(d.regions.at(-1)).toEqual([expect.objectContaining({ behaviour: { kind: 'terrain', difficulties: { walk: 3 } } })]);
     });
 

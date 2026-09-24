@@ -749,9 +749,22 @@ These make everything after them cheaper and safer, so they come first.
   recreated.
   - **Still open:** `avoidOccupied`, which is not in the 14.359 schema.
     Build it against a newer reference release.
-- **Spawn regions.** `RegionDocument#spawnTokens` and
-  `TokenLayer#placeTokens` [14.352, 14.356] make it possible for a scene spec
-  or generator to declare spawn regions: encounters and reinforcements.
+- **[done] Spawn regions.** Any area (painted ground, a room or a zone) can
+  carry a `spawn` (`tools/spawn.ts`), for encounters and reinforcements.
+  - It lists actors by UUID, each with a count (1–50), and how Foundry
+    places them: anywhere inside or at the centre, snapped or not, and
+    avoiding occupied spaces or not.
+  - An area with a spawn always has its region. `areaRegionId` names that
+    region among the others a room plans.
+  - The effects panel's Spawn section lists the actors a line each ("3
+    Actor.abc"), reverting a malformed line, and has a Spawn now button.
+  - The module API has `spawn(featureId)`. Both run Foundry's own
+    `RegionDocument#spawnTokens` (`foundry/spawner.ts`). A region on
+    several levels, or on every level, spawns on the viewed level. UUIDs
+    that name no Actor are reported, and Foundry's own errors (no room
+    left) are shown.
+  - The scene spec's areas take `spawn`. Proven in
+    `tests/e2e/structures.spec.ts`.
 - **Hazard presets.** Measured templates are gone [14.352], and areas of
   effect are regions now. Region presets (fire, gas, rubble) combine a shape
   with behaviours and fit the same model.

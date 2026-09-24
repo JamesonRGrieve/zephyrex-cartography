@@ -9,17 +9,19 @@ import { type AreaDisplay, type AreaEffect, displayOf, effectsOf } from './area-
 import type { Feature } from './feature';
 import type { RegionFeature } from './region';
 import type { RoomFeature } from './room';
+import { type AreaSpawn, spawnOf } from './spawn';
 import type { StrokeFeature } from './stroke';
 import { movementCostOf } from './terrain-cost';
 import type { ZoneFeature } from './zone';
 
 export type AreaFeature = RegionFeature | StrokeFeature | RoomFeature | ZoneFeature;
 
-/** What the effects panel edits on an area: what crossing it costs on foot, its effects, and how its region shows. */
+/** What the effects panel edits on an area: what crossing it costs on foot, its effects, how its region shows, and what it spawns. */
 export interface AreaSettings {
     readonly movementCost: number;
     readonly effects: readonly AreaEffect[];
     readonly display: AreaDisplay;
+    readonly spawn: AreaSpawn;
 }
 
 /** Whether `feature` is an area. */
@@ -29,5 +31,5 @@ export function isArea(feature: Feature): feature is AreaFeature {
 
 /** An area's settings: its cost (ordinary ground when it has none) and its effects. */
 export function areaSettingsOf(area: AreaFeature): AreaSettings {
-    return { movementCost: movementCostOf(area), effects: effectsOf(area), display: displayOf(area) };
+    return { movementCost: movementCostOf(area), effects: effectsOf(area), display: displayOf(area), spawn: spawnOf(area) };
 }

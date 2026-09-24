@@ -11,6 +11,7 @@ import { DEFAULT_FLOOR_PLAN, generateFloorPlan, type FloorPlanOptions } from '..
 import { parseSceneSpec, type SceneSpec, type SpecIssue } from '../generate/spec';
 import { MODULE_ID } from '../module-id';
 import { buildOnScene } from './build-spec';
+import { spawnInto, type SpawnResult } from './spawner';
 
 /** Revision of the API shape; additive changes keep it. */
 const API_VERSION = 1;
@@ -26,6 +27,12 @@ interface CartographyApi {
     readonly buildSpec: (spec: unknown) => Promise<BuildOutcome>;
     /** A floor-plan scene spec; options not given take the generator's defaults. */
     readonly generateFloorPlan: (options?: Partial<FloorPlanOptions>) => SceneSpec;
+    /**
+     * Spawn an area's tokens into its region (painted ground, a room or a
+     * zone, by feature id). Foundry's own errors (no room left inside, no
+     * permission) are thrown as they are.
+     */
+    readonly spawn: (featureId: string) => Promise<SpawnResult>;
 }
 
 declare global {
@@ -54,6 +61,12 @@ export function registerApi(controller: () => CartographyController | null): voi
             return { ok: true, report: await buildOnScene(active, parsed.spec) };
         },
         generateFloorPlan: (options = {}) => generateFloorPlan({ ...DEFAULT_FLOOR_PLAN, ...options }),
+        spawn: async (featureId) => {
+            const active = controller();
+            const settings = active?.areaSettings(featureId) ?? null;
+            const regionId = active?.areaRegionId(featureId) ?? null;
+            return settings === null || regionId === null ? { spawned: 0, missing: [] } : spawnInto(regionId, settings.spawn);
+        },
     };
     Hooks.once('init', () => {
         const cartography = game.modules?.get(MODULE_ID);

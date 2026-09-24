@@ -9,6 +9,7 @@
 import { DEFAULT_AREA_DISPLAY } from '../tools/area-effects';
 import type { FloorMaterial, WallMaterial } from '../tools/materials';
 import { NEW_DOOR } from '../tools/room';
+import { NO_SPAWN } from '../tools/spawn';
 import { NORMAL_COST } from '../tools/terrain-cost';
 import { DEFAULT_WALL_PRESET, type WallPreset } from '../tools/wall-presets';
 import { pick, randomInt, seededRandom, type Random } from './random';
@@ -207,6 +208,7 @@ function roomSpec(room: Rect, slots: readonly DoorSlot[], o: FloorPlanOptions): 
         movementCost: NORMAL_COST,
         effects: [],
         display: DEFAULT_AREA_DISPLAY,
+        spawn: { ...NO_SPAWN, actors: [] },
         doors,
     };
 }
