@@ -31,7 +31,8 @@ export interface RealizeOptions {
     readonly gridSize: number;
 }
 
-type RealizeProblem = 'level' | 'stamp' | 'interior' | 'switch';
+/** What could not be built; `splat` is indexed in the spec's splats, the rest in its features. */
+type RealizeProblem = 'level' | 'stamp' | 'interior' | 'switch' | 'splat';
 
 export interface RealizeReport {
     /** Ids of the features built, in spec order. */
@@ -181,6 +182,13 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
             const id = levels[l.key];
             if (id !== undefined) {
                 await controller.setLevelArt(id, levelArt(l, levels));
+            }
+        }, Promise.resolve());
+        await spec.splats.reduce(async (previous, splat, index) => {
+            await previous;
+            const level = splat.level === undefined ? null : levels[splat.level] ?? null;
+            if (!(await controller.adoptSplat(level, splat.mask, splat.roles))) {
+                problems.push({ index, problem: 'splat' });
             }
         }, Promise.resolve());
 

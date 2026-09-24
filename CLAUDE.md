@@ -815,8 +815,18 @@ option**: a splat map, as in Dungeondraft and Inkarnate.
     tiled by repeat wrap at its own size and tinted like its biome.
   - `tests/e2e/pointer.spec.ts` reads the saved PNG back in Foundry and
     screenshots the blend.
-  - **Still open:** baking to a native Tile or Level background, masks in
-    the scene spec, and layering more than one mask per level.
+  - **[done] Masks in the scene spec.** The spec's `splats` give a level
+    (or every level) a mask image, an 8-bit RGBA or RGB PNG whose channels
+    weight the four `roles`. `adoptSplat` lays it over the whole scene
+    whatever its size.
+    - The mask is copied to the level's own mask file, so painting over it
+      never touches the original.
+    - A built spec that brings masks is still one undo step: the batch folds
+      the masks as they were into its entry (`steps`).
+    - The decoder reads RGB too, its fourth channel weighting nothing.
+    - A mask that cannot be read is reported as a `splat` problem.
+  - **Still open:** baking to a native Tile or Level background, and
+    layering more than one mask per level.
 
 ---
 

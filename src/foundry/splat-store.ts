@@ -7,7 +7,7 @@
  */
 import type { SplatStore } from '../canvas/controller';
 import { MODULE_ID } from '../module-id';
-import { decodePng, encodePng } from '../tools/png';
+import { decodePng, encodePng, type RgbaImage } from '../tools/png';
 import { parseSplatLayers, type SplatLayer } from '../tools/splat';
 import type { FoundryScene } from './boundary';
 
@@ -31,8 +31,19 @@ async function ensureFolder(): Promise<void> {
     await folderReady;
 }
 
+/** An 8-bit RGBA or RGB PNG as pixels, or null when it cannot be fetched or decoded. */
+async function readImage(path: string): Promise<RgbaImage | null> {
+    try {
+        const response = await fetch(path, { cache: 'no-store' });
+        return response.ok ? await decodePng(new Uint8Array(await response.arrayBuffer())) : null;
+    } catch {
+        return null;
+    }
+}
+
 export function createSplatStore(getScene: () => FoundryScene | null): SplatStore {
     return {
+        readImage,
         load: () => {
             const scene = getScene();
             return scene ? parseSplatLayers(scene.getFlag(MODULE_ID, SPLAT_FLAG)) : [];
@@ -41,13 +52,8 @@ export function createSplatStore(getScene: () => FoundryScene | null): SplatStor
             await getScene()?.setFlag(MODULE_ID, SPLAT_FLAG, layers);
         },
         readMask: async (layer) => {
-            try {
-                const response = await fetch(layer.path, { cache: 'no-store' });
-                const image = response.ok ? await decodePng(new Uint8Array(await response.arrayBuffer())) : null;
-                return image?.width === layer.width && image.height === layer.height ? image.pixels : null;
-            } catch {
-                return null;
-            }
+            const image = await readImage(layer.path);
+            return image?.width === layer.width && image.height === layer.height ? image.pixels : null;
         },
         writeMask: async (layer: SplatLayer, mask) => {
             await ensureFolder();

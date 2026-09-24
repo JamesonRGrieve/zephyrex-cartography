@@ -213,3 +213,23 @@ test('a spec with problems reports them instead of throwing', async ({ world }) 
     );
     expect(outcome?.ok).toBe(false);
 });
+
+test('a spec’s splat map blends the textures its mask weights over the whole scene, saved as the scene’s own mask', async ({ world }) => {
+    const result = await world.evaluate(async () => {
+        const api = game.modules?.get('zephyrex-cartography').api;
+        const outcome = await api?.buildSpec({
+            schemaVersion: 1,
+            splats: [{ mask: 'modules/zc-e2e-pack/masks/sand-rock.png', roles: ['sand', 'rock', null, null] }],
+            features: [],
+        });
+        const layer = api?.controller()?.splatLayer();
+        return { problems: outcome?.ok === true ? outcome.report.problems : null, roles: layer?.roles, path: layer?.path, size: [layer?.width, layer?.height] };
+    });
+    expect(result.problems).toEqual([]);
+    expect(result.roles).toEqual(['sand', 'rock', null, null]);
+    // Copied to the scene's own mask file, so painting over it leaves the pack's image alone.
+    expect(result.path).toMatch(/^worlds\/zc-e2e\/zephyrex-cartography\/splat-.+-all\.png$/u);
+    expect(result.size).toEqual([40, 30]);
+    await frameScene(world);
+    await expect(world.locator('#board')).toHaveScreenshot('spec-splat.png');
+});

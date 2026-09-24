@@ -55,6 +55,7 @@ export const I18N = {
             stamp: key('Generator.Problems.Stamp'),
             interior: key('Generator.Problems.Interior'),
             switch: key('Generator.Problems.Switch'),
+            splat: key('Generator.Problems.Splat'),
         },
     },
     levels: {

@@ -54,7 +54,20 @@ describe('png', () => {
         }
     });
 
-    it('refuses what is not an 8-bit RGBA PNG', async () => {
+    it('reads an RGB PNG as RGBA whose fourth channel weights nothing, with a filter across its three-byte pixels', async () => {
+        // A 2×1 RGB image, its one scanline filtered "sub" (each byte less the one three before it).
+        const rgb = [10, 20, 30, 40, 60, 90];
+        const sub = rgb.map((byte, i) => (byte - (i >= 3 ? rgb[i - 3] ?? 0 : 0)) & 0xff);
+        const deflated = new Uint8Array(
+            await new Response(new Blob([new Uint8Array([1, ...sub])]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer(),
+        );
+        const file = await encodePng({ width: 2, height: 1, pixels: new Uint8ClampedArray(8) });
+        file[8 + 8 + 9] = 2; // IHDR colour type: RGB
+        const decoded = await decodePng(await withIdat(file, deflated));
+        expect([...(decoded?.pixels ?? [])]).toEqual([10, 20, 30, 0, 40, 60, 90, 0]);
+    });
+
+    it('refuses what is not an 8-bit RGBA or RGB PNG', async () => {
         expect(await decodePng(new Uint8Array([1, 2, 3]))).toBeNull();
         const file = await encodePng(sample());
         const grey = file.slice();

@@ -18,6 +18,7 @@ describe('parseSceneSpec', () => {
                 schemaVersion: 1,
                 units: 'grid',
                 levels: [],
+                splats: [],
                 features: [
                     {
                         type: 'room',
@@ -82,6 +83,25 @@ describe('parseSceneSpec', () => {
             ],
         });
         expect(result.ok ? [] : result.issues.map((i) => i.path)).toEqual(['levels.1.key', 'features.0.level', 'features.1.doors.0.segment']);
+    });
+
+    it('reports a splat map on a level it does not have, and a second on one level', () => {
+        const roles = ['sand', null, null, null];
+        const result = parseSceneSpec({
+            schemaVersion: 1,
+            levels: [{ key: 'g', name: 'Ground' }],
+            splats: [
+                { level: 'g', mask: 'maps/g.png', roles },
+                { level: 'g', mask: 'maps/g2.png', roles },
+                { level: 'attic', mask: 'maps/a.png', roles },
+                { mask: 'maps/all.png', roles },
+            ],
+            features: [],
+        });
+        expect(result.ok ? [] : result.issues).toEqual([
+            { path: 'splats.1.level', message: 'a level has one splat map at most' },
+            { path: 'splats.2.level', message: 'no level with key "attic"' },
+        ]);
     });
 
     it('reports duplicate feature keys, and visible levels and switch controls that name no key', () => {

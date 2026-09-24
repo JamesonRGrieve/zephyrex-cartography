@@ -214,6 +214,7 @@ export function generateFloorPlan(o: FloorPlanOptions): SceneSpec {
         schemaVersion: SCENE_SPEC_SCHEMA_VERSION,
         units: 'grid',
         levels: [],
+        splats: [],
         features: rooms.map((room) => roomSpec(room, slotsOf(room), o)),
     };
 }

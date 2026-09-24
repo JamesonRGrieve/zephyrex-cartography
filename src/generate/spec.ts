@@ -323,6 +323,19 @@ const sceneSettingsSpec = z
     .strict()
     .describe("The scene's own settings, as its config's Basics, Lighting and Ambience tabs set them; only those given change.");
 
+const splatSpec = z
+    .object({
+        level,
+        mask: text.describe(
+            'Path to the mask image: an 8-bit RGBA or RGB PNG laid over the whole scene, each channel weighting one texture (RGB leaves the fourth unused).',
+        ),
+        roles: z
+            .tuple([text.nullable(), text.nullable(), text.nullable(), text.nullable()])
+            .describe('The texture roles of the red, green, blue and alpha channels, e.g. "sand"; null for a channel not used.'),
+    })
+    .strict()
+    .describe("A level's painted texture blend (its splat map), as the paint tool's Blend brush makes one.");
+
 export const sceneSpecSchema = z
     .object({
         $schema: z.string().optional(),
@@ -330,6 +343,7 @@ export const sceneSpecSchema = z
         units: z.enum(['grid', 'px']).default('grid').describe('Unit of every coordinate, width and radius: grid squares, or scene pixels.'),
         scene: sceneSettingsSpec.optional(),
         levels: z.array(levelSpec).default([]).describe('Levels to add, bottom to top, stacked above any the scene has.'),
+        splats: z.array(splatSpec).default([]).describe('Painted texture blends: at most one per level.'),
         features: z.array(featureSpec).describe('In drawing order: later features draw above, and earlier rooms own shared walls.'),
     })
     .strict();
@@ -368,6 +382,20 @@ function unresolved(named: readonly string[], keys: ReadonlySet<string>, pathOf:
     return named.flatMap((reference, j) => (keys.has(reference) ? [] : [{ path: pathOf(j), message: `no ${what} with key "${reference}"` }]));
 }
 
+/** Splat maps on levels the spec does not have, and a second one on the same level. */
+function splatIssues(splats: SceneSpec['splats'], levelKeys: ReadonlySet<string>): SpecIssue[] {
+    const seen = new Set<string>();
+    return splats.flatMap((splat, i) => {
+        const on = splat.level ?? '';
+        const issues = [
+            ...unresolved(splat.level === undefined ? [] : [splat.level], levelKeys, () => `splats.${i}.level`, 'level'),
+            ...(seen.has(on) ? [{ path: `splats.${i}.level`, message: 'a level has one splat map at most' }] : []),
+        ];
+        seen.add(on);
+        return issues;
+    });
+}
+
 /** Doors on segments the room does not have. */
 function doorIssues(f: FeatureSpec, i: number): SpecIssue[] {
     if (f.type !== 'room') {
@@ -389,6 +417,7 @@ function referenceIssues(spec: SceneSpec): SpecIssue[] {
     return [
         ...levels.issues,
         ...features.issues,
+        ...splatIssues(spec.splats, levels.keys),
         ...spec.levels.flatMap((l, i) => unresolved(l.visibleLevels, levels.keys, (j) => `levels.${i}.visibleLevels.${j}`, 'level')),
         ...spec.features.flatMap((f, i) => [
             ...unresolved(f.level === undefined ? [] : [f.level], levels.keys, () => `features.${i}.level`, 'level'),

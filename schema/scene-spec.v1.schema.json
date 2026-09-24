@@ -345,6 +345,85 @@
                 "additionalProperties": false
             }
         },
+        "splats": {
+            "default": [],
+            "description": "Painted texture blends: at most one per level.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "level": {
+                        "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "mask": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Path to the mask image: an 8-bit RGBA or RGB PNG laid over the whole scene, each channel weighting one texture (RGB leaves the fourth unused)."
+                    },
+                    "roles": {
+                        "type": "array",
+                        "prefixItems": [
+                            {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            {
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            }
+                        ],
+                        "items": false,
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "description": "The texture roles of the red, green, blue and alpha channels, e.g. \"sand\"; null for a channel not used."
+                    }
+                },
+                "required": [
+                    "mask",
+                    "roles"
+                ],
+                "additionalProperties": false,
+                "description": "A level's painted texture blend (its splat map), as the paint tool's Blend brush makes one."
+            }
+        },
         "features": {
             "type": "array",
             "items": {

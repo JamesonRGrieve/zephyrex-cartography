@@ -6,13 +6,21 @@
  * mask's alpha is a texture weight like the others, so it must survive
  * exactly. Encoding writes 8-bit RGBA, unfiltered scanlines, deflated with
  * the platform's `CompressionStream` (zlib, which PNG's IDAT requires).
- * Decoding reads 8-bit RGBA with any of PNG's five scanline filters.
+ * Decoding reads 8-bit RGBA or RGB with any of PNG's five scanline filters.
  */
 
 const SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 const RGBA_BYTES = 4;
 const BIT_DEPTH = 8;
 const COLOUR_TYPE_RGBA = 6;
+const COLOUR_TYPE_RGB = 2;
+const RGB_BYTES = 3;
+
+/** The colour types decoded, by their bytes per pixel. */
+const BYTES_PER_PIXEL: ReadonlyMap<number, number> = new Map([
+    [COLOUR_TYPE_RGBA, RGBA_BYTES],
+    [COLOUR_TYPE_RGB, RGB_BYTES],
+]);
 const HEADER_BYTES = 13;
 const LENGTH_BYTES = 4;
 const TYPE_BYTES = 4;
@@ -99,18 +107,22 @@ function paeth(left: number, up: number, upLeft: number): number {
     return pb <= pc ? up : upLeft;
 }
 
-/** Undo one scanline's filter in place, given the previous (already unfiltered) line. */
-function unfilter(filter: number, line: Uint8Array, previous: Uint8Array | null): void {
+/** Undo one scanline's filter in place, given the previous (already unfiltered) line and the bytes per pixel. */
+function unfilter(filter: number, line: Uint8Array, previous: Uint8Array | null, bytesPerPixel: number): void {
     for (let i = 0; i < line.length; i += 1) {
-        const left = i >= RGBA_BYTES ? line[i - RGBA_BYTES] ?? 0 : 0;
+        const left = i >= bytesPerPixel ? line[i - bytesPerPixel] ?? 0 : 0;
         const up = previous?.[i] ?? 0;
-        const upLeft = i >= RGBA_BYTES ? previous?.[i - RGBA_BYTES] ?? 0 : 0;
+        const upLeft = i >= bytesPerPixel ? previous?.[i - bytesPerPixel] ?? 0 : 0;
         const predictors = [0, left, up, (left + up) >>> 1, paeth(left, up, upLeft)];
         line[i] = ((line[i] ?? 0) + (predictors[filter] ?? 0)) & 0xff;
     }
 }
 
-/** Decode an 8-bit RGBA PNG; null for anything else (another colour type, depth, interlacing, or a corrupt file). */
+/**
+ * Decode an 8-bit RGBA or RGB PNG; null for anything else (another colour
+ * type, depth, interlacing, or a corrupt file). An RGB image's fourth channel
+ * comes out 0: as a mask, it weights nothing.
+ */
 export async function decodePng(file: Uint8Array<ArrayBuffer>): Promise<RgbaImage | null> {
     if (file.length < SIGNATURE.length || SIGNATURE.some((byte, i) => file[i] !== byte)) {
         return null;
@@ -119,6 +131,7 @@ export async function decodePng(file: Uint8Array<ArrayBuffer>): Promise<RgbaImag
     let at = SIGNATURE.length;
     let width = 0;
     let height = 0;
+    let bytesPerPixel = 0;
     const idat: Uint8Array[] = [];
     while (at + LENGTH_BYTES + TYPE_BYTES <= file.length) {
         const size = view.getUint32(at);
@@ -128,7 +141,8 @@ export async function decodePng(file: Uint8Array<ArrayBuffer>): Promise<RgbaImag
             const header = new DataView(data.buffer, data.byteOffset, data.byteLength);
             width = header.getUint32(0);
             height = header.getUint32(4);
-            if (data[8] !== BIT_DEPTH || data[9] !== COLOUR_TYPE_RGBA || data[12] !== 0) {
+            bytesPerPixel = BYTES_PER_PIXEL.get(data[9] ?? -1) ?? 0;
+            if (data[8] !== BIT_DEPTH || bytesPerPixel === 0 || data[12] !== 0) {
                 return null;
             }
         } else if (type === 'IDAT') {
@@ -149,17 +163,20 @@ export async function decodePng(file: Uint8Array<ArrayBuffer>): Promise<RgbaImag
     } catch {
         return null;
     }
-    const stride = width * RGBA_BYTES;
+    const stride = width * bytesPerPixel;
     if (width === 0 || height === 0 || raw.length < (stride + 1) * height) {
         return null;
     }
-    const pixels = new Uint8ClampedArray(stride * height);
+    const pixels = new Uint8ClampedArray(width * RGBA_BYTES * height);
     let previous: Uint8Array | null = null;
     for (let y = 0; y < height; y += 1) {
         const start = y * (stride + 1);
         const line = raw.slice(start + 1, start + 1 + stride);
-        unfilter(raw[start] ?? 0, line, previous);
-        pixels.set(line, y * stride);
+        unfilter(raw[start] ?? 0, line, previous, bytesPerPixel);
+        for (let x = 0; x < width; x += 1) {
+            // RGB carries three of the four channels; the fourth stays 0.
+            pixels.set(line.subarray(x * bytesPerPixel, (x + 1) * bytesPerPixel), (y * width + x) * RGBA_BYTES);
+        }
         previous = line;
     }
     return { width, height, pixels };

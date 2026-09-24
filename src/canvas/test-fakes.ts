@@ -21,6 +21,7 @@ import {
 } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
+import type { RgbaImage } from '../tools/png';
 import type { SceneSettings } from '../tools/scene-settings';
 import type { MaskRect, SplatLayer } from '../tools/splat';
 import type { SceneFrame } from '../tools/submap';
@@ -314,6 +315,13 @@ class FakeSplats implements SplatStore {
         this.masks.set(layer.path, mask.slice());
         this.maskWrites.push(layer.path);
         await Promise.resolve();
+    }
+    /** Mask images a spec can name, by path. */
+    readonly images = new Map<string, RgbaImage>();
+    async readImage(path: string): Promise<RgbaImage | null> {
+        await Promise.resolve();
+        const image = this.images.get(path);
+        return image ? { ...image, pixels: image.pixels.slice() } : null;
     }
     pathFor(level: string | null): string {
         return `splats/${level ?? 'all'}.png`;

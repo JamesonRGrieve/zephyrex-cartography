@@ -39,6 +39,7 @@ import { drawOrder } from '../tools/nesting';
 import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath, type PathKind, type RiverLook } from '../tools/path';
 import { makePin, NEW_PIN, type PinSettings, pinSettingsOf, withPinSettings } from '../tools/pin';
 import { NO_PLAN, type PlanContext, planDocuments } from '../tools/plan';
+import type { RgbaImage } from '../tools/png';
 import { makeRegion } from '../tools/region';
 import {
     type DoorSettings,
@@ -54,7 +55,7 @@ import {
     withRoomMaterials,
 } from '../tools/room';
 import { hasSceneSettings, type SceneSettings } from '../tools/scene-settings';
-import { blankMask, channelFor, type MaskRect, maskLength, maskPoint, newSplatLayer, paintDab, type SplatLayer } from '../tools/splat';
+import { blankMask, channelFor, type MaskRect, maskLength, maskPoint, newSplatLayer, paintDab, type SplatLayer, type SplatRoles } from '../tools/splat';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { DEFAULT_TRAVEL, exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
@@ -120,6 +121,8 @@ export interface SplatStore {
     save: (layers: readonly SplatLayer[]) => Promise<void>;
     /** A layer's saved mask, or null when it has none yet or it cannot be read. */
     readMask: (layer: SplatLayer) => Promise<Uint8ClampedArray<ArrayBuffer> | null>;
+    /** Any mask image (an 8-bit RGBA or RGB PNG) as pixels, or null when it cannot be read. */
+    readImage: (path: string) => Promise<RgbaImage | null>;
     writeMask: (layer: SplatLayer, mask: Uint8ClampedArray<ArrayBuffer>) => Promise<void>;
     /** Where a new splat map for `level` saves its mask. */
     pathFor: (level: string | null) => string;
@@ -139,8 +142,15 @@ interface Splat {
     readonly mask: Uint8ClampedArray<ArrayBuffer>;
 }
 
-/** A step undo can take back: the feature list as it was, or a level's splat map before a blend stroke. */
-type HistoryEntry = { readonly kind: 'features'; readonly features: readonly Feature[] } | ({ readonly kind: 'blend'; readonly key: string } & Splat);
+/**
+ * A step undo can take back: the feature list as it was, a level's splat map
+ * before a blend stroke or an adopted mask, or several of those taken back
+ * together (a built spec that also brought splat maps).
+ */
+type HistoryEntry =
+    | { readonly kind: 'features'; readonly features: readonly Feature[] }
+    | ({ readonly kind: 'blend'; readonly key: string } & Splat)
+    | { readonly kind: 'steps'; readonly steps: readonly HistoryEntry[] };
 
 /** A splat map's key: its level, or "" for one on every level. */
 function splatKey(level: string | null): string {
@@ -249,6 +259,8 @@ export class CartographyController {
     private blendStart: (Splat & { readonly key: string }) | null = null;
     /** Inside {@link batch}: edits share the batch's one undo snapshot. */
     private batching = false;
+    /** Splat maps as they were before the batch under way changed them, to undo with it. */
+    private batchSteps: Extract<HistoryEntry, { kind: 'blend' }>[] = [];
     /** Document changes waiting for the current transaction to end. */
     private readonly staged: StagedChanges;
     /** Depth of nested transactions; only the outermost one writes. */
@@ -578,6 +590,10 @@ export class CartographyController {
             entries.flatMap((entry): HistoryEntry[] => {
                 if (entry.kind === 'features') {
                     return [{ kind: 'features', features: entry.features.filter((f) => !orphaned(f)) }];
+                }
+                if (entry.kind === 'steps') {
+                    const steps = prune(entry.steps);
+                    return steps.length > 0 ? [{ kind: 'steps', steps }] : [];
                 }
                 return entry.layer.level !== null && findLevel(this.levelList, entry.layer.level) === null ? [] : [entry];
             });
@@ -1255,6 +1271,9 @@ export class CartographyController {
         if (entry.kind === 'features') {
             return { kind: 'features', features: [...this.features] };
         }
+        if (entry.kind === 'steps') {
+            return { kind: 'steps', steps: entry.steps.map((step) => this.present(step)) };
+        }
         const now = this.splats.get(entry.key);
         return now ? { kind: 'blend', key: entry.key, layer: now.layer, mask: now.mask.slice() } : entry;
     }
@@ -1264,6 +1283,13 @@ export class CartographyController {
         if (entry.kind === 'features') {
             // One transaction: an undo lands whole or not at all.
             await this.transaction(async () => this.restore(entry.features));
+            return;
+        }
+        if (entry.kind === 'steps') {
+            await entry.steps.reduce(async (previous, step) => {
+                await previous;
+                await this.revert(step);
+            }, Promise.resolve());
             return;
         }
         this.splats.set(entry.key, { layer: entry.layer, mask: entry.mask.slice() });
@@ -1430,11 +1456,27 @@ export class CartographyController {
         }
         this.snapshot();
         this.batching = true;
+        this.batchSteps = [];
         try {
             // One undo step, and one atomic document write.
             await this.transaction(work);
+            // Splat maps the batch changed are taken back with its features, as the same step.
+            const snapshot = this.history.at(-1);
+            if (this.batchSteps.length > 0 && snapshot?.kind === 'features') {
+                this.history.splice(-1, 1, { kind: 'steps', steps: [snapshot, ...this.batchSteps] });
+            }
         } finally {
             this.batching = false;
+            this.batchSteps = [];
+        }
+    }
+
+    /** Record a splat map as it was: its own undo step, or part of the batch under way. */
+    private recordSplat(entry: Extract<HistoryEntry, { kind: 'blend' }>): void {
+        if (this.batching) {
+            this.batchSteps.push(entry);
+        } else {
+            this.record(entry);
         }
     }
 
@@ -1508,8 +1550,33 @@ export class CartographyController {
             return;
         }
         this.blendStart = null;
-        this.record({ kind: 'blend', ...start });
+        this.recordSplat({ kind: 'blend', ...start });
         await this.saveSplat(start.key);
+    }
+
+    /**
+     * Make a mask image the splat map of `level` (null: every level), its
+     * channels weighting `roles`: a scene spec's painted blend. The image is
+     * copied to the level's own mask file, so painting over it never touches
+     * the original, and it covers the scene whatever its size. False when the
+     * image cannot be read or there is no scene to cover.
+     */
+    async adoptSplat(level: string | null, image: string, roles: SplatRoles): Promise<boolean> {
+        const here = this.scenes.current();
+        const frame = here ? this.scenes.frame(here.id) : null;
+        const read = await this.splatStore.readImage(image);
+        if (!frame || !read) {
+            return false;
+        }
+        const key = splatKey(level);
+        const before = this.splats.get(key);
+        const bounds = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
+        const layer = { level, path: this.splatStore.pathFor(level), bounds, width: read.width, height: read.height, roles };
+        this.recordSplat(before ? { kind: 'blend', key, ...before, mask: before.mask.slice() } : { kind: 'blend', key, layer, mask: blankMask(layer) });
+        this.splats.set(key, { layer, mask: read.pixels });
+        this.redrawSplats();
+        await this.saveSplat(key);
+        return true;
     }
 
     /** A blank splat map over the scene for the level being edited, or null with no scene frame to cover. */
