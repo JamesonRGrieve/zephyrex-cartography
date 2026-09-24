@@ -5,7 +5,7 @@
  * Style is derived from the feature, so the controller just hands over features;
  * the concrete PIXI surface lives at the Foundry boundary, keeping this pure.
  */
-import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
+import { brushOutline, buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
 import { perimeterSegments, segmentBand } from '../geometry/wall';
 import { BIOME_STYLES, isBiomeKind, type BiomeKind } from '../tools/biome';
 import { tintToward } from '../tools/colour';
@@ -144,9 +144,9 @@ function roleFilled(role: string, outline: number[], feather: boolean, resolve: 
     return { outline, fill: ROLE_FALLBACK, alpha: TEXTURE_ALPHA, texture, tint, feather };
 }
 
-/** A path's ribbon outline at `halfWidths`; rivers taper to a point at each end, roads keep a constant carriageway. */
+/** A path's ribbon outline at `halfWidths`, ending square across at full width: a road's carriageway, a river's banks. */
 function pathOutline(path: CartographyPath, halfWidths: readonly number[]): number[] {
-    return ribbonOutline(buildRibbon(path.points, halfWidths, RIBBON_SAMPLES, path.kind === 'river'));
+    return ribbonOutline(buildRibbon(path.points, halfWidths, RIBBON_SAMPLES));
 }
 
 function pathFilled(path: CartographyPath, resolve: TextureResolver): Filled {
@@ -185,8 +185,8 @@ function outlineAndStyle(feature: Feature, resolve: TextureResolver): Filled {
         return biomeFilled(feature.biome, regionOutline(feature.points), true, resolve);
     }
     if (feature.type === 'stroke') {
-        const halfWidths = feature.points.map(() => feature.radius);
-        return biomeFilled(feature.biome, ribbonOutline(buildRibbon(feature.points, halfWidths, RIBBON_SAMPLES, false)), true, resolve);
+        // What a round brush leaves along the pointer's path: rounded at both ends.
+        return biomeFilled(feature.biome, brushOutline(feature.points, feature.radius, RIBBON_SAMPLES), true, resolve);
     }
     if (feature.type === 'room') {
         // The exact polygon with a crisp edge: a room's walls are straight and cover its boundary.

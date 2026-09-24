@@ -21,20 +21,8 @@ export interface RibbonGeometry {
 
 const EMPTY: RibbonGeometry = { positions: [], uvs: [], indices: [] };
 
-/** Fraction of the arc over which a tapered end ramps from a point to full width. */
-const TAPER_FRACTION = 0.18;
-
-/**
- * Smooth 0→1→0 width multiplier along the ribbon: for a tapered feature the two
- * ends narrow to a point (a river's source/mouth) while the middle keeps its
- * authored width. `j` is the sample index, `n` the sample count.
- */
-function taperFactor(j: number, n: number): number {
-    const t = n > 1 ? j / (n - 1) : 0.5;
-    const ramp = Math.min(t, 1 - t) / TAPER_FRACTION;
-    const c = Math.min(1, Math.max(0, ramp));
-    return c * c * (3 - 2 * c); // smoothstep
-}
+/** Points on each half-circle end cap of a round-brush outline. */
+const CAP_SEGMENTS = 12;
 
 /** Half-width at densified sample `j`, interpolated across the control widths. */
 function widthAt(halfWidths: readonly number[], j: number, samples: number): number {
@@ -55,9 +43,10 @@ function widthAt(halfWidths: readonly number[], j: number, samples: number): num
 /**
  * Build the ribbon for `centerline` control points with `halfWidths` (parallel
  * array), smoothing with `samplesPerSegment` samples per span. Degenerate input
- * (< 2 points) yields empty arrays.
+ * (< 2 points) yields empty arrays. The ends are cut square across the path,
+ * at full width.
  */
-export function buildRibbon(centerline: readonly Point[], halfWidths: readonly number[], samplesPerSegment: number, taperEnds = false): RibbonGeometry {
+export function buildRibbon(centerline: readonly Point[], halfWidths: readonly number[], samplesPerSegment: number): RibbonGeometry {
     if (centerline.length < 2) {
         return EMPTY;
     }
@@ -91,7 +80,7 @@ export function buildRibbon(centerline: readonly Point[], halfWidths: readonly n
         const len = Math.hypot(dx, dy) || 1;
         const nx = -dy / len;
         const ny = dx / len;
-        const hw = widthAt(halfWidths, j, n) * (taperEnds ? taperFactor(j, n) : 1);
+        const hw = widthAt(halfWidths, j, n);
         const u = (cumulative[j] ?? 0) * invTotal;
         positions.push(cur.x + nx * hw, cur.y + ny * hw); // left rail
         positions.push(cur.x - nx * hw, cur.y - ny * hw); // right rail
@@ -128,6 +117,73 @@ export function ribbonOutline(geo: RibbonGeometry): number[] {
     const out = [...left];
     for (let j = pairs - 1; j >= 0; j--) {
         out.push(right[j * 2] ?? 0, right[j * 2 + 1] ?? 0);
+    }
+    return out;
+}
+
+/**
+ * The half circle closing a round-brush outline at `centre`, from its left
+ * rail round through `forward` to its right rail, `forward` being the unit
+ * direction the stroke leaves in there; excludes both rail points, which the
+ * rails give.
+ */
+function capArc(centre: Point, forward: Point, radius: number): number[] {
+    const left = { x: -forward.y, y: forward.x };
+    const arc: number[] = [];
+    for (let k = 1; k < CAP_SEGMENTS; k++) {
+        const phi = (Math.PI * k) / CAP_SEGMENTS;
+        arc.push(
+            centre.x + radius * (left.x * Math.cos(phi) + forward.x * Math.sin(phi)),
+            centre.y + radius * (left.y * Math.cos(phi) + forward.y * Math.sin(phi)),
+        );
+    }
+    return arc;
+}
+
+/** The unit direction from `from` to `to`, or none when they coincide. */
+function unit(from: Point | undefined, to: Point | undefined): Point | null {
+    if (!from || !to) {
+        return null;
+    }
+    const len = Math.hypot(to.x - from.x, to.y - from.y);
+    return len > 0 ? { x: (to.x - from.x) / len, y: (to.y - from.y) / len } : null;
+}
+
+/**
+ * The closed outline `[x, y, …]` a round brush of `radius` leaves dragged along
+ * `centerline` (smoothed as a ribbon): the ribbon, rounded off by a half
+ * circle at each end. Fewer than two points leave nothing.
+ */
+export function brushOutline(centerline: readonly Point[], radius: number, samplesPerSegment: number): number[] {
+    const geo = buildRibbon(
+        centerline,
+        centerline.map(() => radius),
+        samplesPerSegment,
+    );
+    const pairs = Math.floor(geo.positions.length / 4);
+    if (pairs < 2) {
+        return [];
+    }
+    const spine = catmullRom(centerline, Math.max(1, samplesPerSegment));
+    const endDir = unit(spine[spine.length - 2], spine[spine.length - 1]);
+    const startDir = unit(spine[1], spine[0]);
+    const first = spine[0];
+    const last = spine[spine.length - 1];
+    const p = geo.positions;
+    const out: number[] = [];
+    for (let j = 0; j < pairs; j++) {
+        out.push(p[j * 4] ?? 0, p[j * 4 + 1] ?? 0);
+    }
+    // Round the far end off from the left rail to the right, then walk the right rail back.
+    if (endDir && last) {
+        out.push(...capArc(last, endDir, radius));
+    }
+    for (let j = pairs - 1; j >= 0; j--) {
+        out.push(p[j * 4 + 2] ?? 0, p[j * 4 + 3] ?? 0);
+    }
+    // The near end, walked backwards: from the right rail round to the left.
+    if (startDir && first) {
+        out.push(...capArc(first, startDir, radius));
     }
     return out;
 }

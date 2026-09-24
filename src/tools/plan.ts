@@ -7,7 +7,7 @@
  * feature is fully described by the feature itself plus its scene context
  * (the other features and the levels): the declarative-first rule.
  */
-import { buildRibbon, RIBBON_SAMPLES, ribbonOutline } from '../geometry/ribbon';
+import { brushOutline, RIBBON_SAMPLES } from '../geometry/ribbon';
 import { catmullRom, distanceToSegment, type Point } from '../geometry/spline';
 import { cutSegment, perimeterSegments, type Segment, splitSegment } from '../geometry/wall';
 import type { StampLight } from '../stamps/schema';
@@ -560,17 +560,7 @@ function outlinePoints(flat: readonly number[]): Point[] {
  * systems to attach their own (weather and so on).
  */
 function terrainRegion(feature: RegionFeature | StrokeFeature, levels: readonly Level[]): RegionDoc {
-    const outline =
-        feature.type === 'region'
-            ? regionOutline(feature.points)
-            : ribbonOutline(
-                  buildRibbon(
-                      feature.points,
-                      feature.points.map(() => feature.radius),
-                      RIBBON_SAMPLES,
-                      false,
-                  ),
-              );
+    const outline = feature.type === 'region' ? regionOutline(feature.points) : brushOutline(feature.points, feature.radius, RIBBON_SAMPLES);
     return areaRegion(feature, { kind: 'terrain', biome: feature.biome }, outlinePoints(outline), levels);
 }
 

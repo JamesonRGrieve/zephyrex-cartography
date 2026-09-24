@@ -246,7 +246,9 @@ that type's own control group, after Foundry's tools
   group.
 
 **Terrain & paths [done]:** click + freehand paths (Catmull-Rom, RDP), variable
-width ribbons, river taper, 13-biome regions, freehand brush strokes, feathered
+width ribbons ending square at full width (roads and rivers alike), 13-biome
+regions, freehand brush strokes shaped as a round brush leaves them (the
+swath rounded off at both ends; their terrain region matches), feathered
 edges, tiled textures from selectable packs, control-point editing, eraser,
 undo/redo, z-order, wall emission along paths.
 
