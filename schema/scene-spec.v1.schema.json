@@ -219,10 +219,9 @@
                     "tints": {
                         "default": {
                             "background": "#ffffff",
-                            "foreground": "#ffffff",
-                            "fog": "#ffffff"
+                            "foreground": "#ffffff"
                         },
-                        "description": "Each image's tint.",
+                        "description": "The background's and foreground's tints (Foundry's fog image has none since 14.364).",
                         "type": "object",
                         "properties": {
                             "background": {
@@ -231,11 +230,6 @@
                                 "pattern": "^#[0-9a-fA-F]{6}$"
                             },
                             "foreground": {
-                                "default": "#ffffff",
-                                "type": "string",
-                                "pattern": "^#[0-9a-fA-F]{6}$"
-                            },
-                            "fog": {
                                 "default": "#ffffff",
                                 "type": "string",
                                 "pattern": "^#[0-9a-fA-F]{6}$"

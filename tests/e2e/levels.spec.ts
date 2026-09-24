@@ -184,7 +184,7 @@ test('a level’s look is its native Level’s colours, thresholds, placement an
                     key: 'hall',
                     name: 'Hall',
                     backgroundColor: '#202830',
-                    tints: { background: '#d8c8a8', fog: '#405060' },
+                    tints: { background: '#d8c8a8', foreground: '#405060' },
                     alphaThresholds: { foreground: 0.4 },
                     placement: { anchorX: 0, offsetX: 50, fit: 'cover', scaleY: 2, rotation: 90 },
                     visibleLevels: ['cellar'],
@@ -200,6 +200,7 @@ test('a level’s look is its native Level’s colours, thresholds, placement an
             native: hall && {
                 backgroundColor: hall.background.color.css,
                 backgroundTint: hall.background.tint.css,
+                foregroundTint: hall.foreground.tint.css,
                 foregroundThreshold: hall.foreground.alphaThreshold,
                 textures: {
                     anchorX: hall.textures.anchorX,
@@ -217,13 +218,14 @@ test('a level’s look is its native Level’s colours, thresholds, placement an
     expect(result.native).toEqual({
         backgroundColor: '#202830',
         backgroundTint: '#d8c8a8',
+        foregroundTint: '#405060',
         foregroundThreshold: 0.4,
         textures: { anchorX: 0, offsetX: 50, fit: 'cover', scaleY: 2, rotation: 90 },
         visible: [result.cellar],
     });
     expect(result.art).toMatchObject({
         backgroundColor: '#202830',
-        tints: { background: '#d8c8a8', foreground: '#ffffff', fog: '#405060' },
+        tints: { background: '#d8c8a8', foreground: '#405060' },
         alphaThresholds: { background: 0.75, foreground: 0.4 },
         placement: { anchorX: 0, anchorY: 0.5, offsetX: 50, offsetY: 0, fit: 'cover', scaleX: 1, scaleY: 2, rotation: 90 },
         visibleLevels: [result.cellar],

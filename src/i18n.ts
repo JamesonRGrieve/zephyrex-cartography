@@ -82,7 +82,6 @@ export const I18N = {
         tints: {
             background: key('Levels.Tints.Background'),
             foreground: key('Levels.Tints.Foreground'),
-            fog: key('Levels.Tints.Fog'),
         },
         thresholds: {
             background: key('Levels.Thresholds.Background'),

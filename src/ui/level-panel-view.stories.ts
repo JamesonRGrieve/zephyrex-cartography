@@ -36,7 +36,7 @@ const LABELS: LevelPanelLabels = {
     look: {
         title: 'Look',
         backgroundColor: 'Background colour',
-        tints: { background: 'Background tint', foreground: 'Foreground tint', fog: 'Fog tint' },
+        tints: { background: 'Background tint', foreground: 'Foreground tint' },
         thresholds: { background: 'Background alpha threshold', foreground: 'Foreground alpha threshold' },
         // Named as Foundry's own Level sheet names them.
         fit: 'Fit Mode',

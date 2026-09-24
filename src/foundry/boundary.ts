@@ -265,13 +265,10 @@ interface PreparedColour {
     readonly css: string;
 }
 
-/** A Level image (v14 `background`, `foreground` and `fog`): its source (null: none), tint and, for two of them, alpha threshold. */
-interface LevelImage<Colour> {
+/** A Level's background or foreground image: its source (null: none), tint and alpha threshold. The fog is a source alone (14.364). */
+interface ThresholdImage<Colour> {
     readonly src: string | null;
     readonly tint: Colour;
-}
-
-interface ThresholdImage<Colour> extends LevelImage<Colour> {
     readonly alphaThreshold: number;
 }
 
@@ -293,7 +290,7 @@ export interface LevelUpdateData {
     readonly elevation?: { readonly bottom: number; readonly top: number };
     readonly background?: ThresholdImage<string> & { readonly color: string };
     readonly foreground?: ThresholdImage<string>;
-    readonly fog?: LevelImage<string>;
+    readonly fog?: { readonly src: string | null };
     readonly textures?: LevelTextures;
     readonly visibility?: { readonly levels: readonly string[] };
 }
@@ -437,8 +434,8 @@ export interface NativeLevel {
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
     readonly background: ThresholdImage<PreparedColour> & { readonly color: PreparedColour };
     readonly foreground: ThresholdImage<PreparedColour>;
-    /** 14.359 gives the fog a tint (`common/documents/level.mjs`); fvtt-types does not have it yet. */
-    readonly fog: { readonly src: string | null; readonly tint?: PreparedColour };
+    /** Only an image: the fog's tint went in 14.364. */
+    readonly fog: { readonly src: string | null };
     readonly textures: LevelTextures;
     /** The other levels seen from this one (a `SceneLevelsSetField`: a Set once prepared). */
     readonly visibility: { readonly levels: ReadonlySet<string> };

@@ -161,8 +161,7 @@
             "BackgroundColor": "Background colour",
             "Tints": {
                 "Background": "Background tint",
-                "Foreground": "Foreground tint",
-                "Fog": "Fog tint"
+                "Foreground": "Foreground tint"
             },
             "Thresholds": {
                 "Background": "Background alpha threshold",

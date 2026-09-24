@@ -302,10 +302,10 @@ const levelSpec = z
         fog: text.optional().describe('Image shown in unexplored fog on this level.'),
         backgroundColor: hexColour.default(NO_LEVEL_ART.backgroundColor).describe('Colour shown where the level has no background image.'),
         tints: z
-            .object({ background: hexColour.default(tints.background), foreground: hexColour.default(tints.foreground), fog: hexColour.default(tints.fog) })
+            .object({ background: hexColour.default(tints.background), foreground: hexColour.default(tints.foreground) })
             .strict()
             .default(tints)
-            .describe("Each image's tint."),
+            .describe("The background's and foreground's tints (Foundry's fog image has none since 14.364)."),
         alphaThresholds: z
             .object({ background: alpha.default(alphaThresholds.background), foreground: alpha.default(alphaThresholds.foreground) })
             .strict()

@@ -44,7 +44,7 @@ describe('editLevelArt', () => {
         expect(edit({ kind: 'backgroundColor', typed: ' #AB12CD ' })?.backgroundColor).toBe('#ab12cd');
         expect(edit({ kind: 'tint', image: 'foreground', typed: '#00ff00' })?.tints).toEqual({ ...NO_LEVEL_ART.tints, foreground: '#00ff00' });
         expect(edit({ kind: 'backgroundColor', typed: 'red' })).toBeNull();
-        expect(edit({ kind: 'tint', image: 'fog', typed: '#fff' })).toBeNull();
+        expect(edit({ kind: 'tint', image: 'background', typed: '#fff' })).toBeNull();
     });
 
     it('takes alpha thresholds from 0 to 1', () => {

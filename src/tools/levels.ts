@@ -13,7 +13,11 @@ export const LEVEL_IMAGES = ['background', 'foreground', 'fog'] as const;
 
 export type LevelImage = (typeof LEVEL_IMAGES)[number];
 
-/** The images whose transparent pixels let light and weather through below a threshold. */
+/**
+ * The images Foundry tints, and whose transparent pixels let light and weather
+ * through below a threshold. The fog image has neither (its tint went in
+ * 14.364).
+ */
 export const THRESHOLD_IMAGES = ['background', 'foreground'] as const satisfies readonly LevelImage[];
 
 export type ThresholdImage = (typeof THRESHOLD_IMAGES)[number];
@@ -43,7 +47,7 @@ export const PLACEMENT_NUMBERS = ['anchorX', 'anchorY', 'offsetX', 'offsetY', 's
 
 /**
  * How Foundry draws a level, for that floor alone: the native Level's
- * background, foreground and fog images (null: none) and their tints, the
+ * background, foreground and fog images (null: none), the first two's tints, the
  * colour shown where there is no background, the alpha below which image
  * pixels let light and weather through, where the images sit, and which other
  * levels are seen from this one. Colours are `#rrggbb`.
@@ -53,7 +57,7 @@ export interface LevelArt {
     readonly foreground: string | null;
     readonly fog: string | null;
     readonly backgroundColor: string;
-    readonly tints: Readonly<Record<LevelImage, string>>;
+    readonly tints: Readonly<Record<ThresholdImage, string>>;
     readonly alphaThresholds: Readonly<Record<ThresholdImage, number>>;
     readonly placement: LevelPlacement;
     /** Ids of the other levels fully or partly visible from this one. */
@@ -66,7 +70,7 @@ export const NO_LEVEL_ART: LevelArt = {
     foreground: null,
     fog: null,
     backgroundColor: '#999999',
-    tints: { background: '#ffffff', foreground: '#ffffff', fog: '#ffffff' },
+    tints: { background: '#ffffff', foreground: '#ffffff' },
     alphaThresholds: { background: 0.75, foreground: 0.75 },
     placement: { anchorX: 0.5, anchorY: 0.5, offsetX: 0, offsetY: 0, fit: 'fill', scaleX: 1, scaleY: 1, rotation: 0 },
     visibleLevels: [],
@@ -76,7 +80,7 @@ export const NO_LEVEL_ART: LevelArt = {
 export type LevelArtEdit =
     | { readonly kind: 'image'; readonly image: LevelImage; readonly path: string }
     | { readonly kind: 'backgroundColor'; readonly typed: string }
-    | { readonly kind: 'tint'; readonly image: LevelImage; readonly typed: string }
+    | { readonly kind: 'tint'; readonly image: ThresholdImage; readonly typed: string }
     | { readonly kind: 'threshold'; readonly image: ThresholdImage; readonly typed: string }
     | { readonly kind: 'placement'; readonly field: PlacementNumber; readonly typed: string }
     | { readonly kind: 'fit'; readonly fit: TextureFit }

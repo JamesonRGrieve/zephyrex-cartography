@@ -31,7 +31,7 @@ function artOf(level: NativeLevel): LevelArt {
         foreground: foreground.src,
         fog: fog.src,
         backgroundColor: background.color.css,
-        tints: { background: background.tint.css, foreground: foreground.tint.css, fog: fog.tint?.css ?? NO_LEVEL_ART.tints.fog },
+        tints: { background: background.tint.css, foreground: foreground.tint.css },
         alphaThresholds: { background: background.alphaThreshold, foreground: foreground.alphaThreshold },
         placement: { ...textures, fit: TEXTURE_FITS.find((fit) => fit === textures.fit) ?? NO_LEVEL_ART.placement.fit },
         visibleLevels: [...level.visibility.levels],
@@ -43,7 +43,7 @@ function artUpdate(art: LevelArt): Omit<LevelUpdateData, '_id'> {
     return {
         background: { src: art.background, color: art.backgroundColor, tint: art.tints.background, alphaThreshold: art.alphaThresholds.background },
         foreground: { src: art.foreground, tint: art.tints.foreground, alphaThreshold: art.alphaThresholds.foreground },
-        fog: { src: art.fog, tint: art.tints.fog },
+        fog: { src: art.fog },
         textures: art.placement,
         visibility: { levels: art.visibleLevels },
     };

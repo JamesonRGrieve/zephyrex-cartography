@@ -222,7 +222,7 @@ describe('realizeSpec', () => {
                         key: 'ground',
                         name: 'Ground',
                         backgroundColor: '#202020',
-                        tints: { fog: '#8090a0' },
+                        tints: { foreground: '#8090a0' },
                         alphaThresholds: { foreground: 0.4 },
                         placement: { offsetX: 50, fit: 'cover' },
                         visibleLevels: ['cellar'],
@@ -263,7 +263,7 @@ describe('realizeSpec', () => {
         expect(h.c.levels[1]?.art).toEqual({
             ...NO_LEVEL_ART,
             backgroundColor: '#202020',
-            tints: { ...NO_LEVEL_ART.tints, fog: '#8090a0' },
+            tints: { ...NO_LEVEL_ART.tints, foreground: '#8090a0' },
             alphaThresholds: { ...NO_LEVEL_ART.alphaThresholds, foreground: 0.4 },
             placement: { ...NO_LEVEL_ART.placement, offsetX: 50, fit: 'cover' },
             visibleLevels: ['lv1'],

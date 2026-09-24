@@ -30,7 +30,7 @@ interface LevelLookLabels {
     /** The section's summary. */
     readonly title: string;
     readonly backgroundColor: string;
-    readonly tints: Readonly<Record<LevelImage, string>>;
+    readonly tints: Readonly<Record<ThresholdImage, string>>;
     readonly thresholds: Readonly<Record<ThresholdImage, string>>;
     readonly fit: string;
     readonly fits: Readonly<Record<TextureFit, string>>;
@@ -109,7 +109,7 @@ function lookSection(level: Level, others: readonly Level[], labels: LevelLookLa
     const key = (field: string): string => `${field}:${level.id}`;
     return disclosure(labels.title, key('look'), [
         labelledInput(labels.backgroundColor, 'color', art.backgroundColor, key('background-color'), (typed) => edit({ kind: 'backgroundColor', typed })),
-        ...LEVEL_IMAGES.map((image) =>
+        ...THRESHOLD_IMAGES.map((image) =>
             labelledInput(labels.tints[image], 'color', art.tints[image], key(`tint-${image}`), (typed) => edit({ kind: 'tint', image, typed })),
         ),
         ...THRESHOLD_IMAGES.map((image) =>

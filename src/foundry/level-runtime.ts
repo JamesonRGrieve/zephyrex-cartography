@@ -42,7 +42,7 @@ function panelLabels(): LevelPanelLabels {
         look: {
             title: localize(l.look),
             backgroundColor: localize(l.backgroundColor),
-            tints: { background: localize(l.tints.background), foreground: localize(l.tints.foreground), fog: localize(l.tints.fog) },
+            tints: { background: localize(l.tints.background), foreground: localize(l.tints.foreground) },
             thresholds: { background: localize(l.thresholds.background), foreground: localize(l.thresholds.foreground) },
             // Named as Foundry's own Level sheet names them.
             fit: localize('SCENE_LEVEL.FIELDS.textures.fit.label'),
