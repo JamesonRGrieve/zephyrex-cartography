@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_FLOOR_PLAN, generateFloorPlan } from '../generate/floor-plan';
 import { parseSceneSpec, type SceneSpec } from '../generate/spec';
 import type { WallDoc } from '../tools/documents';
+import { NO_LEVEL_ART } from '../tools/levels';
 import { LIQUID_LOOKS } from '../tools/path';
 import { realizeSpec } from './realize';
 import { catalogStamps, makeHarness } from './test-fakes';
@@ -209,7 +210,15 @@ describe('realizeSpec', () => {
             spec({
                 levels: [
                     { key: 'cellar', name: 'Cellar', bottom: -10, top: 0, background: 'maps/cellar.webp', fog: 'maps/damp.webp' },
-                    { key: 'ground', name: 'Ground' },
+                    {
+                        key: 'ground',
+                        name: 'Ground',
+                        backgroundColor: '#202020',
+                        tints: { fog: '#8090a0' },
+                        alphaThresholds: { foreground: 0.4 },
+                        placement: { offsetX: 50, fit: 'cover' },
+                        visibleLevels: ['cellar', 'attic'],
+                    },
                 ],
                 features: [
                     {
@@ -237,8 +246,20 @@ describe('realizeSpec', () => {
         );
         expect(report.levels).toEqual({ cellar: 'lv1', ground: 'lv2' });
         expect(h.c.levels.map((l) => l.name)).toEqual(['Cellar', 'Ground']);
-        expect(h.c.levels[0]).toMatchObject({ bottom: -10, top: 0, art: { background: 'maps/cellar.webp', foreground: null, fog: 'maps/damp.webp' } });
-        expect(h.c.levels[1]?.art).toEqual({ background: null, foreground: null, fog: null });
+        expect(h.c.levels[0]).toMatchObject({
+            bottom: -10,
+            top: 0,
+            art: { ...NO_LEVEL_ART, background: 'maps/cellar.webp', foreground: null, fog: 'maps/damp.webp' },
+        });
+        // Whatever the spec leaves out is Foundry's own default; a level key the spec does not have is left out.
+        expect(h.c.levels[1]?.art).toEqual({
+            ...NO_LEVEL_ART,
+            backgroundColor: '#202020',
+            tints: { ...NO_LEVEL_ART.tints, fog: '#8090a0' },
+            alphaThresholds: { ...NO_LEVEL_ART.alphaThresholds, foreground: 0.4 },
+            placement: { ...NO_LEVEL_ART.placement, offsetX: 50, fit: 'cover' },
+            visibleLevels: ['lv1'],
+        });
         expect(h.s.last().map((f) => f.level)).toEqual(['lv1', null]);
         expect(h.c.activeLevel).toBeNull();
     });

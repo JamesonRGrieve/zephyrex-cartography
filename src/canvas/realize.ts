@@ -10,6 +10,7 @@ import type { FeatureSpec, SceneSpec } from '../generate/spec';
 import type { Point } from '../geometry/spline';
 import { parseCssHex } from '../tools/colour';
 import type { Feature } from '../tools/feature';
+import type { LevelArt } from '../tools/levels';
 import { DEFAULT_HALF_WIDTH, LIQUID_LOOKS, makePath } from '../tools/path';
 import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
@@ -90,6 +91,20 @@ function placement(spec: Extract<FeatureSpec, { type: 'stamp' }>, scale: Scale):
     };
 }
 
+/** How Foundry draws a spec level; the levels it sees are named by key, and a key with no level is left out. */
+function levelArt(l: SceneSpec['levels'][number], ids: Readonly<Record<string, string>>): LevelArt {
+    return {
+        background: l.background ?? null,
+        foreground: l.foreground ?? null,
+        fog: l.fog ?? null,
+        backgroundColor: l.backgroundColor,
+        tints: l.tints,
+        alphaThresholds: l.alphaThresholds,
+        placement: l.placement,
+        visibleLevels: l.visibleLevels.flatMap((key) => ids[key] ?? []),
+    };
+}
+
 export async function realizeSpec(controller: CartographyController, spec: SceneSpec, options: RealizeOptions): Promise<RealizeReport> {
     const scale = scaleOf(spec, options);
     const levels: Record<string, string> = {};
@@ -109,9 +124,14 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
                 if (l.bottom !== undefined && l.top !== undefined) {
                     await controller.setLevelBand(id, l.bottom, l.top);
                 }
-                if (l.background !== undefined || l.foreground !== undefined || l.fog !== undefined) {
-                    await controller.setLevelArt(id, { background: l.background ?? null, foreground: l.foreground ?? null, fog: l.fog ?? null });
-                }
+            }
+        }, Promise.resolve());
+        // Once every level exists, so each can name the others it sees.
+        await spec.levels.reduce(async (previous, l) => {
+            await previous;
+            const id = levels[l.key];
+            if (id !== undefined) {
+                await controller.setLevelArt(id, levelArt(l, levels));
             }
         }, Promise.resolve());
 

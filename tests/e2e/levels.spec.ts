@@ -135,6 +135,63 @@ test('a level’s own images are its native Level background, foreground and fog
     expect(result.actual).toEqual(result.expected);
 });
 
+test('a level’s look is its native Level’s colours, thresholds, placement and visible levels, and reads back unchanged', async ({ world }) => {
+    const result = await world.evaluate(async () => {
+        const api = game.modules?.get('zephyrex-cartography').api;
+        await api?.buildSpec({
+            schemaVersion: 1,
+            levels: [
+                { key: 'cellar', name: 'Cellar' },
+                {
+                    key: 'hall',
+                    name: 'Hall',
+                    backgroundColor: '#202830',
+                    tints: { background: '#d8c8a8', fog: '#405060' },
+                    alphaThresholds: { foreground: 0.4 },
+                    placement: { anchorX: 0, offsetX: 50, fit: 'cover', scaleY: 2, rotation: 90 },
+                    visibleLevels: ['cellar'],
+                },
+            ],
+            features: [],
+        });
+        const levels = canvas?.scene?.levels.contents ?? [];
+        const hall = levels.find((l) => l.name === 'Hall');
+        const cellar = levels.find((l) => l.name === 'Cellar');
+        return {
+            cellar: cellar?.id,
+            native: hall && {
+                backgroundColor: hall.background.color.css,
+                backgroundTint: hall.background.tint.css,
+                foregroundThreshold: hall.foreground.alphaThreshold,
+                textures: {
+                    anchorX: hall.textures.anchorX,
+                    offsetX: hall.textures.offsetX,
+                    fit: hall.textures.fit,
+                    scaleY: hall.textures.scaleY,
+                    rotation: hall.textures.rotation,
+                },
+                visible: [...hall.visibility.levels],
+            },
+            // What the engine reads back from the native Level.
+            art: api?.controller()?.levels.find((l) => l.name === 'Hall')?.art,
+        };
+    });
+    expect(result.native).toEqual({
+        backgroundColor: '#202830',
+        backgroundTint: '#d8c8a8',
+        foregroundThreshold: 0.4,
+        textures: { anchorX: 0, offsetX: 50, fit: 'cover', scaleY: 2, rotation: 90 },
+        visible: [result.cellar],
+    });
+    expect(result.art).toMatchObject({
+        backgroundColor: '#202830',
+        tints: { background: '#d8c8a8', foreground: '#ffffff', fog: '#405060' },
+        alphaThresholds: { background: 0.75, foreground: 0.4 },
+        placement: { anchorX: 0, anchorY: 0.5, offsetX: 50, offsetY: 0, fit: 'cover', scaleX: 1, scaleY: 2, rotation: 90 },
+        visibleLevels: [result.cellar],
+    });
+});
+
 test('levels are native Level documents, and a room on one has walls on that level only', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const api = game.modules?.get('zephyrex-cartography').api;

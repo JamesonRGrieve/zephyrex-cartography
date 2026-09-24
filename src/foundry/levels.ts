@@ -5,8 +5,8 @@
  * vision.
  */
 import type { LevelStore } from '../canvas/controller';
-import { type Level, levelHeightFor, sortLevels } from '../tools/levels';
-import type { FoundryScene, NativeLevel } from './boundary';
+import { type Level, type LevelArt, levelHeightFor, NO_LEVEL_ART, sortLevels, TEXTURE_FITS } from '../tools/levels';
+import type { FoundryScene, LevelUpdateData, NativeLevel } from './boundary';
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: parses Foundry's createEmbeddedDocuments result to read the created Level's id
 function firstId(created: unknown): string | null {
@@ -25,8 +25,33 @@ function fromNative(level: NativeLevel, height: number): Level | null {
     }
     // Foundry reports an open bound as null in source data and as ±Infinity once prepared.
     const bottom = finiteOr(level.elevation.bottom, 0);
-    const art = { background: level.background.src, foreground: level.foreground.src, fog: level.fog.src };
-    return { id: level.id, name: level.name, bottom, top: finiteOr(level.elevation.top, bottom + height), art };
+    return { id: level.id, name: level.name, bottom, top: finiteOr(level.elevation.top, bottom + height), art: artOf(level) };
+}
+
+/** How Foundry draws `level`, as the engine holds it. */
+function artOf(level: NativeLevel): LevelArt {
+    const { background, foreground, fog, textures } = level;
+    return {
+        background: background.src,
+        foreground: foreground.src,
+        fog: fog.src,
+        backgroundColor: background.color.css,
+        tints: { background: background.tint.css, foreground: foreground.tint.css, fog: fog.tint?.css ?? NO_LEVEL_ART.tints.fog },
+        alphaThresholds: { background: background.alphaThreshold, foreground: foreground.alphaThreshold },
+        placement: { ...textures, fit: TEXTURE_FITS.find((fit) => fit === textures.fit) ?? NO_LEVEL_ART.placement.fit },
+        visibleLevels: [...level.visibility.levels],
+    };
+}
+
+/** `art` as a native Level update. */
+function artUpdate(art: LevelArt): Omit<LevelUpdateData, '_id'> {
+    return {
+        background: { src: art.background, color: art.backgroundColor, tint: art.tints.background, alphaThreshold: art.alphaThresholds.background },
+        foreground: { src: art.foreground, tint: art.tints.foreground, alphaThreshold: art.alphaThresholds.foreground },
+        fog: { src: art.fog, tint: art.tints.fog },
+        textures: art.placement,
+        visibility: { levels: art.visibleLevels },
+    };
 }
 
 function finiteOr(value: number | null, fallback: number): number {
@@ -58,10 +83,7 @@ export function createLevelStore(getScene: () => FoundryScene | null): LevelStor
                 return;
             }
             const band = { bottom: patch.bottom ?? current.bottom, top: patch.top ?? current.top };
-            const art =
-                patch.art === undefined
-                    ? {}
-                    : { background: { src: patch.art.background }, foreground: { src: patch.art.foreground }, fog: { src: patch.art.fog } };
+            const art = patch.art === undefined ? {} : artUpdate(patch.art);
             await scene.updateEmbeddedDocuments('Level', [{ _id: id, ...(patch.name === undefined ? {} : { name: patch.name }), elevation: band, ...art }]);
         },
         remove: async (id) => {

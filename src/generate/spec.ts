@@ -14,6 +14,7 @@
 import { z } from 'zod';
 import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
+import { NO_LEVEL_ART, TEXTURE_FITS } from '../tools/levels';
 import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
 import { FOG_MODES } from '../tools/scene-settings';
@@ -32,6 +33,7 @@ const text = z.string().min(1);
 const point = z.object({ x: z.number(), y: z.number() }).strict();
 const positive = z.number().positive();
 const biome = z.enum(BIOMES);
+const hexColour = z.string().regex(/^#[0-9a-fA-F]{6}$/u);
 const level = text.optional().describe('Key of an entry in `levels`. Omitted: the feature shows on every level.');
 
 const movementCost = z
@@ -71,11 +73,7 @@ const pathSpec = z
                 "Walls along the centerline: a wall kind as Foundry's Walls palette names them (solid, terrain, invisible, ethereal, window), true for solid, or false for none.",
             ),
         liquid: z.enum(SPEC_LIQUIDS).optional().describe('What a river carries (default: water). Ignored for a road.'),
-        shade: z
-            .string()
-            .regex(/^#[0-9a-fA-F]{6}$/u)
-            .optional()
-            .describe("A river's liquid colour, #rrggbb (default: the liquid's usual shade)."),
+        shade: hexColour.optional().describe("A river's liquid colour, #rrggbb (default: the liquid's usual shade)."),
         bed: text.nullable().optional().describe('Texture role of a river\'s bed, e.g. "sand"; null: no bed (default: the liquid\'s usual bed).'),
         level,
     })
@@ -146,6 +144,9 @@ const stampSpec = z
     .strict()
     .describe('A stamp from a loaded pack.');
 
+const { tints, alphaThresholds, placement } = NO_LEVEL_ART;
+const alpha = z.number().min(0).max(1);
+
 const levelSpec = z
     .object({
         key: text.describe('What features name in their `level`.'),
@@ -155,6 +156,38 @@ const levelSpec = z
         background: text.optional().describe("Image Foundry draws as this level's background, for this floor alone."),
         foreground: text.optional().describe("Image Foundry draws over this level's tokens (roofs, canopies)."),
         fog: text.optional().describe('Image shown in unexplored fog on this level.'),
+        backgroundColor: hexColour.default(NO_LEVEL_ART.backgroundColor).describe('Colour shown where the level has no background image.'),
+        tints: z
+            .object({ background: hexColour.default(tints.background), foreground: hexColour.default(tints.foreground), fog: hexColour.default(tints.fog) })
+            .strict()
+            .default(tints)
+            .describe("Each image's tint."),
+        alphaThresholds: z
+            .object({ background: alpha.default(alphaThresholds.background), foreground: alpha.default(alphaThresholds.foreground) })
+            .strict()
+            .default(alphaThresholds)
+            .describe("Image pixels less opaque than this let light and weather through (Foundry's Alpha Threshold)."),
+        placement: z
+            .object({
+                anchorX: z.number().default(placement.anchorX),
+                anchorY: z.number().default(placement.anchorY),
+                offsetX: z.number().int().default(placement.offsetX).describe('Whole pixels.'),
+                offsetY: z.number().int().default(placement.offsetY),
+                fit: z.enum(TEXTURE_FITS).default(placement.fit),
+                scaleX: z
+                    .number()
+                    .refine((scale) => scale !== 0, 'not 0')
+                    .default(placement.scaleX),
+                scaleY: z
+                    .number()
+                    .refine((scale) => scale !== 0, 'not 0')
+                    .default(placement.scaleY),
+                rotation: z.number().default(placement.rotation).describe('Degrees.'),
+            })
+            .strict()
+            .default(placement)
+            .describe("Where the level's images sit (Foundry's Positioning)."),
+        visibleLevels: z.array(text).default([]).describe('Keys of the other levels seen from this one.'),
     })
     .strict();
 

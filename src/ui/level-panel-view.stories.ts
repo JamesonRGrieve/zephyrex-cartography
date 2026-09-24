@@ -12,6 +12,8 @@ export interface LevelPanelArgs {
     readonly levels: readonly Level[];
     readonly active: string | null;
     readonly counts: Readonly<Record<string, number>>;
+    /** A level whose look section starts open. */
+    readonly openLook?: string;
 }
 
 const LABELS: LevelPanelLabels = {
@@ -28,6 +30,25 @@ const LABELS: LevelPanelLabels = {
     list: 'Scene levels, top to bottom',
     art: { background: 'Background image', foreground: 'Foreground image', fog: 'Fog image' },
     browse: (image) => `Browse for ${image}`,
+    look: {
+        title: 'Look',
+        backgroundColor: 'Background colour',
+        tints: { background: 'Background tint', foreground: 'Foreground tint', fog: 'Fog tint' },
+        thresholds: { background: 'Background alpha threshold', foreground: 'Foreground alpha threshold' },
+        // Named as Foundry's own Level sheet names them.
+        fit: 'Fit Mode',
+        fits: { fill: 'Fill', contain: 'Contain', cover: 'Cover', width: 'Full Width', height: 'Full Height' },
+        placement: {
+            anchorX: 'Anchor X',
+            anchorY: 'Anchor Y',
+            offsetX: 'Offset X (px)',
+            offsetY: 'Offset Y (px)',
+            scaleX: 'Scale X',
+            scaleY: 'Scale Y',
+            rotation: 'Rotation (°)',
+        },
+        visibleLevels: 'Visible Levels',
+    },
 };
 
 /** A stand-in for Foundry's file picker: the path it would return. */
@@ -79,12 +100,28 @@ export function mountLevelPanel(args: LevelPanelArgs): HTMLElement {
         });
     };
     render();
+    const look = root.querySelector<HTMLDetailsElement>(`details[data-zc-focus="look:${args.openLook ?? ''}"]`);
+    if (look) {
+        look.open = true;
+    }
     return windowEl;
 }
 
 const HAB_LEVELS: readonly Level[] = [
     { id: 'cellar', name: 'Cellar', bottom: -10, top: 0, art: NO_LEVEL_ART },
-    { id: 'ground', name: 'Ground floor', bottom: 0, top: 10, art: { background: 'maps/hab/ground.webp', foreground: 'maps/hab/roof.webp', fog: null } },
+    {
+        id: 'ground',
+        name: 'Ground floor',
+        bottom: 0,
+        top: 10,
+        art: {
+            ...NO_LEVEL_ART,
+            background: 'maps/hab/ground.webp',
+            foreground: 'maps/hab/roof.webp',
+            tints: { ...NO_LEVEL_ART.tints, background: '#d8c8a8' },
+            visibleLevels: ['cellar'],
+        },
+    },
     { id: 'upper', name: 'Upper floor', bottom: 10, top: 20, art: NO_LEVEL_ART },
 ];
 
@@ -103,6 +140,10 @@ export const ThreeFloors: Story = {};
 
 export const EditingAllLevels: Story = {
     args: { active: null },
+};
+
+export const GroundFloorLook: Story = {
+    args: { openLook: 'ground' },
 };
 
 export const NoLevelsYet: Story = {

@@ -499,9 +499,18 @@ These make everything after them cheaper and safer, so they come first.
   sets each by typing a path or with Foundry's file picker, and a scene spec
   level entry sets them too. Art never re-syncs features: `planningLevels`
   leaves it out.
-  - **Still open:** the rest of the Level's look. That is the background
-    colour, the tints and alpha thresholds, `textures` (anchor, offset, fit,
-    scale, rotation) and `visibility.levels`.
+  - **[done] The rest of the Level's look.** `LevelArt` holds everything
+    the native Level draws with: the background colour, each image's tint,
+    the background and foreground alpha thresholds, the images' placement
+    (`textures`: anchor, offset, fit, scale, rotation) and the other levels
+    seen from it (`visibility.levels`).
+    - Each row of the levels panel has a Look section, closed until
+      opened, that sets them. Typed values are checked first
+      (`editLevelArt`).
+    - A scene spec level takes them too, defaulting to Foundry's own
+      values, with `visibleLevels` naming other levels by key.
+    - 14.359 gives the fog a tint, but fvtt-types lacks it, so the boundary
+      reads the fog tint as optional.
 - **Level preloading** [14.364]. The levels panel can preload a level's
   images before the party climbs to it.
 - **Buildings: interior scene or upper levels.** A building can open into a

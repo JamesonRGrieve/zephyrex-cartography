@@ -122,6 +122,133 @@
                         "description": "Image shown in unexplored fog on this level.",
                         "type": "string",
                         "minLength": 1
+                    },
+                    "backgroundColor": {
+                        "default": "#999999",
+                        "description": "Colour shown where the level has no background image.",
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
+                    "tints": {
+                        "default": {
+                            "background": "#ffffff",
+                            "foreground": "#ffffff",
+                            "fog": "#ffffff"
+                        },
+                        "description": "Each image's tint.",
+                        "type": "object",
+                        "properties": {
+                            "background": {
+                                "default": "#ffffff",
+                                "type": "string",
+                                "pattern": "^#[0-9a-fA-F]{6}$"
+                            },
+                            "foreground": {
+                                "default": "#ffffff",
+                                "type": "string",
+                                "pattern": "^#[0-9a-fA-F]{6}$"
+                            },
+                            "fog": {
+                                "default": "#ffffff",
+                                "type": "string",
+                                "pattern": "^#[0-9a-fA-F]{6}$"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "alphaThresholds": {
+                        "default": {
+                            "background": 0.75,
+                            "foreground": 0.75
+                        },
+                        "description": "Image pixels less opaque than this let light and weather through (Foundry's Alpha Threshold).",
+                        "type": "object",
+                        "properties": {
+                            "background": {
+                                "default": 0.75,
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "foreground": {
+                                "default": 0.75,
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "placement": {
+                        "default": {
+                            "anchorX": 0.5,
+                            "anchorY": 0.5,
+                            "offsetX": 0,
+                            "offsetY": 0,
+                            "fit": "fill",
+                            "scaleX": 1,
+                            "scaleY": 1,
+                            "rotation": 0
+                        },
+                        "description": "Where the level's images sit (Foundry's Positioning).",
+                        "type": "object",
+                        "properties": {
+                            "anchorX": {
+                                "default": 0.5,
+                                "type": "number"
+                            },
+                            "anchorY": {
+                                "default": 0.5,
+                                "type": "number"
+                            },
+                            "offsetX": {
+                                "default": 0,
+                                "description": "Whole pixels.",
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                            },
+                            "offsetY": {
+                                "default": 0,
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                            },
+                            "fit": {
+                                "default": "fill",
+                                "type": "string",
+                                "enum": [
+                                    "fill",
+                                    "contain",
+                                    "cover",
+                                    "width",
+                                    "height"
+                                ]
+                            },
+                            "scaleX": {
+                                "default": 1,
+                                "type": "number"
+                            },
+                            "scaleY": {
+                                "default": 1,
+                                "type": "number"
+                            },
+                            "rotation": {
+                                "default": 0,
+                                "description": "Degrees.",
+                                "type": "number"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "visibleLevels": {
+                        "default": [],
+                        "description": "Keys of the other levels seen from this one.",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1
+                        }
                     }
                 },
                 "required": [

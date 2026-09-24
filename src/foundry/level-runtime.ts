@@ -36,6 +36,31 @@ function panelLabels(): LevelPanelLabels {
         list: localize(l.list),
         art: { background: localize(l.background), foreground: localize(l.foreground), fog: localize(l.fog) },
         browse: (image) => format(l.browse, { image }),
+        look: {
+            title: localize(l.look),
+            backgroundColor: localize(l.backgroundColor),
+            tints: { background: localize(l.tints.background), foreground: localize(l.tints.foreground), fog: localize(l.tints.fog) },
+            thresholds: { background: localize(l.thresholds.background), foreground: localize(l.thresholds.foreground) },
+            // Named as Foundry's own Level sheet names them.
+            fit: localize('SCENE_LEVEL.FIELDS.textures.fit.label'),
+            fits: {
+                fill: localize('TEXTURE_DATA.FIT.fill'),
+                contain: localize('TEXTURE_DATA.FIT.contain'),
+                cover: localize('TEXTURE_DATA.FIT.cover'),
+                width: localize('TEXTURE_DATA.FIT.width'),
+                height: localize('TEXTURE_DATA.FIT.height'),
+            },
+            placement: {
+                anchorX: localize(l.placement.anchorX),
+                anchorY: localize(l.placement.anchorY),
+                offsetX: localize(l.placement.offsetX),
+                offsetY: localize(l.placement.offsetY),
+                scaleX: localize(l.placement.scaleX),
+                scaleY: localize(l.placement.scaleY),
+                rotation: localize(l.placement.rotation),
+            },
+            visibleLevels: localize('SCENE_LEVEL.FIELDS.visibility.levels.label'),
+        },
     };
 }
 

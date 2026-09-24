@@ -94,7 +94,27 @@
             "Background": "Background image",
             "Foreground": "Foreground image",
             "Fog": "Fog image",
-            "Browse": "Browse for {image}"
+            "Browse": "Browse for {image}",
+            "Look": "Look",
+            "BackgroundColor": "Background colour",
+            "Tints": {
+                "Background": "Background tint",
+                "Foreground": "Foreground tint",
+                "Fog": "Fog tint"
+            },
+            "Thresholds": {
+                "Background": "Background alpha threshold",
+                "Foreground": "Foreground alpha threshold"
+            },
+            "Placement": {
+                "AnchorX": "Anchor X",
+                "AnchorY": "Anchor Y",
+                "OffsetX": "Offset X (px)",
+                "OffsetY": "Offset Y (px)",
+                "ScaleX": "Scale X",
+                "ScaleY": "Scale Y",
+                "Rotation": "Rotation (°)"
+            }
         },
         "Doors": {
             "Title": "Door",

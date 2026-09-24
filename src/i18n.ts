@@ -67,6 +67,26 @@ export const I18N = {
         foreground: key('Levels.Foreground'),
         fog: key('Levels.Fog'),
         browse: key('Levels.Browse'),
+        look: key('Levels.Look'),
+        backgroundColor: key('Levels.BackgroundColor'),
+        tints: {
+            background: key('Levels.Tints.Background'),
+            foreground: key('Levels.Tints.Foreground'),
+            fog: key('Levels.Tints.Fog'),
+        },
+        thresholds: {
+            background: key('Levels.Thresholds.Background'),
+            foreground: key('Levels.Thresholds.Foreground'),
+        },
+        placement: {
+            anchorX: key('Levels.Placement.AnchorX'),
+            anchorY: key('Levels.Placement.AnchorY'),
+            offsetX: key('Levels.Placement.OffsetX'),
+            offsetY: key('Levels.Placement.OffsetY'),
+            scaleX: key('Levels.Placement.ScaleX'),
+            scaleY: key('Levels.Placement.ScaleY'),
+            rotation: key('Levels.Placement.Rotation'),
+        },
     },
     paint: {
         title: key('Paint.Title'),

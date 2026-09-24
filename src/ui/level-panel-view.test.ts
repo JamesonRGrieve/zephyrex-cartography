@@ -99,6 +99,54 @@ describe('level panel', () => {
         expect(input(root, 'Fog image', 0).value).toBe('maps/levels/picked.webp');
     });
 
+    it('keeps each level’s look closed until opened, and open across edits', () => {
+        const root = mount();
+        const look = (): HTMLDetailsElement | null => root.querySelector<HTMLDetailsElement>('details[data-zc-focus="look:ground"]');
+        expect(look()?.open).toBe(false);
+        expect(look()?.querySelector('summary')?.textContent).toBe('Look');
+        const opened = look();
+        if (opened) {
+            opened.open = true;
+        }
+        change(input(root, 'Background tint', 1), '#AABBCC');
+        expect(look()?.open).toBe(true);
+        expect(input(root, 'Background tint', 1).value).toBe('#aabbcc');
+    });
+
+    it('sets colours, thresholds, fit and placement, reverting what is not valid', () => {
+        const root = mount();
+        change(input(root, 'Background colour', 1), '#101010');
+        expect(input(root, 'Background colour', 1).value).toBe('#101010');
+        change(input(root, 'Foreground alpha threshold', 1), '0.2');
+        expect(input(root, 'Foreground alpha threshold', 1).value).toBe('0.2');
+        change(input(root, 'Foreground alpha threshold', 1), '1.5');
+        expect(input(root, 'Foreground alpha threshold', 1).value).toBe('0.2');
+        change(input(root, 'Offset X (px)', 1), '12');
+        expect(input(root, 'Offset X (px)', 1).value).toBe('12');
+        change(input(root, 'Offset X (px)', 1), '12.5');
+        expect(input(root, 'Offset X (px)', 1).value).toBe('12');
+        change(input(root, 'Scale Y', 1), '0');
+        expect(input(root, 'Scale Y', 1).value).toBe('1');
+        const fit = root.querySelector<HTMLSelectElement>('#fit\\:ground');
+        if (fit) {
+            fit.value = 'cover';
+            fit.dispatchEvent(new Event('change'));
+        }
+        expect(root.querySelector<HTMLSelectElement>('#fit\\:ground')?.value).toBe('cover');
+    });
+
+    it('offers the other levels as the ones seen from this one', () => {
+        const root = mount();
+        // The ground floor's look lists only the upper floor, unchecked.
+        const seen = (): HTMLInputElement | null => root.querySelector<HTMLInputElement>('input[data-zc-focus="visible-upper:ground"]');
+        expect(root.querySelector('input[data-zc-focus="visible-ground:ground"]')).toBeNull();
+        expect(seen()?.checked).toBe(false);
+        seen()?.click();
+        expect(seen()?.checked).toBe(true);
+        seen()?.click();
+        expect(seen()?.checked).toBe(false);
+    });
+
     it('explains an empty scene and still offers to add a level', () => {
         const root = mount({ levels: [], active: null, counts: {} });
         expect(root.textContent).toContain('no levels yet');
@@ -107,8 +155,9 @@ describe('level panel', () => {
     });
 
     it('renders every story', () => {
-        for (const story of [stories.ThreeFloors, stories.EditingAllLevels, stories.NoLevelsYet]) {
+        for (const story of [stories.ThreeFloors, stories.EditingAllLevels, stories.GroundFloorLook, stories.NoLevelsYet]) {
             expect(mount(story.args ?? {}).querySelector('button')).not.toBeNull();
         }
+        expect(mount(stories.GroundFloorLook.args).querySelector<HTMLDetailsElement>('details[open]')?.getAttribute('data-zc-focus')).toBe('look:ground');
     });
 });

@@ -6,18 +6,133 @@
  * transition stamps (stairs, ladders, lifts, hatches) connect adjacent levels.
  * The levels are the scene's native Level documents. Pure and unit-tested.
  */
+import { cssHex, parseCssHex } from './colour';
+
+/** A level's own images, which Foundry draws for that floor alone. */
+export const LEVEL_IMAGES = ['background', 'foreground', 'fog'] as const;
+
+export type LevelImage = (typeof LEVEL_IMAGES)[number];
+
+/** The images whose transparent pixels let light and weather through below a threshold. */
+export const THRESHOLD_IMAGES = ['background', 'foreground'] as const satisfies readonly LevelImage[];
+
+export type ThresholdImage = (typeof THRESHOLD_IMAGES)[number];
+
+/** How a level's images fit the scene: v14 `CONST.TEXTURE_DATA_FIT_MODES`. */
+export const TEXTURE_FITS = ['fill', 'contain', 'cover', 'width', 'height'] as const;
+
+export type TextureFit = (typeof TEXTURE_FITS)[number];
+
+/** Where a level's images sit on the scene: the native Level's `textures`. */
+export interface LevelPlacement {
+    readonly anchorX: number;
+    readonly anchorY: number;
+    /** Whole pixels. */
+    readonly offsetX: number;
+    readonly offsetY: number;
+    readonly fit: TextureFit;
+    readonly scaleX: number;
+    readonly scaleY: number;
+    /** Degrees. */
+    readonly rotation: number;
+}
+
+export type PlacementNumber = Exclude<keyof LevelPlacement, 'fit'>;
+
+export const PLACEMENT_NUMBERS = ['anchorX', 'anchorY', 'offsetX', 'offsetY', 'scaleX', 'scaleY', 'rotation'] as const satisfies readonly PlacementNumber[];
 
 /**
- * A level's own images, which Foundry draws for that floor alone (the native
- * Level's background, foreground and fog). Null: none.
+ * How Foundry draws a level, for that floor alone: the native Level's
+ * background, foreground and fog images (null: none) and their tints, the
+ * colour shown where there is no background, the alpha below which image
+ * pixels let light and weather through, where the images sit, and which other
+ * levels are seen from this one. Colours are `#rrggbb`.
  */
 export interface LevelArt {
     readonly background: string | null;
     readonly foreground: string | null;
     readonly fog: string | null;
+    readonly backgroundColor: string;
+    readonly tints: Readonly<Record<LevelImage, string>>;
+    readonly alphaThresholds: Readonly<Record<ThresholdImage, number>>;
+    readonly placement: LevelPlacement;
+    /** Ids of the other levels fully or partly visible from this one. */
+    readonly visibleLevels: readonly string[];
 }
 
-export const NO_LEVEL_ART: LevelArt = { background: null, foreground: null, fog: null };
+/** A Level as Foundry makes one (14.359 `LevelDocument` defaults). */
+export const NO_LEVEL_ART: LevelArt = {
+    background: null,
+    foreground: null,
+    fog: null,
+    backgroundColor: '#999999',
+    tints: { background: '#ffffff', foreground: '#ffffff', fog: '#ffffff' },
+    alphaThresholds: { background: 0.75, foreground: 0.75 },
+    placement: { anchorX: 0.5, anchorY: 0.5, offsetX: 0, offsetY: 0, fit: 'fill', scaleX: 1, scaleY: 1, rotation: 0 },
+    visibleLevels: [],
+};
+
+/** One change the GM makes to a level's art, as typed or picked. */
+export type LevelArtEdit =
+    | { readonly kind: 'image'; readonly image: LevelImage; readonly path: string }
+    | { readonly kind: 'backgroundColor'; readonly typed: string }
+    | { readonly kind: 'tint'; readonly image: LevelImage; readonly typed: string }
+    | { readonly kind: 'threshold'; readonly image: ThresholdImage; readonly typed: string }
+    | { readonly kind: 'placement'; readonly field: PlacementNumber; readonly typed: string }
+    | { readonly kind: 'fit'; readonly fit: TextureFit }
+    | { readonly kind: 'visible'; readonly level: string; readonly visible: boolean };
+
+/** A typed `#rrggbb` colour, lower-cased, or null. */
+function colourOf(typed: string): string | null {
+    const colour = parseCssHex(typed.trim());
+    return colour === null ? null : cssHex(colour);
+}
+
+/** A typed number, or null when blank or not finite. */
+function numberOf(typed: string): number | null {
+    const value = typed.trim() === '' ? Number.NaN : Number(typed);
+    return Number.isFinite(value) ? value : null;
+}
+
+/** Is `value` right for the placement `field`: whole pixels for an offset, a scale that is not 0. */
+function validPlacement(field: PlacementNumber, value: number): boolean {
+    if (field === 'offsetX' || field === 'offsetY') {
+        return Number.isInteger(value);
+    }
+    return (field !== 'scaleX' && field !== 'scaleY') || value !== 0;
+}
+
+/** Apply `edit` to `art`, or null when what was typed is not valid (the field reverts). */
+export function editLevelArt(art: LevelArt, edit: LevelArtEdit): LevelArt | null {
+    switch (edit.kind) {
+        case 'image': {
+            const path = edit.path.trim();
+            return { ...art, [edit.image]: path === '' ? null : path };
+        }
+        case 'backgroundColor': {
+            const colour = colourOf(edit.typed);
+            return colour === null ? null : { ...art, backgroundColor: colour };
+        }
+        case 'tint': {
+            const colour = colourOf(edit.typed);
+            return colour === null ? null : { ...art, tints: { ...art.tints, [edit.image]: colour } };
+        }
+        case 'threshold': {
+            const value = numberOf(edit.typed);
+            return value === null || value < 0 || value > 1 ? null : { ...art, alphaThresholds: { ...art.alphaThresholds, [edit.image]: value } };
+        }
+        case 'placement': {
+            const value = numberOf(edit.typed);
+            return value === null || !validPlacement(edit.field, value) ? null : { ...art, placement: { ...art.placement, [edit.field]: value } };
+        }
+        case 'fit':
+            return { ...art, placement: { ...art.placement, fit: edit.fit } };
+        case 'visible':
+            break;
+    }
+    const others = art.visibleLevels.filter((id) => id !== edit.level);
+    return { ...art, visibleLevels: edit.visible ? [...others, edit.level] : others };
+}
 
 export interface Level {
     readonly id: string;

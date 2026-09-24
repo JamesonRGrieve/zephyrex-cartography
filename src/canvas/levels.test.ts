@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { NO_LEVEL_ART } from '../tools/levels';
 import { DEFAULT_ROOM_MATERIALS } from '../tools/room';
 import { catalogStamps, makeHarness } from './test-fakes';
 
@@ -139,7 +140,7 @@ describe('CartographyController levels', () => {
         c.setActiveLevel('lv1');
         await drawRoom(c);
         const writes = d.writes.length;
-        const art = { background: 'maps/ground.webp', foreground: null, fog: 'maps/fog.webp' };
+        const art = { ...NO_LEVEL_ART, background: 'maps/ground.webp', fog: 'maps/fog.webp', backgroundColor: '#202020', visibleLevels: ['lv0'] };
         expect(await c.setLevelArt('lv1', art)).toBe(true);
         expect(l.levels[0]?.art).toEqual(art);
         expect(c.levels[0]?.art).toEqual(art);

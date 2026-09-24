@@ -163,18 +163,42 @@ interface LevelCreateData {
     readonly elevation: { readonly bottom: number; readonly top: number };
 }
 
-/** A Level image's source (v14 `background`, `foreground` and `fog` each have one); null: none. */
-interface LevelImage {
-    readonly src: string | null;
+/** A colour as a prepared v14 document holds it (`Color`, a Number): `css` is `#rrggbb`. */
+interface PreparedColour {
+    readonly css: string;
 }
 
-interface LevelUpdateData {
+/** A Level image (v14 `background`, `foreground` and `fog`): its source (null: none), tint and, for two of them, alpha threshold. */
+interface LevelImage<Colour> {
+    readonly src: string | null;
+    readonly tint: Colour;
+}
+
+interface ThresholdImage<Colour> extends LevelImage<Colour> {
+    readonly alphaThreshold: number;
+}
+
+/** Where a Level's images sit (v14 `Level#textures`). */
+interface LevelTextures {
+    readonly anchorX: number;
+    readonly anchorY: number;
+    readonly offsetX: number;
+    readonly offsetY: number;
+    readonly fit: string;
+    readonly scaleX: number;
+    readonly scaleY: number;
+    readonly rotation: number;
+}
+
+export interface LevelUpdateData {
     readonly _id: string;
     readonly name?: string;
     readonly elevation?: { readonly bottom: number; readonly top: number };
-    readonly background?: LevelImage;
-    readonly foreground?: LevelImage;
-    readonly fog?: LevelImage;
+    readonly background?: ThresholdImage<string> & { readonly color: string };
+    readonly foreground?: ThresholdImage<string>;
+    readonly fog?: LevelImage<string>;
+    readonly textures?: LevelTextures;
+    readonly visibility?: { readonly levels: readonly string[] };
 }
 
 export type EmbeddedName = 'Wall' | 'AmbientLight' | 'AmbientSound' | 'Tile' | 'Region' | 'Level';
@@ -254,9 +278,13 @@ export interface NativeLevel {
     readonly name: string;
     /** An open bound is null in source data and ±Infinity once Foundry prepares it. */
     readonly elevation: { readonly bottom: number | null; readonly top: number | null };
-    readonly background: LevelImage;
-    readonly foreground: LevelImage;
-    readonly fog: LevelImage;
+    readonly background: ThresholdImage<PreparedColour> & { readonly color: PreparedColour };
+    readonly foreground: ThresholdImage<PreparedColour>;
+    /** 14.359 gives the fog a tint (`common/documents/level.mjs`); fvtt-types does not have it yet. */
+    readonly fog: { readonly src: string | null; readonly tint?: PreparedColour };
+    readonly textures: LevelTextures;
+    /** The other levels seen from this one (a `SceneLevelsSetField`: a Set once prepared). */
+    readonly visibility: { readonly levels: Iterable<string> };
 }
 
 /*

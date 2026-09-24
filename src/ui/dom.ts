@@ -42,7 +42,13 @@ export function pressable(className: string, text: string, pressed: boolean, key
  * committed value and returns whether it was valid; a rejected value reverts
  * the input.
  */
-export function labelledInput(label: string, type: 'text' | 'number', value: string, key: string, accept: (value: string) => boolean): HTMLLabelElement {
+export function labelledInput(
+    label: string,
+    type: 'text' | 'number' | 'color',
+    value: string,
+    key: string,
+    accept: (value: string) => boolean,
+): HTMLLabelElement {
     const wrap = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', label);
     const input = el('input', 'tw-text-xs tw-w-24');
     input.type = type;
@@ -104,12 +110,29 @@ export function choice<T extends string>(
     return wrap;
 }
 
-/** Replace `root`'s children, returning keyboard focus (and an input's caret) to the control that had it. */
+/** A collapsed section (a native disclosure) whose `summary` opens it; it stays open across re-renders. */
+export function disclosure(summary: string, key: string, children: readonly HTMLElement[]): HTMLDetailsElement {
+    const details = el('details', 'tw-w-full tw-text-xs');
+    focusKey(details, key);
+    const body = el('div', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-pt-1');
+    body.append(...children);
+    details.append(el('summary', 'tw-cursor-pointer', summary), body);
+    return details;
+}
+
+/**
+ * Replace `root`'s children, returning keyboard focus (and an input's caret)
+ * to the control that had it, and reopening the disclosures that were open.
+ */
 export function replacePreservingFocus(root: HTMLElement, children: readonly HTMLElement[]): void {
     const active = root.ownerDocument.activeElement;
     const focused = active instanceof HTMLElement && root.contains(active) ? active.getAttribute(FOCUS_ATTR) : null;
     const caret = active instanceof HTMLInputElement && active.type !== 'number' ? active.selectionStart : null;
+    const opened = new Set([...root.querySelectorAll<HTMLDetailsElement>('details[open]')].map((details) => details.getAttribute(FOCUS_ATTR)));
     root.replaceChildren(...children);
+    for (const details of root.querySelectorAll<HTMLDetailsElement>(`details[${FOCUS_ATTR}]`)) {
+        details.open = opened.has(details.getAttribute(FOCUS_ATTR));
+    }
     if (focused === null) {
         return;
     }

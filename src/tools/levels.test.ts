@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     adjacentLevel,
+    editLevelArt,
     findLevel,
     levelElevation,
     levelHeightFor,
@@ -12,6 +13,8 @@ import {
     planningLevels,
     sortLevels,
     type Level,
+    type LevelArt,
+    type LevelArtEdit,
 } from './levels';
 
 const levels: Level[] = [
@@ -26,6 +29,49 @@ describe('planningLevels', () => {
         expect(planningLevels(painted)).toBe(planningLevels(levels));
         expect(planningLevels(levels.map((level) => ({ ...level, name: `${level.name}!` })))).not.toBe(planningLevels(levels));
         expect(planningLevels(levels.map((level) => ({ ...level, top: level.top + 1 })))).not.toBe(planningLevels(levels));
+    });
+});
+
+describe('editLevelArt', () => {
+    const edit = (change: LevelArtEdit): LevelArt | null => editLevelArt(NO_LEVEL_ART, change);
+
+    it('sets an image path, trimmed, and clears a blank one', () => {
+        expect(edit({ kind: 'image', image: 'fog', path: ' maps/fog.webp ' })?.fog).toBe('maps/fog.webp');
+        expect(editLevelArt({ ...NO_LEVEL_ART, background: 'a.webp' }, { kind: 'image', image: 'background', path: '  ' })?.background).toBeNull();
+    });
+
+    it('takes six-digit hex colours, lower-cased, for the backdrop and each tint', () => {
+        expect(edit({ kind: 'backgroundColor', typed: ' #AB12CD ' })?.backgroundColor).toBe('#ab12cd');
+        expect(edit({ kind: 'tint', image: 'foreground', typed: '#00ff00' })?.tints).toEqual({ ...NO_LEVEL_ART.tints, foreground: '#00ff00' });
+        expect(edit({ kind: 'backgroundColor', typed: 'red' })).toBeNull();
+        expect(edit({ kind: 'tint', image: 'fog', typed: '#fff' })).toBeNull();
+    });
+
+    it('takes alpha thresholds from 0 to 1', () => {
+        expect(edit({ kind: 'threshold', image: 'background', typed: '0' })?.alphaThresholds.background).toBe(0);
+        expect(edit({ kind: 'threshold', image: 'foreground', typed: '1' })?.alphaThresholds.foreground).toBe(1);
+        expect(edit({ kind: 'threshold', image: 'background', typed: '1.01' })).toBeNull();
+        expect(edit({ kind: 'threshold', image: 'background', typed: '-0.1' })).toBeNull();
+        expect(edit({ kind: 'threshold', image: 'background', typed: '' })).toBeNull();
+    });
+
+    it('places the images: whole-pixel offsets, scales that are not 0, any anchor and rotation, and a fit', () => {
+        expect(edit({ kind: 'placement', field: 'offsetY', typed: '-40' })?.placement.offsetY).toBe(-40);
+        expect(edit({ kind: 'placement', field: 'offsetX', typed: '4.5' })).toBeNull();
+        expect(edit({ kind: 'placement', field: 'scaleX', typed: '-1' })?.placement.scaleX).toBe(-1);
+        expect(edit({ kind: 'placement', field: 'scaleY', typed: '0' })).toBeNull();
+        expect(edit({ kind: 'placement', field: 'anchorX', typed: '0.25' })?.placement.anchorX).toBe(0.25);
+        expect(edit({ kind: 'placement', field: 'rotation', typed: '90' })?.placement.rotation).toBe(90);
+        expect(edit({ kind: 'placement', field: 'rotation', typed: 'x' })).toBeNull();
+        expect(edit({ kind: 'fit', fit: 'contain' })?.placement).toEqual({ ...NO_LEVEL_ART.placement, fit: 'contain' });
+    });
+
+    it('adds and removes a level seen from this one, never twice', () => {
+        const seen = edit({ kind: 'visible', level: 'cellar', visible: true });
+        expect(seen?.visibleLevels).toEqual(['cellar']);
+        const again = seen && editLevelArt(seen, { kind: 'visible', level: 'cellar', visible: true });
+        expect(again?.visibleLevels).toEqual(['cellar']);
+        expect(again && editLevelArt(again, { kind: 'visible', level: 'cellar', visible: false })?.visibleLevels).toEqual([]);
     });
 });
 
