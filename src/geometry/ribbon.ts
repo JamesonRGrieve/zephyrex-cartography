@@ -140,13 +140,23 @@ function capArc(centre: Point, forward: Point, radius: number): number[] {
     return arc;
 }
 
-/** The unit direction from `from` to `to`, or none when they coincide. */
-function unit(from: Point | undefined, to: Point | undefined): Point | null {
-    if (!from || !to) {
-        return null;
+/**
+ * The half circle rounding off a ribbon's end, from its rail pair there: the
+ * centre is midway between them, and the end faces along the path (`facing`
+ * 1, the far end) or back against it (−1, the near end). An end whose rails
+ * meet faces no way, and gets none.
+ */
+function endCap(positions: readonly number[], pair: number, facing: 1 | -1, radius: number): number[] {
+    const left = { x: positions[pair * 4] ?? 0, y: positions[pair * 4 + 1] ?? 0 };
+    const right = { x: positions[pair * 4 + 2] ?? 0, y: positions[pair * 4 + 3] ?? 0 };
+    const half = Math.hypot(left.x - right.x, left.y - right.y) / 2;
+    if (half === 0) {
+        return [];
     }
-    const len = Math.hypot(to.x - from.x, to.y - from.y);
-    return len > 0 ? { x: (to.x - from.x) / len, y: (to.y - from.y) / len } : null;
+    // The rails sit a half-width either side of the centre along the path's left normal; the path runs a right angle from it.
+    const normal = { x: (left.x - right.x) / (2 * half), y: (left.y - right.y) / (2 * half) };
+    const forward = { x: normal.y * facing, y: -normal.x * facing };
+    return capArc({ x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 }, forward, radius);
 }
 
 /**
@@ -160,30 +170,17 @@ export function brushOutline(centerline: readonly Point[], radius: number, sampl
         centerline.map(() => radius),
         samplesPerSegment,
     );
-    const pairs = Math.floor(geo.positions.length / 4);
-    if (pairs < 2) {
-        return [];
-    }
-    const spine = catmullRom(centerline, Math.max(1, samplesPerSegment));
-    const endDir = unit(spine[spine.length - 2], spine[spine.length - 1]);
-    const startDir = unit(spine[1], spine[0]);
-    const first = spine[0];
-    const last = spine[spine.length - 1];
     const p = geo.positions;
+    const pairs = Math.floor(p.length / 4);
     const out: number[] = [];
     for (let j = 0; j < pairs; j++) {
         out.push(p[j * 4] ?? 0, p[j * 4 + 1] ?? 0);
     }
-    // Round the far end off from the left rail to the right, then walk the right rail back.
-    if (endDir && last) {
-        out.push(...capArc(last, endDir, radius));
-    }
+    // Round the far end off from the left rail to the right, walk the right rail back, then round the near end.
+    out.push(...endCap(p, pairs - 1, 1, radius));
     for (let j = pairs - 1; j >= 0; j--) {
         out.push(p[j * 4 + 2] ?? 0, p[j * 4 + 3] ?? 0);
     }
-    // The near end, walked backwards: from the right rail round to the left.
-    if (startDir && first) {
-        out.push(...capArc(first, startDir, radius));
-    }
+    out.push(...endCap(p, 0, -1, radius));
     return out;
 }

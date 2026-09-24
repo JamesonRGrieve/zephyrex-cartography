@@ -83,6 +83,15 @@ describe('brushOutline', () => {
         expect(back).toBeGreaterThan(tip);
     });
 
+    it('rounds no end that faces no way (a stroke that never moved)', () => {
+        const still: Point[] = [
+            { x: 5, y: 5 },
+            { x: 5, y: 5 },
+        ];
+        // No direction means no cap arc: nothing reaches out to the brush's radius.
+        expect(pointsOf(brushOutline(still, 10, 4)).every((p) => p.x === 5 && p.y === 5)).toBe(true);
+    });
+
     it('leaves nothing for fewer than two points', () => {
         expect(brushOutline([{ x: 0, y: 0 }], 10, 4)).toEqual([]);
     });
