@@ -5,7 +5,11 @@ import * as stories from './zone-panel-view.stories';
 
 function mount(story: { readonly args?: Partial<stories.ZonePanelArgs> }): HTMLElement {
     const base = stories.default.args;
-    const el = stories.mountZonePanel({ settings: story.args?.settings ?? base?.settings ?? NEW_ZONE, tokens: story.args?.tokens ?? base?.tokens ?? [] });
+    const el = stories.mountZonePanel({
+        settings: story.args?.settings ?? base?.settings ?? NEW_ZONE,
+        tokens: story.args?.tokens ?? base?.tokens ?? [],
+        presets: story.args?.presets ?? base?.presets ?? [],
+    });
     document.body.replaceChildren(el);
     return el;
 }
@@ -93,6 +97,22 @@ describe('zone panel', () => {
         expect(select(root, 'zc-zone-token').value).toBe('');
         const gone = mount({ args: { settings: { ...NEW_ZONE, attachedTo: 'tokenGone0000001' }, tokens: [] } });
         expect(select(gone, 'zc-zone-token').value).toBe('tokenGone0000001');
+    });
+
+    it('applies and forgets the world’s presets, and saves the zone as one under its own name to start', () => {
+        const none = mount(stories.NewZone);
+        expect(none.textContent).toContain('No presets yet');
+        const root = mount(stories.FlamerCone);
+        const button = (key: string): HTMLButtonElement | null => root.querySelector<HTMLButtonElement>(`button[data-zc-focus="${key}"]`);
+        change(select(root, 'zc-zone-preset'), 'Choking gas');
+        button('zone-preset-apply')?.click();
+        expect(input(root, 'zone-name').value).toBe('Choking gas');
+        expect(input(root, 'zone-preset-name').value).toBe('Choking gas');
+        change(input(root, 'zone-preset-name'), 'Gas, heavy');
+        button('zone-preset-save')?.click();
+        expect([...select(root, 'zc-zone-preset').options].map((o) => o.value)).toEqual(['Promethium slick', 'Choking gas', 'Rubble', 'Gas, heavy']);
+        button('zone-preset-forget')?.click();
+        expect([...select(root, 'zc-zone-preset').options].map((o) => o.value)).toEqual(['Choking gas', 'Rubble', 'Gas, heavy']);
     });
 
     it('renders every story', () => {

@@ -229,8 +229,9 @@ export function zoneHit(zone: ZoneFeature, pt: Point): boolean {
     return Math.abs(x) <= shape.width * HALF && Math.abs(y) <= shape.height * HALF;
 }
 
-// eslint-disable-next-line no-restricted-syntax -- boundary: parses a persisted zone shape from scene-flag JSON
-function parseZoneShape(v: unknown): ZoneShape | null {
+/** A persisted zone shape, or null when it is not one Foundry takes. */
+// eslint-disable-next-line no-restricted-syntax -- boundary: parses a persisted zone shape from scene-flag or setting JSON
+export function parseZoneShape(v: unknown): ZoneShape | null {
     if (!isRecord(v)) {
         return null;
     }

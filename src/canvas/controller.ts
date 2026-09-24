@@ -12,7 +12,7 @@ import type { Point } from '../geometry/spline';
 import { centroid, nearestSegment } from '../geometry/wall';
 import { type CatalogStamp, cycleVariantIndex, effectiveProperties } from '../stamps/catalog';
 import { storedDisplay, storedEffects } from '../tools/area-effects';
-import { type AreaSettings, areaSettingsOf, isArea } from '../tools/areas';
+import { type AreaFeature, type AreaSettings, areaSettingsOf, isArea } from '../tools/areas';
 import type { BiomeKind } from '../tools/biome';
 import { pileSpec, type PileSpec } from '../tools/containers';
 import { hasDocs, NO_DOCS, type DoorState, type GeneratedDocs, type RegionDoc, type SubmapTravel, type TileDoc } from '../tools/documents';
@@ -76,6 +76,7 @@ import { lampVariant, switchOf } from '../tools/switches';
 import { NORMAL_COST, storedCost, validCost } from '../tools/terrain-cost';
 import type { WallPreset } from '../tools/wall-presets';
 import { makeZone, NEW_ZONE, withZonePlace, withZoneSettings, type ZoneFeature, zonePoint, type ZoneSettings, zoneSettingsOf } from '../tools/zone';
+import { presetZone, type ZonePreset } from '../tools/zone-presets';
 import type { FeatureRenderer } from './renderer';
 import { type DocumentKind, StagedChanges, type StagedWrite } from './staged-changes';
 
@@ -245,6 +246,20 @@ const DOOR_SNAP_SQUARES = 0.5;
 
 /** The labels of the regions areas carry their settings on: a room's own, painted ground's and a zone's. */
 const AREA_REGION_KINDS: ReadonlySet<string> = new Set(['room', 'terrain', 'zone']);
+
+/** `area` with `settings`, each stored only when not ordinary; null when the cost is not one Foundry takes. */
+function withAreaSettings<A extends AreaFeature>(area: A, settings: AreaSettings): A | null {
+    if (validCost(settings.movementCost) === null) {
+        return null;
+    }
+    return {
+        ...area,
+        movementCost: storedCost(settings.movementCost),
+        effects: storedEffects(settings.effects),
+        display: storedDisplay(settings.display),
+        spawn: storedSpawn(settings.spawn),
+    };
+}
 
 function swap(arr: Feature[], a: number, b: number): void {
     const first = arr[a];
@@ -1234,16 +1249,23 @@ export class CartographyController {
     /** Give an area another movement cost and effects, re-syncing its Scene Region; false if it is not an area or the cost is not one Foundry takes. */
     async setAreaSettings(id: string, settings: AreaSettings): Promise<boolean> {
         const f = this.getFeature(id);
-        if (!f || !isArea(f) || validCost(settings.movementCost) === null) {
+        const next = f && isArea(f) ? withAreaSettings(f, settings) : null;
+        if (next === null) {
             return false;
         }
-        await this.replaceFeature(id, {
-            ...f,
-            movementCost: storedCost(settings.movementCost),
-            effects: storedEffects(settings.effects),
-            display: storedDisplay(settings.display),
-            spawn: storedSpawn(settings.spawn),
-        });
+        await this.replaceFeature(id, next);
+        return true;
+    }
+
+    /** Give a zone a hazard preset's shape and area settings, as one re-sync; false if it is not a zone or the preset will not fit it. */
+    async applyZonePreset(id: string, preset: ZonePreset): Promise<boolean> {
+        const f = this.getFeature(id);
+        const shaped = f?.type === 'zone' ? withZoneSettings(f, presetZone(zoneSettingsOf(f), preset)) : null;
+        const next = shaped && withAreaSettings(shaped, preset.area);
+        if (!next) {
+            return false;
+        }
+        await this.replaceFeature(id, next);
         return true;
     }
 

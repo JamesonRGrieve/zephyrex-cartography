@@ -466,6 +466,25 @@ test('the zone tool, with the Regions tools, places a native Region in Foundryâ€
     await expect.poll(zones).toEqual([]);
 });
 
+test('a zone saved as a hazard preset gives another zone its shape and behaviours', async ({ world }) => {
+    await useTool(world, 'zone');
+    await holdView(world);
+    await clickScene(world, { x: 400, y: 400 });
+    const panel = world.locator(`#${MODULE_ID}-zone`);
+    await panel.getByLabel('Type').selectOption({ label: 'Ring' });
+    await panel.getByLabel('Preset name').fill('Cordon');
+    await panel.getByLabel('Preset name').press('Enter');
+    await panel.getByRole('button', { name: 'Save this zone as a preset' }).click();
+    await expect(panel.getByLabel('Preset', { exact: true })).toHaveValue('Cordon');
+
+    // A second zone, clear of the first and of the open panel, takes the preset.
+    await clickScene(world, { x: 100, y: 800 });
+    await panel.getByRole('button', { name: 'Apply to this zone' }).click();
+    const shapes = async (): Promise<string[][]> =>
+        world.evaluate(() => (canvas?.scene?.regions.contents ?? []).map((region) => region.shapes.map((shape) => `${region.name}:${shape.type}`)));
+    await expect.poll(shapes).toEqual([['Zone:ring'], ['Cordon:ring']]);
+});
+
 test('the pin tool, with the Notes tools, places a native Note that opens a journal page, and erase removes it', async ({ world }) => {
     const journal = await world.evaluate(async () => {
         const entry = await JournalEntry.create({ name: 'The Sump', pages: [{ name: 'The bar', type: 'text' }] });

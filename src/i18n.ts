@@ -146,6 +146,15 @@ export const I18N = {
     zones: {
         title: key('Zones.Title'),
         none: key('Zones.None'),
+        presets: {
+            title: key('Zones.Presets.Title'),
+            preset: key('Zones.Presets.Preset'),
+            apply: key('Zones.Presets.Apply'),
+            forget: key('Zones.Presets.Forget'),
+            name: key('Zones.Presets.Name'),
+            save: key('Zones.Presets.Save'),
+            empty: key('Zones.Presets.Empty'),
+        },
     },
     effects: {
         title: key('Effects.Title'),

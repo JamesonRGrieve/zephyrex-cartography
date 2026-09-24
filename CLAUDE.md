@@ -765,9 +765,18 @@ These make everything after them cheaper and safer, so they come first.
     left) are shown.
   - The scene spec's areas take `spawn`. Proven in
     `tests/e2e/structures.spec.ts`.
-- **Hazard presets.** Measured templates are gone [14.352], and areas of
-  effect are regions now. Region presets (fire, gas, rubble) combine a shape
-  with behaviours and fit the same model.
+- **[done] Hazard presets.** Measured templates are gone [14.352], and areas
+  of effect are regions now. A preset (`tools/zone-presets.ts`) is a zone
+  the GM set up once and saved under a name: its shape, grid measuring and
+  every area setting (cost, behaviours, display, spawn).
+  - The GM makes them, so the module ships no game rules of its own. They
+    are the world's, kept as JSON in the `zonePresets` world setting and
+    parsed defensively.
+  - The zone panel's Hazard presets section applies one to the zone (one
+    re-sync, `applyZonePreset`; a zone without a name takes the preset's),
+    forgets one, or saves the zone as one, replacing a preset of the same
+    name.
+  - Proven in `tests/e2e/pointer.spec.ts`.
 
 ### Priority 6: sounds, particles and effects
 - **[done] Ambient sounds**, as stamp emitters (a generator's hum, a

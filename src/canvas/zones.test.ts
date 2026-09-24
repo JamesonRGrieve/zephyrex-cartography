@@ -52,6 +52,20 @@ describe('zones', () => {
         expect(d.regions.at(-1)).toEqual([expect.objectContaining({ behaviour: { kind: 'terrain', difficulties: { walk: 3 } } })]);
     });
 
+    it('take a hazard preset’s shape and area settings in one re-sync, keeping their token', async () => {
+        const { c, d } = makeHarness();
+        const id = (await c.placeZone({ x: 0, y: 0 }, { ...NEW_ZONE, attachedTo: 'tk1' })) ?? '';
+        const writes = d.writes.length;
+        const area = { movementCost: 2, effects: [{ kind: 'suppressWeather' }], display: DEFAULT_AREA_DISPLAY, spawn: NO_SPAWN } as const;
+        const preset = { name: 'Gas', shape: { kind: 'circle', radius: 400 }, gridBased: true, area } as const;
+        expect(await c.applyZonePreset(id, preset)).toBe(true);
+        expect(d.writes.length).toBe(writes + 1);
+        expect(c.zoneSettings(id)).toEqual({ ...NEW_ZONE, name: 'Gas', shape: preset.shape, gridBased: true, attachedTo: 'tk1' });
+        expect(c.areaSettings(id)).toEqual(area);
+        expect(await c.applyZonePreset('nope', preset)).toBe(false);
+        expect(await c.applyZonePreset(id, { ...preset, area: { ...area, movementCost: 9 } })).toBe(false);
+    });
+
     it('follow their region as Foundry moves it with the token, without recreating it', async () => {
         const { c, d, s } = makeHarness();
         const id = (await c.placeZone({ x: 0, y: 0 }, flamer)) ?? '';

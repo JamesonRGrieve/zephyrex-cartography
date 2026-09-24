@@ -7,6 +7,7 @@ import { renderZonePanel, type TokenChoice, type ZoneLabels } from './zone-panel
 export interface ZonePanelArgs {
     readonly settings: ZoneSettings;
     readonly tokens: readonly TokenChoice[];
+    readonly presets: readonly string[];
 }
 
 const SHAPE_NAMES: Readonly<Record<ZoneShapeKind, string>> = {
@@ -44,6 +45,15 @@ const LABELS: ZoneLabels = {
     gridBased: 'Is Grid-Based',
     token: 'Attached Token',
     none: 'None',
+    presets: {
+        title: 'Hazard presets',
+        preset: 'Preset',
+        apply: 'Apply to this zone',
+        forget: 'Forget preset',
+        name: 'Preset name',
+        save: 'Save this zone as a preset',
+        empty: 'No presets yet: set up a zone, then save it as one.',
+    },
 };
 
 const TOKENS: readonly TokenChoice[] = [
@@ -58,12 +68,26 @@ export function mountZonePanel(args: ZonePanelArgs): HTMLElement {
     const root = document.createElement('div');
     windowEl.append(root);
     let settings = args.settings;
+    let presets = args.presets;
     const render = (): void => {
-        renderZonePanel(root, { settings, tokens: args.tokens }, LABELS, {
+        renderZonePanel(root, { settings, tokens: args.tokens, presets }, LABELS, {
             set: (next) => {
                 settings = next;
                 render();
                 return true;
+            },
+            // A stand-in for the world's presets: applying one just names the zone after it.
+            applyPreset: (presetName) => {
+                settings = { ...settings, name: presetName };
+                render();
+            },
+            savePreset: (presetName) => {
+                presets = presets.includes(presetName) || presetName.trim() === '' ? presets : [...presets, presetName.trim()];
+                render();
+            },
+            forgetPreset: (presetName) => {
+                presets = presets.filter((p) => p !== presetName);
+                render();
             },
         });
     };
@@ -75,7 +99,7 @@ const meta: Meta<ZonePanelArgs> = {
     title: 'Regions/Zone Panel',
     excludeStories: ['mountZonePanel'],
     render: mountZonePanel,
-    args: { settings: NEW_ZONE, tokens: TOKENS },
+    args: { settings: NEW_ZONE, tokens: TOKENS, presets: [] },
 };
 
 export default meta;
@@ -94,6 +118,7 @@ export const FlamerCone: Story = {
             gridBased: true,
             attachedTo: 'tokenServitor001',
         },
+        presets: ['Promethium slick', 'Choking gas', 'Rubble'],
     },
 };
 

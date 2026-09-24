@@ -9,7 +9,9 @@
  */
 import type { CartographyController } from '../canvas/controller';
 import { I18N } from '../i18n';
+import { MODULE_ID } from '../module-id';
 import type { ZoneShapeKind } from '../tools/zone';
+import { parseZonePresets, presetOf, serializeZonePresets, withoutPreset, withPreset, type ZonePreset } from '../tools/zone-presets';
 import { renderZonePanel, type TokenChoice, type ZoneLabels } from '../ui/zone-panel-view';
 import { localize } from './localize';
 import { createViewWindow } from './view-window';
@@ -42,7 +44,33 @@ function labels(): ZoneLabels {
         gridBased: base('gridBased.label'),
         token: localize('REGION.FIELDS.attachment.token.label'),
         none: localize(I18N.zones.none),
+        presets: {
+            title: localize(I18N.zones.presets.title),
+            preset: localize(I18N.zones.presets.preset),
+            apply: localize(I18N.zones.presets.apply),
+            forget: localize(I18N.zones.presets.forget),
+            name: localize(I18N.zones.presets.name),
+            save: localize(I18N.zones.presets.save),
+            empty: localize(I18N.zones.presets.empty),
+        },
     };
+}
+
+/** The world setting the hazard presets are kept in, as JSON. */
+const PRESETS_SETTING = 'zonePresets';
+
+declare global {
+    interface SettingConfig {
+        'zephyrex-cartography.zonePresets': string;
+    }
+}
+
+function presets(): ZonePreset[] {
+    return parseZonePresets(game.settings?.get(MODULE_ID, PRESETS_SETTING) ?? '[]');
+}
+
+async function savePresets(next: readonly ZonePreset[]): Promise<void> {
+    await game.settings?.set(MODULE_ID, PRESETS_SETTING, serializeZonePresets(next));
 }
 
 /** The viewed scene's tokens, by name. */
@@ -58,6 +86,10 @@ export interface ZoneRuntime {
 export function registerZoneRuntime(controller: () => CartographyController | null): ZoneRuntime {
     let zoneId: string | null = null;
 
+    Hooks.once('init', () => {
+        game.settings?.register(MODULE_ID, PRESETS_SETTING, { scope: 'world', config: false, type: String, default: '[]' });
+    });
+
     const panel = createViewWindow({
         id: 'zone',
         title: () => localize(I18N.zones.title),
@@ -71,13 +103,33 @@ export function registerZoneRuntime(controller: () => CartographyController | nu
                 root.replaceChildren();
                 return;
             }
-            renderZonePanel(root, { settings, tokens: tokens() }, labels(), {
+            const after = (work: () => Promise<unknown>): void => {
+                void (async (): Promise<void> => {
+                    await work();
+                    panel.refresh();
+                })();
+            };
+            const saved = presets();
+            renderZonePanel(root, { settings, tokens: tokens(), presets: saved.map((p) => p.name) }, labels(), {
                 set: (next) => {
-                    void (async (): Promise<void> => {
-                        await active.setZoneSettings(id, next);
-                        panel.refresh();
-                    })();
+                    after(async () => active.setZoneSettings(id, next));
                     return true;
+                },
+                applyPreset: (presetName) => {
+                    const preset = saved.find((p) => p.name === presetName);
+                    if (preset) {
+                        after(async () => active.applyZonePreset(id, preset));
+                    }
+                },
+                savePreset: (presetName) => {
+                    const area = active.areaSettings(id);
+                    const preset = area && presetOf(presetName, settings, area);
+                    if (preset) {
+                        after(async () => savePresets(withPreset(saved, preset)));
+                    }
+                },
+                forgetPreset: (presetName) => {
+                    after(async () => savePresets(withoutPreset(saved, presetName)));
                 },
             });
         },

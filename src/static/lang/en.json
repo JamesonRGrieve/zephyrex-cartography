@@ -93,7 +93,16 @@
         },
         "Zones": {
             "Title": "Zone",
-            "None": "None"
+            "None": "None",
+            "Presets": {
+                "Title": "Hazard presets",
+                "Preset": "Preset",
+                "Apply": "Apply to this zone",
+                "Forget": "Forget preset",
+                "Name": "Preset name",
+                "Save": "Save this zone as a preset",
+                "Empty": "No presets yet: set up a zone, then save it as one."
+            }
         },
         "Effects": {
             "Title": "Area effects",
