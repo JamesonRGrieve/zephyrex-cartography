@@ -147,6 +147,9 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
                     problems.push({ index, problem: 'interior' });
                 }
             }
+            if (f.floors && !(await controller.addBuildingFloors(id, f.floors))) {
+                problems.push({ index, problem: 'interior' });
+            }
         }, Promise.resolve());
     });
 

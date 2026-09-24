@@ -129,7 +129,16 @@
             "Transition": "Transition",
             "NoTransition": "None",
             "Duration": "Length (ms)",
-            "Prompt": "Prompt ({token}, {region}, {scene})"
+            "Prompt": "Prompt ({token}, {region}, {scene})",
+            "Floors": {
+                "Heading": "Or floors in this scene",
+                "Count": "Floors",
+                "Add": "Add floors",
+                "Remove": "Remove the stairs",
+                "None": "No floors in this scene.",
+                "List": "Floors: {floors}",
+                "Name": "{stamp} floor {n}"
+            }
         },
         "Lights": {
             "Stamp": "{name} light",

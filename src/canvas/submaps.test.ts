@@ -104,6 +104,31 @@ describe('CartographyController submaps', () => {
         expect(second.w.deleted).toEqual([{ scene: 'vault', region: 'p4' }]);
     });
 
+    it('gives a building its floors in this scene: levels above the top one, joined to its own by stairs', async () => {
+        const { c, d } = await placed();
+        c.gridDistance = 5;
+        await c.addLevel('above', 'Ground');
+        // A stamp on every level stands on the lowest once its floors climb from there.
+        expect(await c.addBuildingFloors('p1', ['Hab floor 1', 'Hab floor 2'])).toBe(true);
+        expect(c.levels.map((l) => [l.name, l.bottom, l.top])).toEqual([
+            ['Ground', 0, 20],
+            ['Hab floor 1', 20, 40],
+            ['Hab floor 2', 40, 60],
+        ]);
+        const hab = c.getFeature('p1');
+        expect(hab?.level).toBe('lv1');
+        expect(c.buildingFloors('p1')).toEqual(['lv2', 'lv3']);
+        const stairs = d.regions.flat().find((r) => r.label.kind === 'stairs');
+        expect(stairs).toMatchObject({ level: 'lv1', spans: ['lv2', 'lv3'], bottom: 0, top: 60, behaviour: { kind: 'changeLevel' } });
+
+        expect(await c.removeBuildingFloors('p1')).toBe(true);
+        expect(c.buildingFloors('p1')).toEqual([]);
+        expect(c.levels).toHaveLength(3);
+        expect(await c.removeBuildingFloors('p1')).toBe(false);
+        expect(await c.addBuildingFloors('p2', ['x'])).toBe(false);
+        expect(await c.addBuildingFloors('p1', [])).toBe(false);
+    });
+
     it('refuses stamps that are not enterable, missing scenes, and the current scene', async () => {
         const { c, w } = await placed();
         expect(await c.linkSubmap('p2', 'vault')).toBe(false);

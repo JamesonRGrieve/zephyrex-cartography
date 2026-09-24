@@ -148,6 +148,15 @@ export const I18N = {
         noTransition: key('Submap.NoTransition'),
         duration: key('Submap.Duration'),
         prompt: key('Submap.Prompt'),
+        floors: {
+            heading: key('Submap.Floors.Heading'),
+            count: key('Submap.Floors.Count'),
+            add: key('Submap.Floors.Add'),
+            remove: key('Submap.Floors.Remove'),
+            none: key('Submap.Floors.None'),
+            list: key('Submap.Floors.List'),
+            name: key('Submap.Floors.Name'),
+        },
     },
     settings: {
         textureSetName: key('Settings.TextureSet.Name'),

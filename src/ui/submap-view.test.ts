@@ -11,6 +11,7 @@ const base: stories.SubmapArgs = {
         { id: 'crypt', name: 'Crypt' },
     ],
     travel: DEFAULT_TRAVEL,
+    floors: [],
     onOpen: () => undefined,
 };
 
@@ -37,12 +38,12 @@ describe('interior panel', () => {
         document.body.replaceChildren();
     });
 
-    it('says an unlinked stamp leads nowhere and offers both ways to give it an interior', () => {
+    it('says an unlinked stamp leads nowhere and offers every way in: a new scene, an existing one, or floors here', () => {
         const root = mount();
         expect(root.querySelector('h3')?.textContent).toBe('Hab Block');
         expect(statusText(root)).toBe('This building does not lead anywhere yet.');
         expect(root.querySelector('label[for="zc-submap-scene"]')).not.toBeNull();
-        expect([...root.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Create an interior scene', 'Link scene']);
+        expect([...root.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Create an interior scene', 'Link scene', 'Add floors']);
     });
 
     it('creates an interior', () => {
@@ -104,8 +105,23 @@ describe('interior panel', () => {
         expect(inputs()[0]?.value).toBe('2000');
     });
 
+    it('offers floors in this scene instead: adds as many as asked, lists them, and removes the stairs', () => {
+        const root = mount();
+        expect(root.textContent).toContain('No floors in this scene.');
+        expect([...root.querySelectorAll('button')].some((b) => b.textContent === 'Remove the stairs')).toBe(false);
+        const count = [...root.querySelectorAll<HTMLInputElement>('input[type="number"]')].at(-1);
+        if (count) {
+            count.value = '2';
+            count.dispatchEvent(new Event('change'));
+        }
+        click(root, 'Add floors');
+        expect(root.textContent).toContain('Floors: Hab Block floor 1, Hab Block floor 2');
+        click(root, 'Remove the stairs');
+        expect(root.textContent).toContain('No floors in this scene.');
+    });
+
     it('renders every story', () => {
-        for (const story of [stories.NotLinked, stories.Linked, stories.LinkedWithATransition, stories.NoOtherScenes]) {
+        for (const story of [stories.NotLinked, stories.Linked, stories.LinkedWithATransition, stories.FloorsInThisScene, stories.NoOtherScenes]) {
             expect(mount(story.args ?? {}).querySelector('h3')).not.toBeNull();
         }
     });

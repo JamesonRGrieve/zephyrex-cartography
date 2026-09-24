@@ -218,6 +218,19 @@ function transitionRegions(stamp: StampFeature, levels: readonly Level[]): Regio
         transition.direction === 'down' ? null : adjacentLevel(levels, here.id, 1),
         transition.direction === 'up' ? null : adjacentLevel(levels, here.id, -1),
     ].filter((level): level is Level => level !== null);
+    return joiningRegions(stamp, transition.kind, here, ends);
+}
+
+/**
+ * A `changeLevel` region over a stamp's footprint joining its own level to
+ * `ends`, spanning all their bands; none when there is nowhere to go.
+ */
+function joiningRegions(
+    stamp: StampFeature,
+    kind: NonNullable<StampFeature['behaviour']['transition']>['kind'],
+    here: Level,
+    ends: readonly Level[],
+): RegionDoc[] {
     if (ends.length === 0) {
         return [];
     }
@@ -225,7 +238,7 @@ function transitionRegions(stamp: StampFeature, levels: readonly Level[]): Regio
     return [
         {
             id: null,
-            label: { kind: transition.kind, from: here.name, to: ends.map((end) => end.name) },
+            label: { kind, from: here.name, to: ends.map((end) => end.name) },
             polygon: stampCorners(stamp),
             bottom: Math.min(...joined.map((level) => level.bottom)),
             top: Math.max(...joined.map((level) => level.top)),
@@ -234,6 +247,17 @@ function transitionRegions(stamp: StampFeature, levels: readonly Level[]): Regio
             behaviour: { kind: 'changeLevel' },
         },
     ];
+}
+
+/**
+ * A building with its floors in this scene: stairs over its footprint from
+ * its own level to every one of its floors still on the scene. A building on
+ * no level has no floor to climb from, and gets none.
+ */
+function buildingStairs(stamp: StampFeature, levels: readonly Level[]): RegionDoc[] {
+    const here = findLevel(levels, stamp.level);
+    const floors = stamp.floors.map((id) => findLevel(levels, id)).filter((level): level is Level => level !== null);
+    return here ? joiningRegions(stamp, 'stairs', here, floors) : [];
 }
 
 /** A linked stamp's entrance: over its footprint on its own level, teleporting to the interior's exit. */
@@ -364,6 +388,7 @@ function stampPlan(stamp: StampFeature, context: PlanContext): DocumentPlan {
         lights: light ? [light] : [],
         regions: [
             ...transitionRegions(stamp, context.levels),
+            ...buildingStairs(stamp, context.levels),
             ...[
                 entranceRegion(stamp, context.levels),
                 stampTerrainRegion(stamp, context.levels),

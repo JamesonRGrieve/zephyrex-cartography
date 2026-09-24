@@ -251,6 +251,50 @@ export class CartographyController {
         return feature?.type === 'stamp' && feature.behaviour.enterable ? feature : null;
     }
 
+    /** The levels of an enterable stamp's floors in this scene, bottom to top; empty for none. */
+    buildingFloors(id: string): readonly string[] {
+        return this.enterable(id)?.floors ?? [];
+    }
+
+    /**
+     * Give a building its floors in this scene: one Level per name, stacked
+     * above the scene's top level, and stairs over its footprint joining its
+     * own level to all of them. A building on every level stands on the
+     * lowest from then on, since its floors climb from there. More can be
+     * added later, above. False for a stamp that is not enterable, or a scene
+     * with no levels.
+     */
+    async addBuildingFloors(id: string, names: readonly string[]): Promise<boolean> {
+        const stamp = this.enterable(id);
+        const ground = stamp && (findLevel(this.levelList, stamp.level) ?? this.levelList[0] ?? null);
+        if (!stamp || !ground || names.length === 0) {
+            return false;
+        }
+        const created = await names.reduce(async (built, levelName) => {
+            const ids = await built;
+            const levelId = await this.levelStore.create({
+                name: levelName,
+                ...nextLevelBand(this.levelList, 'above', levelHeightFor(this.gridDistance)),
+                art: NO_LEVEL_ART,
+            });
+            this.levelList = sortLevels(this.levelStore.load());
+            return levelId === null ? ids : [...ids, levelId];
+        }, Promise.resolve<string[]>([]));
+        await this.reloadLevels();
+        await this.replaceFeature(id, { ...stamp, level: ground.id, floors: [...stamp.floors, ...created] });
+        return created.length > 0;
+    }
+
+    /** Take away a building's stairs to its floors; the floors themselves stay, for the GM to remove from the levels panel. */
+    async removeBuildingFloors(id: string): Promise<boolean> {
+        const stamp = this.enterable(id);
+        if (!stamp || stamp.floors.length === 0) {
+            return false;
+        }
+        await this.replaceFeature(id, { ...stamp, floors: [] });
+        return true;
+    }
+
     /** The interior an enterable stamp leads into, or null. */
     submapOf(id: string): SubmapLink | null {
         return this.enterable(id)?.submap ?? null;

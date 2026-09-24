@@ -383,6 +383,12 @@ The goal is **full use of Foundry v14's scene features**.
 - **Checking.** The latest stable is 14.368 and the local reference source is
   14.359. Check anything the notes date after 14.359 against a newer release
   before building on it.
+  - The live server also runs 14.359 (checked 2026-09-23), so
+    `pull-foundry.sh` cannot supply a newer reference. A newer one has to
+    come from foundryvtt.com with the operator's account. Until then, the
+    items that need it are **blocked**: stair movement actions (14.361),
+    compressed textures (14.362), level preloading and the level-aware
+    helpers (14.364), and teleport `avoidOccupied`.
 - **Closing a gap** means exposing the option everywhere it applies:
   - the engine's plan and document specs, and the Foundry translation;
   - the stamp pack schema (additive v1 fields);
@@ -495,8 +501,17 @@ These make everything after them cheaper and safer, so they come first.
   images before the party climbs to it.
 - **Buildings: interior scene or upper levels.** A building can open into a
   separate interior scene (submaps) or have its floors as Levels of the same
-  scene. That is the GM's choice per building, so an enterable stamp offers
-  both.
+  scene. That is the GM's choice per building (operator decision,
+  2026-09-23): the Interior panel offers both, "Interior scene" and "Floors
+  in this scene". The floors option adds Levels above the building's own and
+  a stair region over its footprint joining them, all in one scene.
+  - **[done]** A stamp's `floors` lists its floor Levels. `addBuildingFloors`
+    stacks one Level per name above the scene's top; a building on every
+    level then stands on the lowest. The plan adds one `changeLevel` region
+    over the footprint joining its level to every floor still on the scene.
+    Removing the stairs keeps the Levels, for the GM to delete when empty.
+    The scene spec's stamps take `floors` (their names). Proven in
+    `tests/e2e/levels.spec.ts`.
 - **Tests and validation** use `Scene#getSurfaces` and
   `Scene#testSurfaceCollision` [14.355, 14.356] to check floors and walls.
   `Level#updateRegionShapeConstraints` [14.365] refreshes region constraints
@@ -674,6 +689,12 @@ These make everything after them cheaper and safer, so they come first.
 Terrain today is polygons and brush strokes, each one biome with a
 feathered edge. The operator asked for texture painting with an **RGBA mask
 option**: a splat map, as in Dungeondraft and Inkarnate.
+- **Design (operator decision, 2026-09-23): one splat map per level.** One
+  RGBA mask image covers the scene on each level; each channel weights one
+  texture role from the active set, blended by a PIXI shader. It is saved as
+  a PNG in the world's data folder and can be baked to a native Tile. The
+  paint tool gains a "Blend" mode that paints into the mask with a soft
+  brush.
 - **Mask.** A painted mask image whose four channels each weight one texture
   from the active set, blended per pixel. Soft, pressure-free brushes paint
   into one channel and take from the others, giving hand-painted edges no

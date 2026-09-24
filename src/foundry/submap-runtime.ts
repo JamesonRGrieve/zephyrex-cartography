@@ -38,6 +38,14 @@ function labels(): SubmapLabels {
             duration: localize(s.duration),
             prompt: localize(s.prompt),
         },
+        floors: {
+            heading: localize(s.floors.heading),
+            count: localize(s.floors.count),
+            add: localize(s.floors.add),
+            remove: localize(s.floors.remove),
+            none: localize(s.floors.none),
+            list: (floors) => format(s.floors.list, { floors }),
+        },
     };
 }
 
@@ -95,8 +103,18 @@ export function registerSubmapRuntime(controller: () => CartographyController | 
                 scenes,
                 travel: link?.travel ?? DEFAULT_TRAVEL,
                 transitions: sceneTransitions(),
+                floors: active.buildingFloors(id).map((levelId) => active.levels.find((level) => level.id === levelId)?.name ?? levelId),
             };
             renderSubmapPanel(root, panelState, labels(), {
+                addFloors: (count) => {
+                    const building = stampName(active, id);
+                    const start = active.buildingFloors(id).length;
+                    const names = Array.from({ length: count }, (_, i) => format(I18N.submap.floors.name, { stamp: building, n: String(start + i + 1) }));
+                    run(async () => active.addBuildingFloors(id, names));
+                },
+                removeFloors: () => {
+                    run(async () => active.removeBuildingFloors(id));
+                },
                 setTravel: (travel) => {
                     run(async () => active.setSubmapTravel(id, travel));
                 },

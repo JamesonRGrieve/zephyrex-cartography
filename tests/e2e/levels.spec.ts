@@ -26,6 +26,28 @@ test('a stair is one native changeLevel region spanning the floors it joins', as
     expect(result.levels).toEqual(expect.arrayContaining(result.joins));
 });
 
+test('a building’s floors in this scene are native Levels above, joined by one changeLevel stair over it', async ({ world }) => {
+    const result = await world.evaluate(async () => {
+        const controller = game.modules?.get('zephyrex-cartography').api.controller();
+        const hab = (await controller?.placeStamp({ stamp: 'zc-e2e-pack:hab', x: 600, y: 600 })) ?? '';
+        const added = await controller?.addBuildingFloors(hab, ['Hab floor 1', 'Hab floor 2']);
+        const levels = canvas?.scene?.levels.contents ?? [];
+        const stairs = canvas?.scene?.regions.contents.filter((region) => region.behaviors.contents.some((b) => b.type === 'changeLevel')) ?? [];
+        return {
+            added,
+            names: levels.map((level) => level.name),
+            stairs: stairs.length,
+            joins: stairs.flatMap((region) => [...region.levels]).length,
+        };
+    });
+    expect(result.added).toBe(true);
+    // The fresh scene's own Level, then the two floors stacked above it.
+    expect(result.names).toHaveLength(3);
+    expect(result.names.slice(1)).toEqual(['Hab floor 1', 'Hab floor 2']);
+    expect(result.stairs).toBe(1);
+    expect(result.joins).toBe(3);
+});
+
 test('a room on an upper level has a floor Foundry treats as a solid surface from both levels', async ({ world }) => {
     const result = await world.evaluate(async () => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();

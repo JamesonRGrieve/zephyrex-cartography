@@ -12,7 +12,7 @@ import type { Point } from '../geometry/spline';
 import { type CatalogStamp, clampVariantIndex, computeTilePlacement, effectiveProperties, resolveVariant } from '../stamps/catalog';
 import { type PlacedBehaviour, placedBehaviourSchema } from '../stamps/schema';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
-import { isPoint, isRecord, numberOr, stringOrNull } from './guards';
+import { isPoint, isRecord, numberOr, stringArray, stringOrNull } from './guards';
 import { parseSubmapLink, type SubmapLink } from './submap';
 import { parseSwitchTargets, type SwitchTarget } from './switch-targets';
 
@@ -61,6 +61,8 @@ export interface StampFeature extends FeatureCommon {
     readonly pile: string | null;
     /** For a light switch, what it turns on and off; empty for every other stamp. */
     readonly switchTargets: readonly SwitchTarget[];
+    /** For a building with its floors in this scene, the levels of its upper floors, bottom to top; empty otherwise. */
+    readonly floors: readonly string[];
 }
 
 /** Grid size assumed for a persisted stamp that predates the field. */
@@ -131,6 +133,7 @@ export function makeStamp(id: string, stamp: CatalogStamp, placement: StampPlace
         submap: null,
         pile: null,
         switchTargets: [],
+        floors: [],
         ...NEW_FEATURE,
     };
 }
@@ -244,6 +247,7 @@ export function parseStamp(v: unknown): StampFeature | null {
         submap: parseSubmapLink(v['submap']),
         pile: stringOrNull(v['pile']),
         switchTargets: parseSwitchTargets(v['switchTargets']),
+        floors: stringArray(v['floors']),
         ...parseFeatureCommon(v),
     };
 }

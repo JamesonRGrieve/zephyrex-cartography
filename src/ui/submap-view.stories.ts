@@ -14,6 +14,7 @@ export interface SubmapArgs {
     readonly linkedScene: string | null;
     readonly scenes: readonly SceneChoice[];
     readonly travel: SubmapTravel;
+    readonly floors: readonly string[];
     readonly onOpen: () => void;
 }
 
@@ -36,6 +37,14 @@ const LABELS: SubmapLabels = {
         duration: 'Length (ms)',
         prompt: 'Prompt ({token}, {region}, {scene})',
     },
+    floors: {
+        heading: 'Or floors in this scene',
+        count: 'Floors',
+        add: 'Add floors',
+        remove: 'Remove the stairs',
+        none: 'No floors in this scene.',
+        list: (floors) => `Floors: ${floors}`,
+    },
 };
 
 /** Foundry's own scene transitions, as a live world lists them. */
@@ -54,8 +63,17 @@ export function mountSubmapPanel(args: SubmapArgs): HTMLElement {
     let linked = args.linkedScene;
     let scenes = [...args.scenes];
     let travel = args.travel;
+    let floors = [...args.floors];
     const render = (): void => {
-        renderSubmapPanel(root, { stampName: args.stampName, linkedScene: linked, scenes, travel, transitions: TRANSITIONS }, LABELS, {
+        renderSubmapPanel(root, { stampName: args.stampName, linkedScene: linked, scenes, travel, transitions: TRANSITIONS, floors }, LABELS, {
+            addFloors: (count) => {
+                floors = [...floors, ...Array.from({ length: count }, (_, i) => `${args.stampName} floor ${String(floors.length + i + 1)}`)];
+                render();
+            },
+            removeFloors: () => {
+                floors = [];
+                render();
+            },
             setTravel: (next) => {
                 travel = next;
                 render();
@@ -92,6 +110,7 @@ const meta: Meta<SubmapArgs> = {
             { id: 'undercroft', name: 'Undercroft (imported)' },
         ],
         travel: DEFAULT_TRAVEL,
+        floors: [],
     },
     argTypes: { onOpen: { action: 'open' } },
 };
@@ -108,6 +127,10 @@ export const Linked: Story = {
 
 export const LinkedWithATransition: Story = {
     args: { linkedScene: 'Vault', travel: { placement: 'center', transition: 'swirl', duration: 2000, prompt: 'Descend into {scene}?' } },
+};
+
+export const FloorsInThisScene: Story = {
+    args: { floors: ['Hab Block floor 1', 'Hab Block floor 2'] },
 };
 
 export const NoOtherScenes: Story = {

@@ -133,6 +133,13 @@ const stampSpec = z
         rotation: z.number().optional().describe('Degrees clockwise.'),
         scale: positive.optional().describe('Multiplier over the authored footprint.'),
         interior: interiorSpec.optional(),
+        floors: z
+            .array(text)
+            .min(1)
+            .optional()
+            .describe(
+                "An enterable stamp's floors in this scene instead of an interior: names of Levels added above the scene's top, bottom to top, reached by stairs over the stamp.",
+            ),
         level,
     })
     .strict()

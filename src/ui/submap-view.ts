@@ -3,8 +3,10 @@
  * The interior panel for an enterable stamp: where it leads, the ways to give
  * it an interior (create a new scene, or link an existing one, imported ones
  * included), and, once linked, how tokens travel through: where they land,
- * the scene transition and its length, and the question asked first. A pure function from a {@link SubmapPanel} to elements;
- * unit-tested under happy-dom.
+ * the scene transition and its length, and the question asked first. Or,
+ * instead, its floors in this scene: Levels above it, reached by stairs. A
+ * pure function from a {@link SubmapPanel} to elements; unit-tested under
+ * happy-dom.
  */
 import { type SubmapTravel, TRAVEL_PLACEMENTS, type TravelPlacement } from '../tools/documents';
 import { validDuration } from '../tools/submap';
@@ -25,6 +27,17 @@ export interface SubmapPanel {
     readonly travel: SubmapTravel;
     /** Foundry's scene transitions (`CONFIG.Canvas.sceneTransitions`), by key and name. */
     readonly transitions: readonly (readonly [string, string])[];
+    /** The names of the building's floors in this scene, bottom to top; empty for none. */
+    readonly floors: readonly string[];
+}
+
+export interface FloorLabels {
+    readonly heading: string;
+    readonly count: string;
+    readonly add: string;
+    readonly remove: string;
+    readonly none: string;
+    readonly list: (floors: string) => string;
 }
 
 export interface TravelLabels {
@@ -49,6 +62,7 @@ export interface SubmapLabels {
     readonly unlink: string;
     readonly noScenes: string;
     readonly travel: TravelLabels;
+    readonly floors: FloorLabels;
 }
 
 export interface SubmapHandlers {
@@ -57,6 +71,36 @@ export interface SubmapHandlers {
     readonly open: () => void;
     readonly unlink: () => void;
     readonly setTravel: (travel: SubmapTravel) => void;
+    /** Add this many floors above the building. */
+    readonly addFloors: (count: number) => void;
+    readonly removeFloors: () => void;
+}
+
+/** How many floors a building gets at once, at most. */
+const MAX_FLOORS_AT_ONCE = 10;
+
+function floorsSection(panel: SubmapPanel, labels: FloorLabels, handlers: SubmapHandlers): HTMLElement {
+    const section = el('section', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2');
+    section.append(el('h4', 'tw-text-xs tw-font-bold tw-w-full', labels.heading));
+    section.append(el('p', 'tw-text-xs tw-w-full', panel.floors.length === 0 ? labels.none : labels.list(panel.floors.join(', '))));
+    let count = 1;
+    section.append(
+        labelledInput(labels.count, 'number', String(count), 'floor-count', (typed) => {
+            const wanted = Number(typed);
+            const valid = Number.isInteger(wanted) && wanted >= 1 && wanted <= MAX_FLOORS_AT_ONCE;
+            if (valid) {
+                count = wanted;
+            }
+            return valid;
+        }),
+        button('tw-text-xs', labels.add, 'add-floors', () => {
+            handlers.addFloors(count);
+        }),
+    );
+    if (panel.floors.length > 0) {
+        section.append(button('tw-text-xs', labels.remove, 'remove-floors', handlers.removeFloors));
+    }
+    return section;
 }
 
 /** The transition select's value standing for "none" (no transition key is empty). */
@@ -139,5 +183,12 @@ export function renderSubmapPanel(root: HTMLElement, panel: SubmapPanel, labels:
     }
     actions.append(button('tw-text-xs', labels.createInterior, 'create', handlers.createInterior));
     const travel = panel.linkedScene === null ? [] : [travelSection(panel, labels.travel, handlers.setTravel)];
-    replacePreservingFocus(root, [heading, statusLine, actions, ...travel, linkExisting(panel, labels, handlers)]);
+    replacePreservingFocus(root, [
+        heading,
+        statusLine,
+        actions,
+        ...travel,
+        linkExisting(panel, labels, handlers),
+        floorsSection(panel, labels.floors, handlers),
+    ]);
 }

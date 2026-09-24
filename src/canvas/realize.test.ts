@@ -270,4 +270,25 @@ describe('realizeSpec', () => {
             rotation: 90,
         });
     });
+
+    it('gives a building its floors in this scene, reporting a scene with no level to build them on', async () => {
+        const h = makeHarness(stamps);
+        const noLevels = await realizeSpec(h.c, spec({ features: [{ type: 'stamp', stamp: 'pack:hab', x: 2, y: 1, floors: ['Upstairs'] }] }), {
+            origin: ORIGIN,
+            gridSize: GRID,
+        });
+        expect(noLevels.problems).toEqual([{ index: 0, problem: 'interior' }]);
+
+        const built = await realizeSpec(
+            h.c,
+            spec({
+                levels: [{ key: 'g', name: 'Ground' }],
+                features: [{ type: 'stamp', stamp: 'pack:hab', x: 6, y: 1, level: 'g', floors: ['Upstairs', 'Attic'] }],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        expect(built.problems).toEqual([]);
+        const [hab] = built.features;
+        expect(hab === undefined ? [] : h.c.buildingFloors(hab).map((id) => h.c.levels.find((l) => l.id === id)?.name)).toEqual(['Upstairs', 'Attic']);
+    });
 });

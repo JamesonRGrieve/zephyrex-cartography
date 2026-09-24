@@ -601,6 +601,15 @@
                                 ],
                                 "description": "Where an enterable stamp leads."
                             },
+                            "floors": {
+                                "description": "An enterable stamp's floors in this scene instead of an interior: names of Levels added above the scene's top, bottom to top, reached by stairs over the stamp.",
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            },
                             "level": {
                                 "description": "Key of an entry in `levels`. Omitted: the feature shows on every level.",
                                 "type": "string",
