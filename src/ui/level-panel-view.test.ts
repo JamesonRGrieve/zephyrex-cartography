@@ -47,7 +47,8 @@ describe('level panel', () => {
 
     it('lists floors top to bottom with the active one pressed and counts shown', () => {
         const root = mount();
-        const names = [...root.querySelectorAll('li > button[aria-pressed]')].map((b) => [b.textContent, b.getAttribute('aria-pressed')]);
+        // Each level's own button heads its card.
+        const names = [...root.querySelectorAll('li .zc-card-head > button[aria-pressed]')].map((b) => [b.textContent, b.getAttribute('aria-pressed')]);
         expect(names).toEqual([
             ['Upper floor', 'false'],
             ['Ground floor', 'true'],

@@ -3,6 +3,150 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * The panels, laid out as Foundry lays out its own sheets: each field a row
+ * with its label in a fixed column and its control beside it, fields tiling
+ * in even columns, and each group a framed section under a small-caps
+ * heading. Colours come from Foundry's theme (with fallbacks outside it).
+ */
+.zephyrex-cartography {
+    --zc-label-width: 9.5rem;
+    --zc-field-width: 18rem;
+    --zc-rule: var(--color-border, rgb(255 255 255 / 14%));
+    --zc-muted: var(--color-text-secondary, #b8b2a0);
+}
+
+.zephyrex-cartography .zc-field {
+    display: grid;
+    flex: 1 1 var(--zc-field-width);
+    grid-template-columns: var(--zc-label-width) minmax(0, 1fr);
+    column-gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+    min-height: 1.9rem;
+    font-size: var(--font-size-13, 0.8125rem);
+}
+
+/* Stacked in a column, a field is one row tall: its tile width must not become its height. */
+.zephyrex-cartography :is(.tw-flex-col, .zc-card) > :is(.zc-field, .zc-check, .zc-inline, .zc-actions) {
+    flex: 0 0 auto;
+}
+
+.zephyrex-cartography .zc-field-wide {
+    flex-basis: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.25rem;
+}
+
+.zephyrex-cartography .zc-field-label {
+    color: var(--zc-muted);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+/* One item of a list (a level): a framed card, its heading line, then its fields. */
+.zephyrex-cartography .zc-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--zc-rule);
+    border-radius: 6px;
+    background: rgb(0 0 0 / 12%);
+    list-style: none;
+}
+
+/* A field and the button that fills it (a path and its file picker), kept together. */
+.zephyrex-cartography .zc-inline {
+    display: flex;
+    flex: 1 1 var(--zc-field-width);
+    gap: 0.35rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.zephyrex-cartography .zc-inline > .zc-field {
+    flex: 1;
+}
+
+/* A row of buttons. */
+.zephyrex-cartography .zc-actions {
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* A card's heading line: what it is on the left, its actions on the right. */
+.zephyrex-cartography .zc-card-head {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+.zephyrex-cartography .zc-card-head .zc-spacer {
+    flex: 1;
+}
+
+.zephyrex-cartography .zc-card-meta {
+    color: var(--zc-muted);
+    font-size: var(--font-size-12, 0.75rem);
+}
+
+.zephyrex-cartography .zc-control {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.zephyrex-cartography .zc-check {
+    display: flex;
+    flex: 1 1 var(--zc-field-width);
+    gap: 0.4rem;
+    align-items: center;
+    min-height: 1.9rem;
+    font-size: var(--font-size-13, 0.8125rem);
+}
+
+.zephyrex-cartography fieldset {
+    margin: 0;
+    padding: 0.5rem 0.75rem 0.75rem;
+    border: 1px solid var(--zc-rule);
+    border-radius: 6px;
+    background: rgb(0 0 0 / 12%);
+}
+
+.zephyrex-cartography legend,
+.zephyrex-cartography .zc-disclosure-summary {
+    padding: 0 0.35rem;
+    color: var(--zc-muted);
+    font-size: var(--font-size-11, 0.6875rem);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.zephyrex-cartography .zc-disclosure {
+    width: 100%;
+    padding-top: 0.25rem;
+    border-top: 1px solid var(--zc-rule);
+}
+
+.zephyrex-cartography .zc-disclosure-summary {
+    padding: 0.25rem 0;
+    cursor: pointer;
+}
+
+.zephyrex-cartography .zc-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    padding-top: 0.35rem;
+}
+
 /* Variant bar the stamp engine adds to the Tile HUD's right column. */
 .zephyrex-cartography-hud-variants {
     display: flex;

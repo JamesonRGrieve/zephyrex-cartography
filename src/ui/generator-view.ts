@@ -6,7 +6,7 @@
  * function from the panel state to elements; unit-tested under happy-dom.
  */
 import type { GeneratorField, GeneratorForm } from '../generate/form';
-import { button, el, labelledCheckbox, labelledInput, labelledTextArea, replacePreservingFocus } from './dom';
+import { button, el, fieldWithAction, labelledCheckbox, labelledInput, labelledTextArea, replacePreservingFocus } from './dom';
 
 /** Lines of the scene spec box. */
 const SPEC_ROWS = 6;
@@ -64,8 +64,10 @@ function floorPlanSection(panel: GeneratorPanel, labels: GeneratorLabels, handle
     const generate = button('tw-text-xs', labels.generate, 'generate', handlers.generate);
     generate.disabled = panel.busy;
     return section(labels.floorPlan, [
-        labelledInput(labels.seed, 'number', String(form.seed), 'seed', (typed) => handlers.setField('seed', typed)),
-        button('tw-text-xs', labels.newSeed, 'new-seed', handlers.newSeed),
+        fieldWithAction(
+            labelledInput(labels.seed, 'number', String(form.seed), 'seed', (typed) => handlers.setField('seed', typed)),
+            button('tw-text-xs', labels.newSeed, 'new-seed', handlers.newSeed),
+        ),
         ...FIELDS.map(({ field, label }) => labelledInput(labels[label], 'number', String(form[field]), field, (typed) => handlers.setField(field, typed))),
         entrance,
         generate,

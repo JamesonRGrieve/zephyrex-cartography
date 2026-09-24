@@ -12,7 +12,7 @@
  */
 import type { BiomeKind } from '../tools/biome';
 import { BAKE_TARGETS, type BakeTarget, PAINT_MODES, type PaintMode, type SplatState } from '../tools/splat';
-import { button, choice, el, labelledInput, pressable, replacePreservingFocus } from './dom';
+import { actionRow, button, choice, el, labelledInput, pressable, replacePreservingFocus } from './dom';
 
 export interface PaintChoice {
     readonly biome: BiomeKind;
@@ -118,6 +118,6 @@ export function renderPaintPanel(root: HTMLElement, panel: PaintPanel, labels: P
             ? labelledInput(labels.strength, 'number', String(panel.strength), 'paint-strength', handlers.setStrength)
             : labelledInput(labels.movementCost, 'number', String(panel.movementCost), 'paint-cost', handlers.setMovementCost),
         // Baking is the blend's: it shows while blending.
-        ...(blending ? bakeButtons(panel, labels, handlers) : []),
+        ...(blending ? [actionRow(bakeButtons(panel, labels, handlers))] : []),
     ]);
 }

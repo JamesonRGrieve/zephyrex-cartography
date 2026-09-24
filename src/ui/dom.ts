@@ -38,9 +38,19 @@ export function pressable(className: string, text: string, pressed: boolean, key
 }
 
 /**
- * A labelled input (the label wraps it, so no id is needed). `accept` applies a
- * committed value and returns whether it was valid; a rejected value reverts
- * the input.
+ * A field row: its label text in the label column, its control beside it
+ * (the stylesheet's `zc-field` grid). The label wraps the control, so no id
+ * is needed.
+ */
+function fieldLabel(label: string): HTMLLabelElement {
+    const wrap = el('label', 'zc-field');
+    wrap.append(el('span', 'zc-field-label', label));
+    return wrap;
+}
+
+/**
+ * A labelled input. `accept` applies a committed value and returns whether it
+ * was valid; a rejected value reverts the input.
  */
 export function labelledInput(
     label: string,
@@ -49,8 +59,8 @@ export function labelledInput(
     key: string,
     accept: (value: string) => boolean,
 ): HTMLLabelElement {
-    const wrap = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', label);
-    const input = el('input', 'tw-text-xs tw-w-24');
+    const wrap = fieldLabel(label);
+    const input = el('input', 'zc-control');
     input.type = type;
     input.value = value;
     focusKey(input, key);
@@ -73,8 +83,9 @@ export function labelledTextArea(label: string, value: string, key: string, rows
 
 /** A labelled monospace text area whose edit `accept` may refuse, putting the text back as it was. */
 export function checkedTextArea(label: string, value: string, key: string, rows: number, accept: (text: string) => boolean): HTMLLabelElement {
-    const wrap = el('label', 'tw-flex tw-flex-col tw-gap-1 tw-text-xs tw-w-full', label);
-    const area = el('textarea', 'tw-text-xs tw-font-mono tw-w-full');
+    const wrap = el('label', 'zc-field zc-field-wide');
+    wrap.append(el('span', 'zc-field-label', label));
+    const area = el('textarea', 'zc-control tw-font-mono');
     area.rows = rows;
     area.spellcheck = false;
     area.value = value;
@@ -90,7 +101,7 @@ export function checkedTextArea(label: string, value: string, key: string, rows:
 
 /** A labelled checkbox (the label wraps it); `onChange` gets whether it is now checked. */
 export function labelledCheckbox(label: string, checked: boolean, key: string, onChange: (checked: boolean) => void): HTMLLabelElement {
-    const wrap = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs', label);
+    const wrap = el('label', 'zc-check', label);
     const checkbox = el('input', '');
     checkbox.type = 'checkbox';
     checkbox.checked = checked;
@@ -113,10 +124,10 @@ export function choice<T extends string>(
     value: T,
     onChange: (v: T) => void,
 ): HTMLElement {
-    const wrap = el('div', 'tw-flex tw-items-center tw-gap-2');
-    const labelEl = el('label', 'tw-text-xs', label);
+    const wrap = el('div', 'zc-field');
+    const labelEl = el('label', 'zc-field-label', label);
     labelEl.htmlFor = id;
-    const select = el('select', 'tw-text-xs');
+    const select = el('select', 'zc-control');
     select.id = id;
     focusKey(select, id);
     for (const [option, shown] of entries) {
@@ -135,13 +146,27 @@ export function choice<T extends string>(
     return wrap;
 }
 
+/** A field and the button that acts on it (a path and its file picker, a seed and a new one), kept together as one. */
+export function fieldWithAction(field: HTMLElement, action: HTMLButtonElement): HTMLElement {
+    const pair = el('div', 'zc-inline');
+    pair.append(field, action);
+    return pair;
+}
+
+/** A row of buttons, spaced apart, that wraps onto a new line as a whole when the panel is narrow. */
+export function actionRow(buttons: readonly HTMLElement[]): HTMLElement {
+    const row = el('div', 'zc-actions');
+    row.append(...buttons);
+    return row;
+}
+
 /** A collapsed section (a native disclosure) whose `summary` opens it; it stays open across re-renders. */
 export function disclosure(summary: string, key: string, children: readonly HTMLElement[]): HTMLDetailsElement {
-    const details = el('details', 'tw-w-full tw-text-xs');
+    const details = el('details', 'zc-disclosure');
     focusKey(details, key);
-    const body = el('div', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-pt-1');
+    const body = el('div', 'zc-fields');
     body.append(...children);
-    details.append(el('summary', 'tw-cursor-pointer', summary), body);
+    details.append(el('summary', 'zc-disclosure-summary', summary), body);
     return details;
 }
 

@@ -23,7 +23,7 @@ import {
     type TextureFit,
     type ThresholdImage,
 } from '../tools/levels';
-import { button, choice, disclosure, el, labelledCheckbox, labelledInput, pressable, replacePreservingFocus } from './dom';
+import { button, choice, disclosure, el, fieldWithAction, labelledCheckbox, labelledInput, pressable, replacePreservingFocus } from './dom';
 
 /** Labels for how Foundry draws a level: named as Foundry's own Level sheet names them where it has a name. */
 interface LevelLookLabels {
@@ -83,17 +83,17 @@ function applyEdit(level: Level, handlers: LevelPanelHandlers, edit: LevelArtEdi
 
 /** A level's image paths, each typed in or browsed for; clearing a path removes the image. */
 function artFields(level: Level, labels: LevelPanelLabels, handlers: LevelPanelHandlers): HTMLElement {
-    const fields = el('div', 'tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-w-full');
+    const fields = el('div', 'zc-fields');
     for (const image of LEVEL_IMAGES) {
         const path = labelledInput(labels.art[image], 'text', level.art[image] ?? '', `${image}:${level.id}`, (typed) =>
             applyEdit(level, handlers, { kind: 'image', image, path: typed }),
         );
-        const browse = button('tw-text-xs', '…', `browse-${image}:${level.id}`, () => {
+        const browse = button('', '…', `browse-${image}:${level.id}`, () => {
             handlers.browse(level.id, image);
         });
         browse.setAttribute('aria-label', labels.browse(labels.art[image]));
         browse.title = labels.browse(labels.art[image]);
-        fields.append(path, browse);
+        fields.append(fieldWithAction(path, browse));
     }
     return fields;
 }
@@ -135,9 +135,9 @@ function lookSection(level: Level, others: readonly Level[], labels: LevelLookLa
 
 /** The other levels, each checked when it is seen from `level`. */
 function visibleLevels(level: Level, others: readonly Level[], labels: LevelLookLabels, edit: (change: LevelArtEdit) => boolean): HTMLElement {
-    const group = el('fieldset', 'tw-flex tw-flex-wrap tw-gap-2 tw-box-border tw-w-full tw-mx-0');
+    const group = el('fieldset', 'zc-fields tw-box-border tw-w-full');
     group.append(
-        el('legend', 'tw-text-xs', labels.visibleLevels),
+        el('legend', '', labels.visibleLevels),
         ...others.map((other) =>
             labelledCheckbox(other.name, level.art.visibleLevels.includes(other.id), `visible-${other.id}:${level.id}`, (visible) => {
                 edit({ kind: 'visible', level: other.id, visible });
@@ -149,27 +149,29 @@ function visibleLevels(level: Level, others: readonly Level[], labels: LevelLook
 
 function levelRow(row: LevelRow, others: readonly Level[], labels: LevelPanelLabels, handlers: LevelPanelHandlers): HTMLLIElement {
     const { level } = row;
-    const item = el('li', 'tw-list-none tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-p-1');
-    const select = pressable('tw-text-xs tw-font-bold', level.name, row.active, `select:${level.id}`, () => {
+    const item = el('li', 'zc-card');
+    const select = pressable('tw-font-bold', level.name, row.active, `select:${level.id}`, () => {
         handlers.select(level.id);
     });
-    const band = (bottom: number, ceiling: number): boolean => {
+    const rebanded = (bottom: number, ceiling: number): boolean => {
         const valid = Number.isFinite(bottom) && Number.isFinite(ceiling) && ceiling > bottom;
         if (valid) {
             handlers.setBand(level.id, bottom, ceiling);
         }
         return valid;
     };
-    const remove = button('tw-text-xs', labels.remove, `remove:${level.id}`, () => {
+    const remove = button('', labels.remove, `remove:${level.id}`, () => {
         handlers.remove(level.id);
     });
     remove.disabled = !row.removable;
     remove.title = row.removable ? labels.remove : labels.removeBlocked;
-    const preload = button('tw-text-xs', labels.preload, `preload:${level.id}`, () => {
+    const preload = button('', labels.preload, `preload:${level.id}`, () => {
         handlers.preload(level.id);
     });
-    item.append(
-        select,
+    const head = el('div', 'zc-card-head');
+    head.append(select, el('span', 'zc-card-meta', labels.features(row.count)), el('span', 'zc-spacer'), preload, remove);
+    const band = el('div', 'zc-fields');
+    band.append(
         labelledInput(labels.name, 'text', level.name, `name:${level.id}`, (typed) => {
             const valid = typed.trim() !== '';
             if (valid) {
@@ -178,15 +180,11 @@ function levelRow(row: LevelRow, others: readonly Level[], labels: LevelPanelLab
             return valid;
         }),
         labelledInput(labels.bottom, 'number', String(level.bottom), `bottom:${level.id}`, (value) =>
-            band(value === '' ? Number.NaN : Number(value), level.top),
+            rebanded(value === '' ? Number.NaN : Number(value), level.top),
         ),
-        labelledInput(labels.top, 'number', String(level.top), `top:${level.id}`, (value) => band(level.bottom, value === '' ? Number.NaN : Number(value))),
-        el('span', 'tw-text-xs', labels.features(row.count)),
-        preload,
-        remove,
-        artFields(level, labels, handlers),
-        lookSection(level, others, labels.look, handlers),
+        labelledInput(labels.top, 'number', String(level.top), `top:${level.id}`, (value) => rebanded(level.bottom, value === '' ? Number.NaN : Number(value))),
     );
+    item.append(head, band, artFields(level, labels, handlers), lookSection(level, others, labels.look, handlers));
     return item;
 }
 
