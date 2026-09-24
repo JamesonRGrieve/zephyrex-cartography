@@ -47,7 +47,12 @@ export const I18N = {
         buildSpec: key('Generator.BuildSpec'),
         built: key('Generator.Built'),
         refused: key('Generator.Refused'),
-        problems: { level: key('Generator.Problems.Level'), stamp: key('Generator.Problems.Stamp'), interior: key('Generator.Problems.Interior') },
+        problems: {
+            level: key('Generator.Problems.Level'),
+            stamp: key('Generator.Problems.Stamp'),
+            interior: key('Generator.Problems.Interior'),
+            switch: key('Generator.Problems.Switch'),
+        },
     },
     levels: {
         title: key('Levels.Title'),

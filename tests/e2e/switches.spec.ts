@@ -55,3 +55,24 @@ test('flipping a switch in play turns its lamp and its plain light off and on', 
     await flip(world, true);
     await expect.poll(async () => lampAndLight(world, plainId)).toEqual({ lamp: 'lamp-lit.svg', plainHidden: false });
 });
+
+test('a scene spec wires a switch to the lamp it names by key and the light it names by id, and it works in play', async ({ world }) => {
+    const outcome = await world.evaluate(async () => {
+        const [plain] = (await canvas?.scene?.createEmbeddedDocuments('AmbientLight', [{ x: 1000, y: 600, config: { dim: 10, bright: 5 } }])) ?? [];
+        const plainId = plain?.id ?? '';
+        const built = await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            units: 'px',
+            features: [
+                { type: 'stamp', stamp: 'zc-e2e-pack:switch', x: 300, y: 300, controls: ['lamp'], lights: [plainId] },
+                { type: 'stamp', key: 'lamp', stamp: 'zc-e2e-pack:lamp', x: 700, y: 300 },
+            ],
+        });
+        return { plainId, problems: built?.ok === true ? built.report.problems : null };
+    });
+    expect(outcome.problems).toEqual([]);
+    await flip(world, true);
+    await expect.poll(async () => lampAndLight(world, outcome.plainId)).toEqual({ lamp: 'lamp-lit.svg', plainHidden: false });
+    await flip(world, false);
+    await expect.poll(async () => lampAndLight(world, outcome.plainId)).toEqual({ lamp: 'lamp-unlit.svg', plainHidden: true });
+});

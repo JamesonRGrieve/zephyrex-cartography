@@ -35,6 +35,7 @@ const positive = z.number().positive();
 const biome = z.enum(BIOMES);
 const hexColour = z.string().regex(/^#[0-9a-fA-F]{6}$/u);
 const level = text.optional().describe('Key of an entry in `levels`. Omitted: the feature shows on every level.');
+const featureKey = text.optional().describe("A name other entries use for this feature, as a light switch's `controls` do.");
 
 const movementCost = z
     .number()
@@ -44,13 +45,14 @@ const movementCost = z
     .describe("Difficult ground: what crossing it on foot costs, times the distance (1 ordinary, 2 mud), as Foundry's Modify Movement Cost.");
 
 const regionSpec = z
-    .object({ type: z.literal('region'), biome, points: z.array(point).min(3).describe('Boundary control points.'), movementCost, level })
+    .object({ type: z.literal('region'), key: featureKey, biome, points: z.array(point).min(3).describe('Boundary control points.'), movementCost, level })
     .strict()
     .describe('A closed, smoothed area of one biome.');
 
 const strokeSpec = z
     .object({
         type: z.literal('stroke'),
+        key: featureKey,
         biome,
         points: z.array(point).min(2).describe('Centerline.'),
         radius: positive.optional().describe('Half-width of the swath (default: the brush default).'),
@@ -63,6 +65,7 @@ const strokeSpec = z
 const pathSpec = z
     .object({
         type: z.literal('path'),
+        key: featureKey,
         kind: z.enum(PATH_KINDS),
         points: z.array(point).min(2).describe('Centerline control points.'),
         halfWidth: positive.optional().describe('Half-width at every point (default: the path default).'),
@@ -93,6 +96,7 @@ const doorSpec = z
 const roomSpec = z
     .object({
         type: z.literal('room'),
+        key: featureKey,
         points: z.array(point).min(3).describe('Boundary. Split an edge with a collinear point to put a door on part of it.'),
         floor: z
             .union([biome, z.string().regex(/^floor\..+/)])
@@ -125,6 +129,7 @@ const interiorSpec = z
 const stampSpec = z
     .object({
         type: z.literal('stamp'),
+        key: featureKey,
         stamp: text.describe('Catalog key, "<pack module id>:<stamp id>".'),
         x: z.number().describe('Footprint centre.'),
         y: z.number(),
@@ -139,6 +144,11 @@ const stampSpec = z
             .describe(
                 "An enterable stamp's floors in this scene instead of an interior: names of Levels added above the scene's top, bottom to top, reached by stairs over the stamp.",
             ),
+        controls: z
+            .array(text)
+            .default([])
+            .describe("A light switch's targets: the keys of the lamp stamps (with lit and unlit variants) and rooms it turns on and off."),
+        lights: z.array(text).default([]).describe("A light switch's other targets: ids of AmbientLights already on the scene, shown and hidden."),
         level,
     })
     .strict()
@@ -237,29 +247,55 @@ export interface SpecIssue {
 
 export type SpecParseResult = { readonly ok: true; readonly spec: SceneSpec } | { readonly ok: false; readonly issues: readonly SpecIssue[] };
 
-/** What JSON Schema cannot express: unique level keys, level references that resolve, doors on real segments. */
-function referenceIssues(spec: SceneSpec): SpecIssue[] {
-    const issues: SpecIssue[] = [];
+/** The keys `entries` declare, and an issue for each one declared twice. */
+function declaredKeys(entries: readonly { readonly key?: string | undefined }[], path: string, what: string): { keys: Set<string>; issues: SpecIssue[] } {
     const keys = new Set<string>();
-    spec.levels.forEach((l, i) => {
-        if (keys.has(l.key)) {
-            issues.push({ path: `levels.${i}.key`, message: `duplicate level key "${l.key}"` });
+    const issues: SpecIssue[] = [];
+    entries.forEach((entry, i) => {
+        if (entry.key === undefined) {
+            return;
         }
-        keys.add(l.key);
+        if (keys.has(entry.key)) {
+            issues.push({ path: `${path}.${i}.key`, message: `duplicate ${what} key "${entry.key}"` });
+        }
+        keys.add(entry.key);
     });
-    spec.features.forEach((f, i) => {
-        if (f.level !== undefined && !keys.has(f.level)) {
-            issues.push({ path: `features.${i}.level`, message: `no level with key "${f.level}"` });
-        }
-        if (f.type === 'room') {
-            f.doors.forEach((d, j) => {
-                if (d.segment >= f.points.length) {
-                    issues.push({ path: `features.${i}.doors.${j}.segment`, message: `the room has only ${f.points.length} segments` });
-                }
-            });
-        }
-    });
-    return issues;
+    return { keys, issues };
+}
+
+/** An issue for each of `named` that is not one of `keys`, at `pathOf` its index. */
+function unresolved(named: readonly string[], keys: ReadonlySet<string>, pathOf: (index: number) => string, what: string): SpecIssue[] {
+    return named.flatMap((reference, j) => (keys.has(reference) ? [] : [{ path: pathOf(j), message: `no ${what} with key "${reference}"` }]));
+}
+
+/** Doors on segments the room does not have. */
+function doorIssues(f: FeatureSpec, i: number): SpecIssue[] {
+    if (f.type !== 'room') {
+        return [];
+    }
+    return f.doors.flatMap((d, j) =>
+        d.segment < f.points.length ? [] : [{ path: `features.${i}.doors.${j}.segment`, message: `the room has only ${f.points.length} segments` }],
+    );
+}
+
+/**
+ * What JSON Schema cannot express: unique level and feature keys, references
+ * to them that resolve (a feature's level, a level's visible levels, a
+ * switch's controls), and doors on real segments.
+ */
+function referenceIssues(spec: SceneSpec): SpecIssue[] {
+    const levels = declaredKeys(spec.levels, 'levels', 'level');
+    const features = declaredKeys(spec.features, 'features', 'feature');
+    return [
+        ...levels.issues,
+        ...features.issues,
+        ...spec.levels.flatMap((l, i) => unresolved(l.visibleLevels, levels.keys, (j) => `levels.${i}.visibleLevels.${j}`, 'level')),
+        ...spec.features.flatMap((f, i) => [
+            ...unresolved(f.level === undefined ? [] : [f.level], levels.keys, () => `features.${i}.level`, 'level'),
+            ...(f.type === 'stamp' ? unresolved(f.controls, features.keys, (j) => `features.${i}.controls.${j}`, 'feature') : []),
+            ...doorIssues(f, i),
+        ]),
+    ];
 }
 
 // eslint-disable-next-line no-restricted-syntax -- boundary: validates an untyped scene spec (pasted or generated JSON) and narrows it to SceneSpec

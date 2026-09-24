@@ -600,8 +600,14 @@ These make everything after them cheaper and safer, so they come first.
     it is active. Removing a target drops it from its switches, and undo
     and redo follow the usual rules. `tests/e2e/switches.spec.ts` and
     `pointer.spec.ts` prove it in Foundry.
-  - **Still open:** scene-spec links, and a switch icon in place of
-    Foundry's door icon (check whether v14 can show one for one wall).
+  - **[done] Scene-spec links.** Any spec feature can have a `key`. A
+    switch stamp's `controls` names lamps and rooms by key, and its
+    `lights` names AmbientLights already on the scene by id. The parser
+    rejects duplicate keys and keys that name nothing. Links are made once
+    everything is built, so a switch may come before what it controls. A
+    target that cannot be linked is reported as a `switch` problem.
+  - **Still open:** a switch icon in place of Foundry's door icon (check
+    whether v14 can show one for one wall).
 
 ### Priority 5: regions
 - **Shapes beyond polygons** [14.349, 14.352, 14.356]:

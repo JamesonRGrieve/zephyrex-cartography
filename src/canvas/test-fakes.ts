@@ -328,3 +328,39 @@ export function catalogStamps(definitions: readonly object[]): readonly CatalogS
     }
     return loaded.stamps;
 }
+
+/** A light switch (`pack:switch`), a lamp with lit and unlit variants (`pack:lamp`), and a crate no switch can control (`pack:crate`). */
+export const SWITCH_STAMPS = catalogStamps([
+    {
+        id: 'switch',
+        name: 'Light Switch',
+        category: 'Lighting',
+        scale: 'interior',
+        perspective: 'top-down',
+        door: { type: 'door', switch: true },
+        variants: [
+            { state: 'off', image: 'off.png', width: 20, height: 100, doorState: 'closed' },
+            { state: 'on', image: 'on.png', width: 20, height: 100, doorState: 'open' },
+        ],
+    },
+    {
+        id: 'lamp',
+        name: 'Lamp',
+        category: 'Lighting',
+        scale: 'interior',
+        perspective: 'top-down',
+        light: { dim: 4, bright: 2 },
+        variants: [
+            { state: 'unlit', image: 'unlit.png', width: 100, height: 100, light: null },
+            { state: 'lit', image: 'lit.png', width: 100, height: 100 },
+        ],
+    },
+    {
+        id: 'crate',
+        name: 'Crate',
+        category: 'Storage',
+        scale: 'interior',
+        perspective: 'top-down',
+        variants: [{ state: 'shut', image: 'crate.png', width: 100, height: 100 }],
+    },
+]);

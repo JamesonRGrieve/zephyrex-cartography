@@ -269,6 +269,11 @@
                                 "type": "string",
                                 "const": "region"
                             },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
+                            },
                             "biome": {
                                 "type": "string",
                                 "enum": [
@@ -335,6 +340,11 @@
                             "type": {
                                 "type": "string",
                                 "const": "stroke"
+                            },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
                             },
                             "biome": {
                                 "type": "string",
@@ -407,6 +417,11 @@
                             "type": {
                                 "type": "string",
                                 "const": "path"
+                            },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
                             },
                             "kind": {
                                 "type": "string",
@@ -507,6 +522,11 @@
                             "type": {
                                 "type": "string",
                                 "const": "room"
+                            },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
                             },
                             "points": {
                                 "minItems": 3,
@@ -674,6 +694,11 @@
                                 "type": "string",
                                 "const": "stamp"
                             },
+                            "key": {
+                                "description": "A name other entries use for this feature, as a light switch's `controls` do.",
+                                "type": "string",
+                                "minLength": 1
+                            },
                             "stamp": {
                                 "type": "string",
                                 "minLength": 1,
@@ -736,6 +761,24 @@
                             "floors": {
                                 "description": "An enterable stamp's floors in this scene instead of an interior: names of Levels added above the scene's top, bottom to top, reached by stairs over the stamp.",
                                 "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            },
+                            "controls": {
+                                "default": [],
+                                "description": "A light switch's targets: the keys of the lamp stamps (with lit and unlit variants) and rooms it turns on and off.",
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            },
+                            "lights": {
+                                "default": [],
+                                "description": "A light switch's other targets: ids of AmbientLights already on the scene, shown and hidden.",
                                 "type": "array",
                                 "items": {
                                     "type": "string",

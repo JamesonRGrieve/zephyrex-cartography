@@ -37,7 +37,8 @@
             "Problems": {
                 "Level": "features.{index}: skipped, its level could not be created.",
                 "Stamp": "features.{index}: skipped, its stamp is not in any loaded pack.",
-                "Interior": "features.{index}: placed, but its interior could not be linked."
+                "Interior": "features.{index}: placed, but its interior could not be linked.",
+                "Switch": "features.{index}: placed, but it is not a light switch, or something it controls is not a lamp, a room or a light."
             }
         },
         "Paint": {

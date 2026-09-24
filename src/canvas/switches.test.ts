@@ -2,42 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { planDocuments } from '../tools/plan';
 import { switchOf, switchOn, SWITCH_BLOCKS } from '../tools/switches';
-import { catalogStamps, makeHarness } from './test-fakes';
-
-const stamps = catalogStamps([
-    {
-        id: 'switch',
-        name: 'Light Switch',
-        category: 'Lighting',
-        scale: 'interior',
-        perspective: 'top-down',
-        door: { type: 'door', switch: true },
-        variants: [
-            { state: 'off', image: 'off.png', width: 20, height: 100, doorState: 'closed' },
-            { state: 'on', image: 'on.png', width: 20, height: 100, doorState: 'open' },
-        ],
-    },
-    {
-        id: 'lamp',
-        name: 'Lamp',
-        category: 'Lighting',
-        scale: 'interior',
-        perspective: 'top-down',
-        light: { dim: 4, bright: 2 },
-        variants: [
-            { state: 'unlit', image: 'unlit.png', width: 100, height: 100, light: null },
-            { state: 'lit', image: 'lit.png', width: 100, height: 100 },
-        ],
-    },
-    {
-        id: 'crate',
-        name: 'Crate',
-        category: 'Storage',
-        scale: 'interior',
-        perspective: 'top-down',
-        variants: [{ state: 'shut', image: 'crate.png', width: 100, height: 100 }],
-    },
-]);
+import { makeHarness, SWITCH_STAMPS as stamps } from './test-fakes';
 
 /** A switch (p1), an unlit lamp (p2), a crate (p3) and a room (p4). */
 async function scene(): Promise<ReturnType<typeof makeHarness>> {

@@ -81,4 +81,21 @@ describe('parseSceneSpec', () => {
         });
         expect(result.ok ? [] : result.issues.map((i) => i.path)).toEqual(['levels.1.key', 'features.0.level', 'features.1.doors.0.segment']);
     });
+
+    it('reports duplicate feature keys, and visible levels and switch controls that name no key', () => {
+        const result = parseSceneSpec({
+            schemaVersion: 1,
+            levels: [{ key: 'g', name: 'Ground', visibleLevels: ['cellar'] }],
+            features: [
+                { type: 'room', key: 'hall', points: square },
+                { type: 'room', key: 'hall', points: square },
+                { type: 'stamp', stamp: 'pack:switch', x: 0, y: 0, controls: ['hall', 'kitchen'] },
+            ],
+        });
+        expect(result.ok ? [] : result.issues).toEqual([
+            { path: 'features.1.key', message: 'duplicate feature key "hall"' },
+            { path: 'levels.0.visibleLevels.0', message: 'no level with key "cellar"' },
+            { path: 'features.2.controls.1', message: 'no feature with key "kitchen"' },
+        ]);
+    });
 });

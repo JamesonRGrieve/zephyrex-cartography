@@ -6,7 +6,7 @@ import type { WallDoc } from '../tools/documents';
 import { NO_LEVEL_ART } from '../tools/levels';
 import { LIQUID_LOOKS } from '../tools/path';
 import { realizeSpec } from './realize';
-import { catalogStamps, makeHarness } from './test-fakes';
+import { catalogStamps, makeHarness, SWITCH_STAMPS } from './test-fakes';
 
 type Harness = ReturnType<typeof makeHarness>;
 
@@ -217,7 +217,7 @@ describe('realizeSpec', () => {
                         tints: { fog: '#8090a0' },
                         alphaThresholds: { foreground: 0.4 },
                         placement: { offsetX: 50, fit: 'cover' },
-                        visibleLevels: ['cellar', 'attic'],
+                        visibleLevels: ['cellar'],
                     },
                 ],
                 features: [
@@ -251,7 +251,7 @@ describe('realizeSpec', () => {
             top: 0,
             art: { ...NO_LEVEL_ART, background: 'maps/cellar.webp', foreground: null, fog: 'maps/damp.webp' },
         });
-        // Whatever the spec leaves out is Foundry's own default; a level key the spec does not have is left out.
+        // Whatever the spec leaves out is Foundry's own default; visible levels named by key become level ids.
         expect(h.c.levels[1]?.art).toEqual({
             ...NO_LEVEL_ART,
             backgroundColor: '#202020',
@@ -288,6 +288,41 @@ describe('realizeSpec', () => {
         );
         expect(h.s.last().map((f) => f.type === 'room' && f.ceiling)).toEqual([true, false]);
         expect(h.d.regions.flat().map((r) => r.label)).toEqual([{ kind: 'ceiling', level: 'Ground' }]);
+    });
+
+    it('links a light switch to the lamps and rooms it names by key, and the lights it names by id', async () => {
+        const h = makeHarness(SWITCH_STAMPS);
+        const square = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 2 },
+        ];
+        const report = await realizeSpec(
+            h.c,
+            spec({
+                features: [
+                    // A switch may come before what it controls.
+                    { type: 'stamp', stamp: 'pack:switch', x: 1, y: 5, controls: ['lamp', 'hall', 'lamp'], lights: ['L1'] },
+                    { type: 'stamp', key: 'lamp', stamp: 'pack:lamp', x: 3, y: 3 },
+                    { type: 'room', key: 'hall', points: square },
+                    { type: 'stamp', key: 'crate', stamp: 'pack:crate', x: 6, y: 6 },
+                    { type: 'stamp', stamp: 'pack:switch', x: 8, y: 5, controls: ['crate'] },
+                    { type: 'stamp', stamp: 'pack:lamp', x: 9, y: 9, controls: ['lamp'] },
+                ],
+            }),
+            { origin: ORIGIN, gridSize: GRID },
+        );
+        const [switchId, lamp, hall] = report.features;
+        expect(h.c.switchTargets(switchId ?? '')).toEqual([
+            { kind: 'feature', id: lamp },
+            { kind: 'feature', id: hall },
+            { kind: 'light', id: 'L1' },
+        ]);
+        // A crate is no lamp, and a lamp is no switch.
+        expect(report.problems).toEqual([
+            { index: 4, problem: 'switch' },
+            { index: 5, problem: 'switch' },
+        ]);
     });
 
     it('places stamps with their interiors, and reports what it could not build', async () => {

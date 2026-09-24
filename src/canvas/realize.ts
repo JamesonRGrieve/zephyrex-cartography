@@ -16,6 +16,7 @@ import { makeRegion } from '../tools/region';
 import { DEFAULT_FLOOR, makeRoom, withRoomDoor } from '../tools/room';
 import type { StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
+import type { SwitchTarget } from '../tools/switch-targets';
 import { storedCost } from '../tools/terrain-cost';
 import { DEFAULT_WALL_PRESET } from '../tools/wall-presets';
 import type { CartographyController } from './controller';
@@ -27,7 +28,7 @@ export interface RealizeOptions {
     readonly gridSize: number;
 }
 
-type RealizeProblem = 'level' | 'stamp' | 'interior';
+type RealizeProblem = 'level' | 'stamp' | 'interior' | 'switch';
 
 export interface RealizeReport {
     /** Ids of the features built, in spec order. */
@@ -91,7 +92,7 @@ function placement(spec: Extract<FeatureSpec, { type: 'stamp' }>, scale: Scale):
     };
 }
 
-/** How Foundry draws a spec level; the levels it sees are named by key, and a key with no level is left out. */
+/** How Foundry draws a spec level; the levels it sees are named by key (a level that could not be created is left out). */
 function levelArt(l: SceneSpec['levels'][number], ids: Readonly<Record<string, string>>): LevelArt {
     return {
         background: l.background ?? null,
@@ -105,10 +106,40 @@ function levelArt(l: SceneSpec['levels'][number], ids: Readonly<Record<string, s
     };
 }
 
+/**
+ * Link switch stamp `switchId` to what its spec entry controls: the features
+ * it names by key and the AmbientLights it names by id, each once. True when
+ * all of it was linked; false when it is not a switch, a target was not built,
+ * or a feature target is not a lamp or a room.
+ */
+async function linkSwitch(
+    controller: CartographyController,
+    switchId: string,
+    f: Extract<FeatureSpec, { type: 'stamp' }>,
+    keyed: Readonly<Record<string, string>>,
+): Promise<boolean> {
+    const features = [...new Set(f.controls)].map((key) => keyed[key]);
+    if (features.includes(undefined)) {
+        return false;
+    }
+    const targets: SwitchTarget[] = [
+        ...features.flatMap((id): SwitchTarget[] => (id === undefined ? [] : [{ kind: 'feature', id }])),
+        ...[...new Set(f.lights)].map((id): SwitchTarget => ({ kind: 'light', id })),
+    ];
+    return targets.reduce<Promise<boolean>>(
+        async (previous, target) => (await previous) && controller.toggleSwitchTarget(switchId, target),
+        Promise.resolve(true),
+    );
+}
+
 export async function realizeSpec(controller: CartographyController, spec: SceneSpec, options: RealizeOptions): Promise<RealizeReport> {
     const scale = scaleOf(spec, options);
     const levels: Record<string, string> = {};
     const features: string[] = [];
+    /** Spec feature key → the feature built for it. */
+    const keyed: Record<string, string> = {};
+    /** Spec feature index → the feature built for it. */
+    const builtAt: Record<number, string> = {};
     const problems: { index: number; problem: RealizeProblem }[] = [];
     const editing = controller.activeLevel;
 
@@ -144,11 +175,18 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
             }
             // New features land on the level being edited, so edit the one this feature names.
             controller.setActiveLevel(level);
+            const built = (featureId: string): void => {
+                features.push(featureId);
+                builtAt[index] = featureId;
+                if (f.key !== undefined) {
+                    keyed[f.key] = featureId;
+                }
+            };
             if (f.type !== 'stamp') {
                 const feature = buildFeature(f, controller.newFeatureId(), level, scale);
                 if (feature) {
                     await controller.add(feature);
-                    features.push(feature.id);
+                    built(feature.id);
                 }
                 return;
             }
@@ -157,7 +195,7 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
                 problems.push({ index, problem: 'stamp' });
                 return;
             }
-            features.push(id);
+            built(id);
             if (f.interior) {
                 const linked =
                     'create' in f.interior
@@ -169,6 +207,16 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
             }
             if (f.floors && !(await controller.addBuildingFloors(id, f.floors))) {
                 problems.push({ index, problem: 'interior' });
+            }
+        }, Promise.resolve());
+
+        // Once everything is built, so a switch can control what comes after it.
+        await spec.features.reduce(async (previous, f, index) => {
+            await previous;
+            const switchId = builtAt[index];
+            const controls = f.type === 'stamp' && (f.controls.length > 0 || f.lights.length > 0);
+            if (controls && switchId !== undefined && !(await linkSwitch(controller, switchId, f, keyed))) {
+                problems.push({ index, problem: 'switch' });
             }
         }, Promise.resolve());
     });
