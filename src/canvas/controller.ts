@@ -49,6 +49,7 @@ import {
     withRoomLit,
     withRoomMaterials,
 } from '../tools/room';
+import { hasSceneSettings, type SceneSettings } from '../tools/scene-settings';
 import { makeStamp, stampCentre, withStampFrame, withStampVariant, type StampFeature, type StampPlacement } from '../tools/stamp';
 import { DEFAULT_BRUSH_RADIUS, makeStroke } from '../tools/stroke';
 import { exitRegion, exitSquare, type SceneFrame, type SubmapLink } from '../tools/submap';
@@ -92,6 +93,8 @@ export interface WorldScenes {
     /** Create one region in another scene, with the id it names. */
     createRegion: (sceneId: string, region: RegionDoc) => Promise<boolean>;
     deleteRegion: (sceneId: string, regionId: string) => Promise<void>;
+    /** Change the current scene's settings: only those given. */
+    updateSettings: (settings: SceneSettings) => Promise<void>;
 }
 
 /** Item Piles containers backing container stamps; unavailable (and inert) when Item Piles is not active. */
@@ -364,6 +367,16 @@ export class CartographyController {
             this.setActiveLevel(id);
         }
         return id;
+    }
+
+    /**
+     * Change the scene's own settings (darkness, fog, weather and so on): only
+     * those given. They are the scene's, not features, so undo leaves them be.
+     */
+    async setSceneSettings(settings: SceneSettings): Promise<void> {
+        if (hasSceneSettings(settings)) {
+            await this.scenes.updateSettings(settings);
+        }
     }
 
     /** Set a level's own background, foreground and fog images; false for an unknown level. */

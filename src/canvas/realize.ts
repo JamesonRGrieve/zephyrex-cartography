@@ -94,6 +94,9 @@ export async function realizeSpec(controller: CartographyController, spec: Scene
     const problems: { index: number; problem: RealizeProblem }[] = [];
     const editing = controller.activeLevel;
 
+    if (spec.scene) {
+        await controller.setSceneSettings(spec.scene);
+    }
     await controller.batch(async () => {
         await spec.levels.reduce(async (previous, l) => {
             await previous;

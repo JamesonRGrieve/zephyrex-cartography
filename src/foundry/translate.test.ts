@@ -7,6 +7,7 @@ import {
     pxToDistance,
     regionCreateData,
     regionUuid,
+    sceneSettingsData,
     soundCreateData,
     tileCreateData,
     tileFrame,
@@ -209,6 +210,31 @@ describe('stamp tile and light behaviour', () => {
         const plain = JSON.parse(JSON.stringify(lightCreateData(light, GRID, 'L')));
         expect(plain).not.toHaveProperty('hidden');
         expect(plain).not.toHaveProperty('config.darkness');
+    });
+});
+
+describe('sceneSettingsData', () => {
+    it('writes only the settings given, in the Scene’s own shape and ids', () => {
+        expect(
+            sceneSettingsData({
+                darkness: 0.7,
+                darknessLock: true,
+                globalLight: false,
+                tokenVision: true,
+                fog: 'shared',
+                weather: 'rain',
+                transition: { type: 'fade', duration: 800 },
+            }),
+        ).toEqual({
+            environment: { darknessLevel: 0.7, darknessLock: true, globalLight: { enabled: false } },
+            tokenVision: true,
+            // CONST.FOG_EXPLORATION_MODES.SHARED
+            fog: { mode: 2 },
+            weather: 'rain',
+            transition: { type: 'fade', duration: 800 },
+        });
+        expect(sceneSettingsData({ fog: 'disabled' })).toEqual({ fog: { mode: 0 } });
+        expect(sceneSettingsData({})).toEqual({});
     });
 });
 

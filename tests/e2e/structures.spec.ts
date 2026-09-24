@@ -26,6 +26,29 @@ test('a room of window walls gets Foundry’s window walls, and its door stays s
     expect(walls.filter((w) => w.door === 1)).toEqual([{ door: 1, sight: 20, light: 20, lightThreshold: null }]);
 });
 
+test('a spec sets the scene’s own darkness, fog, vision, weather and transition', async ({ world }) => {
+    const scene = await world.evaluate(async () => {
+        await game.modules?.get('zephyrex-cartography').api.buildSpec({
+            schemaVersion: 1,
+            scene: { darkness: 0.75, darknessLock: true, globalLight: true, tokenVision: false, fog: 'shared', transition: { type: 'fade', duration: 800 } },
+            features: [],
+        });
+        const s = canvas?.scene;
+        return (
+            s && {
+                darkness: s.environment.darknessLevel,
+                lock: s.environment.darknessLock,
+                globalLight: s.environment.globalLight.enabled,
+                tokenVision: s.tokenVision,
+                fog: s.fog.mode,
+                transition: { type: s.transition.type, duration: s.transition.duration },
+            }
+        );
+    });
+    // CONST.FOG_EXPLORATION_MODES.SHARED is 2.
+    expect(scene).toEqual({ darkness: 0.75, lock: true, globalLight: true, tokenVision: false, fog: 2, transition: { type: 'fade', duration: 800 } });
+});
+
 test('a fenced road puts Foundry’s terrain walls along its centerline', async ({ world }) => {
     const walls = await world.evaluate(async () => {
         await game.modules?.get('zephyrex-cartography').api.buildSpec({

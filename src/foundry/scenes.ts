@@ -7,7 +7,7 @@
 import type { WorldScenes } from '../canvas/controller';
 import type { RegionDoc } from '../tools/documents';
 import { activeScene, worldScene } from './scene-bridge';
-import { regionCreateData } from './translate';
+import { regionCreateData, sceneSettingsData } from './translate';
 
 /** Size of a new interior scene, in grid squares per side; the GM resizes it to suit. */
 const INTERIOR_SQUARES = 20;
@@ -54,6 +54,9 @@ export function createWorldScenes(options: WorldScenesOptions): WorldScenes {
             const onLevel = scene.levels.size > 1 && initial !== null ? { ...data, levels: [initial] } : data;
             await scene.createEmbeddedDocuments('Region', [onLevel], { keepId: true });
             return true;
+        },
+        updateSettings: async (settings) => {
+            await activeScene()?.update(sceneSettingsData(settings));
         },
         deleteRegion: async (sceneId, regionId) => {
             const scene = worldScene(sceneId);

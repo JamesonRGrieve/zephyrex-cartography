@@ -10,6 +10,7 @@ import type { PileSpec } from '../tools/containers';
 import { hasDocs, type GeneratedDocs, type LightDoc, type RegionDoc, type SoundDoc, type TileDoc, type WallDoc } from '../tools/documents';
 import type { Feature } from '../tools/feature';
 import type { Level } from '../tools/levels';
+import type { SceneSettings } from '../tools/scene-settings';
 import type { SceneFrame } from '../tools/submap';
 import {
     CartographyController,
@@ -180,6 +181,12 @@ class FakeScenes implements WorldScenes {
         this.regions.push({ scene: sceneId, region });
         await Promise.resolve();
         return this.names.has(sceneId);
+    }
+    /** Every settings change, in order. */
+    readonly settings: SceneSettings[] = [];
+    async updateSettings(settings: SceneSettings): Promise<void> {
+        this.settings.push(settings);
+        await Promise.resolve();
     }
     async deleteRegion(sceneId: string, regionId: string): Promise<void> {
         this.deleted.push({ scene: sceneId, region: regionId });

@@ -20,6 +20,71 @@
                 "px"
             ]
         },
+        "scene": {
+            "type": "object",
+            "properties": {
+                "darkness": {
+                    "description": "Scene darkness, 0 (day) to 1 (night).",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "darknessLock": {
+                    "description": "Lock the darkness so time of day does not change it.",
+                    "type": "boolean"
+                },
+                "globalLight": {
+                    "description": "Foundry's global illumination, lighting the whole scene.",
+                    "type": "boolean"
+                },
+                "tokenVision": {
+                    "type": "boolean"
+                },
+                "fog": {
+                    "description": "Fog of war exploration: disabled, individual (each user their own), or shared.",
+                    "type": "string",
+                    "enum": [
+                        "disabled",
+                        "individual",
+                        "shared"
+                    ]
+                },
+                "weather": {
+                    "description": "A Foundry weather effect key (CONFIG.weatherEffects), or \"\" for none.",
+                    "type": "string"
+                },
+                "transition": {
+                    "description": "The transition shown on entering the scene.",
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "anyOf": [
+                                {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "A Foundry scene transition type, or null for none."
+                        },
+                        "duration": {
+                            "description": "Milliseconds.",
+                            "type": "integer",
+                            "minimum": 500,
+                            "maximum": 10000
+                        }
+                    },
+                    "required": [
+                        "type"
+                    ],
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false,
+            "description": "The scene's own settings, as its config's Basics, Lighting and Ambience tabs set them; only those given change."
+        },
         "levels": {
             "default": [],
             "description": "Levels to add, bottom to top, stacked above any the scene has.",

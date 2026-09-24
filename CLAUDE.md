@@ -640,13 +640,17 @@ These make everything after them cheaper and safer, so they come first.
 ### Priority 7: other documents, scene settings and assets
 - **Notes** (map pins), with their `author` field [14.353], and
   **drawings**.
-- **Scene settings:**
-  - darkness, weather and environment;
-  - fog of war, including the exploration mode:
-    `CONST.FOG_EXPLORATION_MODES` DISABLED, INDIVIDUAL or SHARED [14.353];
-  - the scene's transition animation [14.352].
-  The scene spec can set them, matching the scene config's Basics and Levels
-  tabs.
+- **[done] Scene settings.** A scene spec's `scene` block sets the scene's
+  own settings, only those given (`tools/scene-settings.ts`):
+  - darkness, its lock, global light and token vision;
+  - weather (a `CONFIG.weatherEffects` key);
+  - fog of war exploration: `CONST.FOG_EXPLORATION_MODES` DISABLED,
+    INDIVIDUAL or SHARED [14.353];
+  - the transition on entering the scene, and its length [14.352].
+  They go through the controller's `WorldScenes` port as one Scene update.
+  They are the scene's, not features, so undo leaves them be.
+  - **Still open:** the environment's base and dark colours, and the fog
+    colours.
 - **Compressed textures.** Tiles and backgrounds accept KTX2 and Basis files
   [14.362]. Asset packs can ship GPU-compressed art for large stamp sets, and
   the pack schema and loader accept those extensions.

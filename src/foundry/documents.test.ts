@@ -56,6 +56,7 @@ function scene(present: readonly string[], id: string | null = 'sc'): FoundrySce
         createEmbeddedDocuments: unused,
         updateEmbeddedDocuments: unused,
         deleteEmbeddedDocuments: unused,
+        update: unused,
     };
 }
 

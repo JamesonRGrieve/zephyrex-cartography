@@ -21,7 +21,25 @@ import type {
     WallDoc,
     WallThreshold,
 } from '../tools/documents';
-import type { LightCreateData, RegionCreateData, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
+import { FOG_MODE_IDS, type SceneSettings } from '../tools/scene-settings';
+import type { LightCreateData, RegionCreateData, SceneSettingsUpdate, SoundCreateData, TileCreateData, WallCreateData } from './boundary';
+
+/** A scene's settings as the partial Scene update Foundry takes; settings not given are left out, so they keep their values. */
+export function sceneSettingsData(settings: SceneSettings): SceneSettingsUpdate {
+    const { darkness, darknessLock, globalLight, tokenVision, fog, weather, transition } = settings;
+    const environment = {
+        ...(darkness === undefined ? {} : { darknessLevel: darkness }),
+        ...(darknessLock === undefined ? {} : { darknessLock }),
+        ...(globalLight === undefined ? {} : { globalLight: { enabled: globalLight } }),
+    };
+    return {
+        ...(Object.keys(environment).length === 0 ? {} : { environment }),
+        ...(tokenVision === undefined ? {} : { tokenVision }),
+        ...(fog === undefined ? {} : { fog: { mode: FOG_MODE_IDS[fog] } }),
+        ...(weather === undefined ? {} : { weather }),
+        ...(transition === undefined ? {} : { transition }),
+    };
+}
 
 /** `CONST.WALL_DOOR_TYPES`. */
 const DOOR_TYPES: Record<DoorType, number> = { none: 0, door: 1, secret: 2 };

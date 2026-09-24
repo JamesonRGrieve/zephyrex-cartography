@@ -256,5 +256,20 @@ export interface FoundryScene {
     updateEmbeddedDocuments(embeddedName: 'Tile', updates: TileUpdateData[]): Promise<unknown>;
     updateEmbeddedDocuments(embeddedName: 'Level', updates: LevelUpdateData[]): Promise<unknown>;
     deleteEmbeddedDocuments(embeddedName: EmbeddedName, ids: readonly string[]): Promise<unknown>;
+    update(data: SceneSettingsUpdate): Promise<unknown>;
 }
 /* eslint-enable @typescript-eslint/method-signature-style */
+
+/** The scene's own settings, as a partial update: only the keys given change. */
+export interface SceneSettingsUpdate {
+    readonly environment?: {
+        readonly darknessLevel?: number;
+        readonly darknessLock?: boolean;
+        readonly globalLight?: { readonly enabled: boolean };
+    };
+    readonly tokenVision?: boolean;
+    /** A `CONST.FOG_EXPLORATION_MODES` value. */
+    readonly fog?: { readonly mode: number };
+    readonly weather?: string;
+    readonly transition?: { readonly type: string | null; readonly duration?: number | undefined };
+}

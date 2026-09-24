@@ -16,6 +16,7 @@ import { BIOMES } from '../tools/biome';
 import { DOOR_ANIMATIONS, type DoorState } from '../tools/documents';
 import type { Liquid, PathKind } from '../tools/path';
 import type { RoomDoorType } from '../tools/room';
+import { FOG_MODES } from '../tools/scene-settings';
 import { DEFAULT_WALL_PRESET, WALL_PRESETS } from '../tools/wall-presets';
 
 export const SCENE_SPEC_SCHEMA_VERSION = 1;
@@ -143,11 +144,32 @@ const levelSpec = z
 
 const featureSpec = z.discriminatedUnion('type', [regionSpec, strokeSpec, pathSpec, roomSpec, stampSpec]);
 
+const sceneSettingsSpec = z
+    .object({
+        darkness: z.number().min(0).max(1).optional().describe('Scene darkness, 0 (day) to 1 (night).'),
+        darknessLock: z.boolean().optional().describe('Lock the darkness so time of day does not change it.'),
+        globalLight: z.boolean().optional().describe("Foundry's global illumination, lighting the whole scene."),
+        tokenVision: z.boolean().optional(),
+        fog: z.enum(FOG_MODES).optional().describe('Fog of war exploration: disabled, individual (each user their own), or shared.'),
+        weather: z.string().optional().describe('A Foundry weather effect key (CONFIG.weatherEffects), or "" for none.'),
+        transition: z
+            .object({
+                type: text.nullable().describe('A Foundry scene transition type, or null for none.'),
+                duration: z.number().int().min(500).max(10000).optional().describe('Milliseconds.'),
+            })
+            .strict()
+            .optional()
+            .describe('The transition shown on entering the scene.'),
+    })
+    .strict()
+    .describe("The scene's own settings, as its config's Basics, Lighting and Ambience tabs set them; only those given change.");
+
 export const sceneSpecSchema = z
     .object({
         $schema: z.string().optional(),
         schemaVersion: z.literal(SCENE_SPEC_SCHEMA_VERSION),
         units: z.enum(['grid', 'px']).default('grid').describe('Unit of every coordinate, width and radius: grid squares, or scene pixels.'),
+        scene: sceneSettingsSpec.optional(),
         levels: z.array(levelSpec).default([]).describe('Levels to add, bottom to top, stacked above any the scene has.'),
         features: z.array(featureSpec).describe('In drawing order: later features draw above, and earlier rooms own shared walls.'),
     })
