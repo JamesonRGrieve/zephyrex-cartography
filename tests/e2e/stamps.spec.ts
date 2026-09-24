@@ -13,12 +13,18 @@ test('a stamp’s tile and light take its pack’s occlusion, restrictions and l
                 alphaThreshold: tile.texture.alphaThreshold,
                 light: tile.restrictions.light,
             },
-            light: light && { coloration: light.config.coloration, luminosity: light.config.luminosity, walls: light.walls },
+            light: light && {
+                coloration: light.config.coloration,
+                luminosity: light.config.luminosity,
+                walls: light.walls,
+                darkness: { min: light.config.darkness.min, max: light.config.darkness.max },
+                hidden: light.hidden,
+            },
         };
     });
     // CONST.OCCLUSION_MODES: FADE 1, VISION 8. SHADER_TECHNIQUES.ADAPTIVE_ATTENUATION is id 101.
     expect(placed.tile).toEqual({ modes: [1, 8], alpha: 0.25, alphaThreshold: 0.5, light: true });
-    expect(placed.light).toEqual({ coloration: 101, luminosity: 0.3, walls: false });
+    expect(placed.light).toEqual({ coloration: 101, luminosity: 0.3, walls: false, darkness: { min: 0.25, max: 1 }, hidden: true });
 });
 
 test('a stamp’s terrain and surface become native Modify Movement Cost and Define Surface regions', async ({ world }) => {

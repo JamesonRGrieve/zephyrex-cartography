@@ -201,6 +201,15 @@ describe('stamp tile and light behaviour', () => {
         });
         expect(JSON.parse(JSON.stringify(lightCreateData(light, GRID, 'L')))).not.toHaveProperty('walls');
     });
+
+    it('gives a light the darkness range it is active in, and places it hidden when the pack says so', () => {
+        const light = { source: { kind: 'room' } as const, x: 0, y: 0, dim: 100, bright: 50, elevation: 0, level: null };
+        const nightLamp = lightCreateData({ ...light, technique: { darkness: { min: 0.5, max: 1 }, hidden: true } }, GRID, 'L');
+        expect(nightLamp).toMatchObject({ config: { darkness: { min: 0.5, max: 1 } }, hidden: true });
+        const plain = JSON.parse(JSON.stringify(lightCreateData(light, GRID, 'L')));
+        expect(plain).not.toHaveProperty('hidden');
+        expect(plain).not.toHaveProperty('config.darkness');
+    });
 });
 
 describe('soundCreateData', () => {

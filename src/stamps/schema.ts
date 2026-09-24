@@ -242,6 +242,13 @@ const lightSchema = z
         shadows: fraction.optional(),
         walls: z.boolean().optional().describe('Constrained by walls (default true).'),
         vision: z.boolean().optional().describe('Also provides vision.'),
+        darkness: z
+            .object({ min: fraction.default(0), max: fraction.default(1) })
+            .strict()
+            .refine((range) => range.min <= range.max, { message: 'darkness.max may not be less than darkness.min' })
+            .optional()
+            .describe("The scene darkness range the light is active in, 0 to 1 (a lamp that lights only at night: min 0.5). Foundry's default: always."),
+        hidden: z.boolean().optional().describe('Placed hidden from players, for the GM to reveal.'),
     })
     .strict()
     .describe('A native ambient light emitted by the placed stamp.');

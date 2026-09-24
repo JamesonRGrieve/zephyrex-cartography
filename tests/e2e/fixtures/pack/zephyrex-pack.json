@@ -302,7 +302,11 @@
                 "bright": 1,
                 "coloration": "adaptiveAttenuation",
                 "luminosity": 0.3,
-                "walls": false
+                "walls": false,
+                "darkness": {
+                    "min": 0.25
+                },
+                "hidden": true
             },
             "tile": {
                 "occlusion": {

@@ -102,8 +102,8 @@ function stampTile(stamp: StampFeature, floor: Floor): TileDoc {
 
 /** A pack light's rendering and reach; nothing when it declares none. */
 function lightTechnique(light: StampLight): Partial<Pick<LightDoc, 'technique'>> {
-    const { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows, walls, vision } = light;
-    const technique = { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows, walls, vision };
+    const { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows, walls, vision, darkness, hidden } = light;
+    const technique = { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows, walls, vision, darkness, hidden };
     return Object.values(technique).every((value) => value === undefined) ? {} : { technique };
 }
 

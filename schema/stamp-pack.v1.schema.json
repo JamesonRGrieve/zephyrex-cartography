@@ -266,6 +266,29 @@
                                                 "vision": {
                                                     "description": "Also provides vision.",
                                                     "type": "boolean"
+                                                },
+                                                "darkness": {
+                                                    "description": "The scene darkness range the light is active in, 0 to 1 (a lamp that lights only at night: min 0.5). Foundry's default: always.",
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "min": {
+                                                            "default": 0,
+                                                            "type": "number",
+                                                            "minimum": 0,
+                                                            "maximum": 1
+                                                        },
+                                                        "max": {
+                                                            "default": 1,
+                                                            "type": "number",
+                                                            "minimum": 0,
+                                                            "maximum": 1
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                },
+                                                "hidden": {
+                                                    "description": "Placed hidden from players, for the GM to reveal.",
+                                                    "type": "boolean"
                                                 }
                                             },
                                             "required": [
@@ -1237,6 +1260,29 @@
                             },
                             "vision": {
                                 "description": "Also provides vision.",
+                                "type": "boolean"
+                            },
+                            "darkness": {
+                                "description": "The scene darkness range the light is active in, 0 to 1 (a lamp that lights only at night: min 0.5). Foundry's default: always.",
+                                "type": "object",
+                                "properties": {
+                                    "min": {
+                                        "default": 0,
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    },
+                                    "max": {
+                                        "default": 1,
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1
+                                    }
+                                },
+                                "additionalProperties": false
+                            },
+                            "hidden": {
+                                "description": "Placed hidden from players, for the GM to reveal.",
                                 "type": "boolean"
                             }
                         },

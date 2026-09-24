@@ -59,11 +59,15 @@ export interface LightCreateData extends OnLevels {
         readonly saturation?: number | undefined;
         readonly contrast?: number | undefined;
         readonly shadows?: number | undefined;
+        /** The scene darkness range (0–1) the light is active in. */
+        readonly darkness?: { readonly min: number; readonly max: number } | undefined;
     };
     /** Whether walls constrain the light (Foundry's default: they do). */
     readonly walls?: boolean | undefined;
     /** Whether the light also provides vision. */
     readonly vision?: boolean | undefined;
+    /** Hidden from players. */
+    readonly hidden?: boolean | undefined;
 }
 
 export interface TileCreateData extends OnLevels {

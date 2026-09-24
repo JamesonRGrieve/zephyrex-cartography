@@ -548,8 +548,9 @@ These make everything after them cheaper and safer, so they come first.
     [14.349], so they are not an index into the list.
   - These come on top of dim, bright, colour, alpha, angle, rotation and
     animation.
-  - **Still open:** `hidden` and the `darkness` range, which the pack schema
-    does not yet declare.
+  - **[done]** `hidden` (placed hidden from players) and the `darkness`
+    range the light is active in (`config.darkness`, 0–1, min ≤ max; a lamp
+    that lights only at night). Both are optional pack fields.
 - **[done] Light switches that players click.** A switch is a stamp the engine
   treats as a door: its variants are its on and off states, and it has a
   native door wall that blocks nothing (every sense `none`, movement off).
@@ -700,7 +701,8 @@ imports).
     `direction`, and a `threshold`;
   - `light`: radii, colour, animation, darkness sources (`negative`),
     priority, colouration technique, luminosity, attenuation, saturation,
-    contrast, shadows, and whether it is walled and gives vision;
+    contrast, shadows, whether it is walled and gives vision, the darkness
+    range it is active in, and whether it is placed hidden;
   - `door`: type, `animation` (ascend, descend, slide, swing, swivel) and a
     Foundry door `sound`;
   - `transition`: stairs, ladder, lift or hatch; up, down or both; and the

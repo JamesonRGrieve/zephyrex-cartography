@@ -87,6 +87,14 @@ describe('parseStampPack', () => {
         expect(parseStampPack(pack([{ ...crate, light: { dim: 1, bright: 1, color: 'orange' } }])).ok).toBe(false);
     });
 
+    it('takes a light’s darkness range, filling its ends, and refuses one upside down', () => {
+        const lit = (darkness: object): ReturnType<typeof parseStampPack> =>
+            parseStampPack(pack([{ ...crate, light: { dim: 2, bright: 1, darkness, hidden: true } }]));
+        const night = lit({ min: 0.5 });
+        expect(night.ok ? night.pack.stamps[0]?.light : null).toMatchObject({ darkness: { min: 0.5, max: 1 }, hidden: true });
+        expect(lit({ min: 0.8, max: 0.2 }).ok).toBe(false);
+    });
+
     it('rejects duplicate stamp ids', () => {
         const result = parseStampPack(pack([crate, crate]));
         const issues = result.ok ? [] : result.issues;

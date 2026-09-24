@@ -120,6 +120,7 @@ export function lightCreateData(light: LightDoc, grid: SceneGrid, displayName: s
         },
         walls: light.technique?.walls,
         vision: light.technique?.vision,
+        hidden: light.technique?.hidden,
         ...levelsField(light.level),
     };
 }
@@ -146,8 +147,9 @@ function lightConfigTechnique(technique: LightDoc['technique']): Partial<LightCr
     if (technique === undefined) {
         return {};
     }
-    const { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows } = technique;
+    const { negative, priority, coloration, luminosity, attenuation, saturation, contrast, shadows, darkness } = technique;
     return {
+        darkness,
         negative,
         priority,
         coloration: coloration === undefined ? undefined : COLORATION_IDS[coloration],

@@ -124,7 +124,7 @@ export interface LightDoc {
 /** A stamp light's rendering and reach, beyond its radii, colour and animation (v14 AmbientLight). */
 export type LightTechnique = Pick<
     StampLight,
-    'negative' | 'priority' | 'coloration' | 'luminosity' | 'attenuation' | 'saturation' | 'contrast' | 'shadows' | 'walls' | 'vision'
+    'negative' | 'priority' | 'coloration' | 'luminosity' | 'attenuation' | 'saturation' | 'contrast' | 'shadows' | 'walls' | 'vision' | 'darkness' | 'hidden'
 >;
 
 /** A native ambient sound, emitted by a stamp. */
