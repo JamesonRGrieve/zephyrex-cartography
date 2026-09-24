@@ -8,10 +8,17 @@ test('an enterable stamp opens into a new interior scene, each side teleporting 
         const interior = stamp === null || stamp === undefined ? null : await controller?.createInterior(stamp, 'Hab interior');
         const here = canvas?.scene;
         const there = interior === null || interior === undefined ? undefined : game.scenes?.get(interior);
-        // fvtt-types still describes v13's single `destination`; v14 holds a set of `destinations`.
+        // fvtt-types still describes v13's single `destination`; v14 holds a set of `destinations`, which
+        // 14.368 may store relative to the behaviour, so each is resolved to the region it names.
         const destinations = (region: RegionDocument | undefined): string[] => {
-            const system: object | undefined = region?.behaviors.contents[0]?.system;
-            return system !== undefined && 'destinations' in system && system.destinations instanceof Set ? [...system.destinations].map(String) : [];
+            const behaviour = region?.behaviors.contents[0];
+            const system: object | undefined = behaviour?.system;
+            return behaviour !== undefined && system !== undefined && 'destinations' in system && system.destinations instanceof Set
+                ? [...system.destinations].map((uuid) => {
+                      const resolved = foundry.utils.fromUuidSync(String(uuid), { relative: behaviour })?.uuid;
+                      return typeof resolved === 'string' ? resolved : String(uuid);
+                  })
+                : [];
         };
         const entrance = here?.regions.contents[0];
         const exit = there?.regions.contents[0];
@@ -42,9 +49,16 @@ test('an enterable stamp opens into a new interior scene, each side teleporting 
                 const entrance = canvas?.scene?.regions.contents[0];
                 // The stamp's footprint is a rectangle, so the entrance is Foundry's own rectangle shape, centred on the stamp.
                 const xs = entrance?.shapes.flatMap((shape) => (shape.type === 'rectangle' && 'x' in shape ? [shape.x] : [])) ?? [];
-                const system: object | undefined = entrance?.behaviors.contents[0]?.system;
+                const behaviour = entrance?.behaviors.contents[0];
+                const system: object | undefined = behaviour?.system;
+                // Stored relative to the behaviour once redrawn in place (14.368), so each is resolved to the region it names.
                 const destinations =
-                    system !== undefined && 'destinations' in system && system.destinations instanceof Set ? [...system.destinations].map(String) : [];
+                    behaviour !== undefined && system !== undefined && 'destinations' in system && system.destinations instanceof Set
+                        ? [...system.destinations].map((uuid) => {
+                              const resolved = foundry.utils.fromUuidSync(String(uuid), { relative: behaviour })?.uuid;
+                              return typeof resolved === 'string' ? resolved : String(uuid);
+                          })
+                        : [];
                 return { uuid: entrance?.uuid, count: canvas?.scene?.regions.size, moved: xs.length > 0 && Math.min(...xs) > 600, destinations };
             }),
         )
