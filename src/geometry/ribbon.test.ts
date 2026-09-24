@@ -5,7 +5,7 @@ import type { Point } from './spline';
 
 describe('buildRibbon', () => {
     it('is empty for fewer than two points', () => {
-        expect(buildRibbon([{ x: 0, y: 0 }], [10], 4)).toEqual({ positions: [], uvs: [], indices: [] });
+        expect(buildRibbon([{ x: 0, y: 0 }], [10], 4)).toEqual({ positions: [], uvs: [], indices: [], rails: [] });
     });
 
     it('produces symmetric left/right rails for a straight horizontal line', () => {

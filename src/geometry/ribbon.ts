@@ -17,9 +17,18 @@ export interface RibbonGeometry {
     readonly uvs: number[];
     /** Triangle-list indices into the vertex array. */
     readonly indices: number[];
+    /** Each sample's rail pair, as points, with its arc-length fraction. */
+    readonly rails: readonly Rail[];
 }
 
-const EMPTY: RibbonGeometry = { positions: [], uvs: [], indices: [] };
+/** One sample across the ribbon: its left and right rail points, and how far along the path it lies (0–1). */
+interface Rail {
+    readonly left: Point;
+    readonly right: Point;
+    readonly u: number;
+}
+
+const EMPTY: RibbonGeometry = { positions: [], uvs: [], indices: [], rails: [] };
 
 /** Points on each half-circle end cap of a round-brush outline. */
 const CAP_SEGMENTS = 12;
@@ -56,40 +65,37 @@ export function buildRibbon(centerline: readonly Point[], halfWidths: readonly n
         return EMPTY;
     }
 
-    // Cumulative arc length for the U coordinate.
-    const cumulative: number[] = new Array<number>(n).fill(0);
-    for (let j = 1; j < n; j++) {
-        const a = spine[j - 1];
-        const b = spine[j];
-        cumulative[j] = (cumulative[j - 1] ?? 0) + (a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0);
-    }
-    const total = cumulative[n - 1] ?? 0;
+    // Each segment of the smoothed spine, as the vector along it.
+    const segments: Point[] = [];
+    spine.reduce((from, to) => {
+        segments.push({ x: to.x - from.x, y: to.y - from.y });
+        return to;
+    });
+    const total = segments.reduce((sum, s) => sum + Math.hypot(s.x, s.y), 0);
     const invTotal = total > 0 ? 1 / total : 0;
+    const none: Point = { x: 0, y: 0 };
 
-    const positions: number[] = [];
-    const uvs: number[] = [];
-    for (let j = 0; j < n; j++) {
-        const cur = spine[j];
-        const prev = spine[j - 1] ?? cur;
-        const next = spine[j + 1] ?? cur;
-        if (!cur || !prev || !next) {
-            continue;
-        }
-        const dx = next.x - prev.x;
-        const dy = next.y - prev.y;
+    const rails: Rail[] = [];
+    let arc = 0;
+    spine.forEach((cur, j) => {
+        // The segments either side (none past an end): together, the next point less the previous one.
+        const before = segments[j - 1] ?? none;
+        const after = segments[j] ?? none;
+        arc += Math.hypot(before.x, before.y);
+        const dx = before.x + after.x;
+        const dy = before.y + after.y;
         const len = Math.hypot(dx, dy) || 1;
-        const nx = -dy / len;
-        const ny = dx / len;
         const hw = widthAt(halfWidths, j, n);
-        const u = (cumulative[j] ?? 0) * invTotal;
-        positions.push(cur.x + nx * hw, cur.y + ny * hw); // left rail
-        positions.push(cur.x - nx * hw, cur.y - ny * hw); // right rail
-        uvs.push(u, 0, u, 1);
-    }
+        const normal = { x: -dy / len, y: dx / len };
+        rails.push({
+            left: { x: cur.x + normal.x * hw, y: cur.y + normal.y * hw },
+            right: { x: cur.x - normal.x * hw, y: cur.y - normal.y * hw },
+            u: arc * invTotal,
+        });
+    });
 
     const indices: number[] = [];
-    const quads = positions.length / 4 - 1; // vertex pairs minus one
-    for (let q = 0; q < quads; q++) {
+    for (let q = 0; q < rails.length - 1; q++) {
         const l0 = q * 2;
         const r0 = l0 + 1;
         const l1 = l0 + 2;
@@ -97,8 +103,15 @@ export function buildRibbon(centerline: readonly Point[], halfWidths: readonly n
         indices.push(l0, r0, l1, r0, r1, l1);
     }
 
-    return { positions, uvs, indices };
+    return {
+        positions: rails.flatMap((rail) => [rail.left.x, rail.left.y, rail.right.x, rail.right.y]),
+        uvs: rails.flatMap((rail) => [rail.u, 0, rail.u, 1]),
+        indices,
+        rails,
+    };
 }
+
+const flat = (points: readonly Point[]): number[] => points.flatMap((p) => [p.x, p.y]);
 
 /**
  * Closed outline polygon `[x, y, …]` for a filled ribbon render: the left rail
@@ -106,19 +119,7 @@ export function buildRibbon(centerline: readonly Point[], halfWidths: readonly n
  * textured-mesh path reuses `positions`/`uvs`/`indices` directly).
  */
 export function ribbonOutline(geo: RibbonGeometry): number[] {
-    const p = geo.positions;
-    const pairs = Math.floor(p.length / 4);
-    const left: number[] = [];
-    const right: number[] = [];
-    for (let j = 0; j < pairs; j++) {
-        left.push(p[j * 4] ?? 0, p[j * 4 + 1] ?? 0);
-        right.push(p[j * 4 + 2] ?? 0, p[j * 4 + 3] ?? 0);
-    }
-    const out = [...left];
-    for (let j = pairs - 1; j >= 0; j--) {
-        out.push(right[j * 2] ?? 0, right[j * 2 + 1] ?? 0);
-    }
-    return out;
+    return [...flat(geo.rails.map((rail) => rail.left)), ...flat(geo.rails.map((rail) => rail.right).reverse())];
 }
 
 /**
@@ -146,9 +147,7 @@ function capArc(centre: Point, forward: Point, radius: number): number[] {
  * 1, the far end) or back against it (−1, the near end). An end whose rails
  * meet faces no way, and gets none.
  */
-function endCap(positions: readonly number[], pair: number, facing: 1 | -1, radius: number): number[] {
-    const left = { x: positions[pair * 4] ?? 0, y: positions[pair * 4 + 1] ?? 0 };
-    const right = { x: positions[pair * 4 + 2] ?? 0, y: positions[pair * 4 + 3] ?? 0 };
+function endCap({ left, right }: Rail, facing: 1 | -1, radius: number): number[] {
     const half = Math.hypot(left.x - right.x, left.y - right.y) / 2;
     if (half === 0) {
         return [];
@@ -170,17 +169,16 @@ export function brushOutline(centerline: readonly Point[], radius: number, sampl
         centerline.map(() => radius),
         samplesPerSegment,
     );
-    const p = geo.positions;
-    const pairs = Math.floor(p.length / 4);
-    const out: number[] = [];
-    for (let j = 0; j < pairs; j++) {
-        out.push(p[j * 4] ?? 0, p[j * 4 + 1] ?? 0);
+    const first = geo.rails[0];
+    const last = geo.rails[geo.rails.length - 1];
+    if (first === undefined || last === undefined) {
+        return [];
     }
-    // Round the far end off from the left rail to the right, walk the right rail back, then round the near end.
-    out.push(...endCap(p, pairs - 1, 1, radius));
-    for (let j = pairs - 1; j >= 0; j--) {
-        out.push(p[j * 4 + 2] ?? 0, p[j * 4 + 3] ?? 0);
-    }
-    out.push(...endCap(p, 0, -1, radius));
-    return out;
+    // The left rail out, round the far end, the right rail back, round the near end.
+    return [
+        ...flat(geo.rails.map((rail) => rail.left)),
+        ...endCap(last, 1, radius),
+        ...flat(geo.rails.map((rail) => rail.right).reverse()),
+        ...endCap(first, -1, radius),
+    ];
 }
