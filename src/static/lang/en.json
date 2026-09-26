@@ -6,7 +6,7 @@
         "Tools": {
             "Road": "Road",
             "River": "Rivers and liquids (water, lava, poison, acid)",
-            "Paint": "Paint terrain (click points for an area, drag for a stroke)",
+            "Paint": "Paint terrain (a round brush: click to dab, drag to paint)",
             "Room": "Room",
             "Door": "Doors (click a wall to add a door, click a door to edit it)",
             "Edit": "Edit points (drag to move, Shift-drag a road or river point to set its width, right-click to delete)",
@@ -48,12 +48,15 @@
         },
         "Paint": {
             "Title": "Paint terrain",
-            "Texture": "Texture",
+            "Ground": "Ground",
+            "Texture": "Texture: {texture}",
+            "OwnTexture": "The ground's own",
+            "TextureSet": "Texture set",
             "Size": "Brush size (px)",
             "MovementCost": "Movement cost (×)",
             "Mode": "Brush",
             "Modes": {
-                "Shapes": "Areas and strokes",
+                "Shapes": "Paint ground",
                 "Blend": "Blend",
                 "Unblend": "Unblend"
             },

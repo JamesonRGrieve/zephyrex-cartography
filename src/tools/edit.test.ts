@@ -27,12 +27,17 @@ function road(): Feature {
 }
 
 function region(): Feature {
-    const r = makeRegion('r', 'grassland', [
-        { x: 0, y: 0 },
-        { x: 10, y: 0 },
-        { x: 10, y: 10 },
-        { x: 0, y: 10 },
-    ]);
+    const r = makeRegion(
+        'r',
+        'grassland',
+        [
+            { x: 0, y: 0 },
+            { x: 10, y: 0 },
+            { x: 10, y: 10 },
+            { x: 0, y: 10 },
+        ],
+        null,
+    );
     if (!r) {
         throw new Error('fixture');
     }
@@ -84,11 +89,16 @@ describe('deletePoint', () => {
     });
 
     it('refuses to drop a region below three points', () => {
-        const tri = makeRegion('r', 'sand', [
-            { x: 0, y: 0 },
-            { x: 10, y: 0 },
-            { x: 5, y: 10 },
-        ]);
+        const tri = makeRegion(
+            'r',
+            'sand',
+            [
+                { x: 0, y: 0 },
+                { x: 10, y: 0 },
+                { x: 5, y: 10 },
+            ],
+            null,
+        );
         expect(tri).not.toBeNull();
         expect(deletePoint(tri as Feature, 0)).toBeNull();
     });
@@ -105,6 +115,7 @@ describe('editing a brush stroke', () => {
                 { x: 20, y: 0 },
             ],
             20,
+            null,
         );
         if (!s) {
             throw new Error('fixture');
@@ -118,10 +129,12 @@ describe('editing a brush stroke', () => {
         expect(moved?.points[1]).toEqual({ x: 10, y: 6 });
     });
 
-    it('deletes a stroke vertex until only two remain', () => {
+    it('deletes stroke vertices down to a single dab, and no further', () => {
         const d = deletePoint(stroke(), 1);
         expect(d?.points).toHaveLength(2);
-        expect(deletePoint(d as Feature, 0)).toBeNull();
+        const dab = deletePoint(d as Feature, 0);
+        expect(dab?.points).toHaveLength(1);
+        expect(deletePoint(dab as Feature, 0)).toBeNull();
     });
 });
 

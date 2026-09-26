@@ -76,8 +76,55 @@ export const BIOME_TINT: Record<BiomeKind, number> = {
     tundra: 0xffffff,
 };
 
+/**
+ * Grid squares one tile of a terrain texture spans. Pack textures are 512 to
+ * 1254 px photos, so drawn this small they keep full detail at any zoom
+ * instead of stretching a few texels over a square.
+ */
+export const TEXTURE_TILE_SQUARES = 2;
+
+/**
+ * Scene px one tile of a texture `side` px across spans: {@link TEXTURE_TILE_SQUARES}
+ * grid squares, or its own size on a scene with no grid. Every fill tiles from
+ * the scene's origin at this size, so overlapping fills of one texture meet
+ * without a seam.
+ */
+export function tileSpan(gridSize: number, side: number): number {
+    return gridSize > 0 ? gridSize * TEXTURE_TILE_SQUARES : side;
+}
+
 /** Texture role of a road (a river is drawn in its liquid's). */
 export const ROAD_TEXTURE = 'road';
+
+/**
+ * Painted ground drawn in a texture of its own instead of its biome's: any
+ * texture role (a pack's `floor.cobbled-street`, another biome's), or null
+ * for the biome's own. The biome still says what the ground is (its terrain
+ * region and colour). A role the active set lacks draws as the biome's own.
+ */
+export interface Textured {
+    readonly texture: string | null;
+}
+
+/** A texture role as a person reads it: its last dotted part, hyphens as spaces, capitalised (`floor.cobbled-street` → `Cobbled street`). */
+export function roleLabel(role: string): string {
+    const words = role.slice(role.lastIndexOf('.') + 1).replaceAll('-', ' ');
+    return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** A texture in a picker: its role, how it reads, and the image a panel shows (null: none it can show). */
+export interface TextureSwatch {
+    readonly role: string;
+    readonly label: string;
+    readonly image: string | null;
+}
+
+/** Every texture the active set has, by label, as a picker shows them (`previews` resolves the images panels can show). */
+export function textureSwatches(roles: readonly string[], previews: TextureResolver): TextureSwatch[] {
+    return roles
+        .map((role) => ({ role, label: roleLabel(role), image: previews(role) }))
+        .sort((a, b) => a.label.localeCompare(b.label) || a.role.localeCompare(b.role));
+}
 
 /** How a biome looks in a picker: its texture from the set (null: none, so its flat colour) and its flat colour. */
 export interface BiomeSwatch {

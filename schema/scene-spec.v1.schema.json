@@ -452,6 +452,11 @@
                                     "ocean"
                                 ]
                             },
+                            "texture": {
+                                "description": "A texture role from the active set to draw the ground in instead of its biome's (`floor.cobbled-street`, another biome's), which still says what the ground is. A role the set lacks draws as the biome.",
+                                "type": "string",
+                                "minLength": 1
+                            },
                             "points": {
                                 "minItems": 3,
                                 "type": "array",
@@ -987,8 +992,13 @@
                                     "ocean"
                                 ]
                             },
+                            "texture": {
+                                "description": "A texture role from the active set to draw the ground in instead of its biome's (`floor.cobbled-street`, another biome's), which still says what the ground is. A role the set lacks draws as the biome.",
+                                "type": "string",
+                                "minLength": 1
+                            },
                             "points": {
-                                "minItems": 2,
+                                "minItems": 1,
                                 "type": "array",
                                 "items": {
                                     "type": "object",
@@ -1006,7 +1016,7 @@
                                     ],
                                     "additionalProperties": false
                                 },
-                                "description": "Centerline."
+                                "description": "Centerline; one point is a round dab."
                             },
                             "radius": {
                                 "description": "Half-width of the swath (default: the brush default).",

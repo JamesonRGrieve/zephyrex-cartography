@@ -9,12 +9,17 @@ import { makeStroke } from './stroke';
 
 describe('featureHit', () => {
     it('hits a region when the point is inside its fill', () => {
-        const region = makeRegion('r', 'water', [
-            { x: 0, y: 0 },
-            { x: 100, y: 0 },
-            { x: 100, y: 100 },
-            { x: 0, y: 100 },
-        ]);
+        const region = makeRegion(
+            'r',
+            'water',
+            [
+                { x: 0, y: 0 },
+                { x: 100, y: 0 },
+                { x: 100, y: 100 },
+                { x: 0, y: 100 },
+            ],
+            null,
+        );
         expect(region).not.toBeNull();
         expect(featureHit(region as Feature, { x: 50, y: 50 })).toBe(true);
         expect(featureHit(region as Feature, { x: 200, y: 50 })).toBe(false);
@@ -48,6 +53,7 @@ describe('featureHit', () => {
                 { x: 100, y: 0 },
             ],
             20,
+            null,
         );
         expect(stroke).not.toBeNull();
         expect(featureHit(stroke as Feature, { x: 50, y: 18 })).toBe(true);

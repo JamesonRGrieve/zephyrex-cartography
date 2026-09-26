@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <rect width="64" height="64" fill="#3f6a2c"/>
+  <g fill="#6c9a45">
+    <circle cx="10" cy="12" r="6"/>
+    <circle cx="40" cy="8" r="5"/>
+    <circle cx="26" cy="34" r="7"/>
+    <circle cx="54" cy="40" r="6"/>
+    <circle cx="12" cy="54" r="5"/>
+    <circle cx="44" cy="60" r="4"/>
+  </g>
+</svg>

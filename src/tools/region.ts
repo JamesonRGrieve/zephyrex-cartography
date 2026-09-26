@@ -8,24 +8,25 @@ import { closedSpline, type Point } from '../geometry/spline';
 import { parseAreaFields, type Affected } from './area-effects';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
-import { isPoint, isRecord } from './guards';
+import { isPoint, isRecord, stringOrNull } from './guards';
 import type { Costed } from './terrain-cost';
+import type { Textured } from './texture';
 
 /** Default half-count of samples per region-boundary span. */
 const REGION_SAMPLES = 10;
 
 /** A closed biome area; its `points` are the boundary control points (>= 3). */
-export interface RegionFeature extends FeatureCommon, Costed, Affected {
+export interface RegionFeature extends FeatureCommon, Costed, Affected, Textured {
     readonly type: 'region';
     readonly biome: BiomeKind;
 }
 
-/** Build a committed region from a boundary point stream, or null if too small. */
-export function makeRegion(id: string, biome: BiomeKind, points: readonly Point[]): RegionFeature | null {
+/** Build a committed region from a boundary point stream, or null if too small; `texture` null draws the biome's own. */
+export function makeRegion(id: string, biome: BiomeKind, points: readonly Point[], texture: string | null): RegionFeature | null {
     if (points.length < 3) {
         return null;
     }
-    return { type: 'region', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })), ...NEW_FEATURE };
+    return { type: 'region', id, biome, texture, points: points.map((p) => ({ x: p.x, y: p.y })), ...NEW_FEATURE };
 }
 
 /** Rebuild a region with new boundary points (edit ops), preserving id/biome, or null if < 3. */
@@ -56,6 +57,6 @@ export function parseRegion(v: unknown): RegionFeature | null {
         return null;
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
-    const region = makeRegion(v['id'], v['biome'], points);
+    const region = makeRegion(v['id'], v['biome'], points, stringOrNull(v['texture']));
     return region && { ...region, ...parseAreaFields(v), ...parseFeatureCommon(v) };
 }

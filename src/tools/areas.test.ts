@@ -18,8 +18,8 @@ const square = [
 describe('areas', () => {
     it('are painted ground, rooms and zones, not paths', () => {
         const features = [
-            makeRegion('a', 'forest', square),
-            makeStroke('b', 'sand', square, 20),
+            makeRegion('a', 'forest', square, null),
+            makeStroke('b', 'sand', square, 20, null),
             makeRoom('c', 'dirt', square),
             makeZone('e', { x: 0, y: 0 }),
             makePath('d', 'road', square, 10, null, LIQUID_LOOKS.water),

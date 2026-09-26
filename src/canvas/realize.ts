@@ -88,15 +88,13 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         });
         return zone && { ...zone, ...areaOf(spec), level };
     }
+    if (spec.type === 'region' || spec.type === 'stroke') {
+        const ground = buildGround(spec, id, scale);
+        return ground && { ...ground, level };
+    }
     const points = spec.points.map(scale.point);
     let feature: Feature | null;
-    if (spec.type === 'region') {
-        const region = makeRegion(id, spec.biome, points);
-        feature = region && { ...region, ...areaOf(spec) };
-    } else if (spec.type === 'stroke') {
-        const stroke = makeStroke(id, spec.biome, points, spec.radius === undefined ? DEFAULT_BRUSH_RADIUS : scale.length(spec.radius));
-        feature = stroke && { ...stroke, ...areaOf(spec) };
-    } else if (spec.type === 'path') {
+    if (spec.type === 'path') {
         const base = LIQUID_LOOKS[spec.liquid ?? 'water'];
         const river = {
             ...base,
@@ -112,6 +110,19 @@ function buildFeature(spec: Exclude<FeatureSpec, { type: 'stamp' }>, id: string,
         feature = doored && { ...doored, ...areaOf(spec) };
     }
     return feature && { ...feature, level };
+}
+
+/** Painted ground a spec describes: an area or a brush stroke of a biome, in its own texture or the biome's. */
+function buildGround(spec: Extract<FeatureSpec, { type: 'region' | 'stroke' }>, id: string, scale: Scale): Feature | null {
+    const points = spec.points.map(scale.point);
+    const texture = spec.texture ?? null;
+    if (spec.type === 'region') {
+        const region = makeRegion(id, spec.biome, points, texture);
+        return region && { ...region, ...areaOf(spec) };
+    }
+    const radius = spec.radius === undefined ? DEFAULT_BRUSH_RADIUS : scale.length(spec.radius);
+    const stroke = makeStroke(id, spec.biome, points, radius, texture);
+    return stroke && { ...stroke, ...areaOf(spec) };
 }
 
 /** A spec's drawn shape: a box at its centre, sized in the spec's units, or its vertices; its stroke in px as given. */

@@ -13,10 +13,14 @@ import { type Feature, isAnchored } from '../tools/feature';
 import type { CartographyPath, Liquid } from '../tools/path';
 import { proceduralRole, type Pattern } from '../tools/procedural';
 import { regionOutline } from '../tools/region';
-import { BIOME_TEXTURE, BIOME_TINT, ROAD_TEXTURE, type TextureResolver } from '../tools/texture';
+import { BIOME_TEXTURE, BIOME_TINT, ROAD_TEXTURE, type Textured, type TextureResolver } from '../tools/texture';
 
-/** Opacity for a textured fill — higher than a flat tint so the tile reads, but still blends. */
-const TEXTURE_ALPHA = 0.9;
+/**
+ * Opacity of a textured land fill: opaque, so strokes of one texture laid
+ * over each other look like one painted area instead of darkening where they
+ * overlap. Their feathered edges still blend into what lies beneath.
+ */
+const TEXTURE_ALPHA = 1;
 
 /** Neutral (no-op) multiply tint for a naturally-coloured texture. */
 const NO_TINT = 0xffffff;
@@ -119,10 +123,9 @@ interface Filled {
 /** Fill descriptor for a biome area (region, brush stroke, or room floor) — textured, tinted. */
 /**
  * How a biome is drawn: water and ocean translucent, in a water texture or
- * rippling; land in its texture, or grain in its colour. Shared by painted
- * areas and splat-map blending.
+ * rippling; land in its texture, or grain in its colour.
  */
-export function biomeLook(biome: BiomeKind, resolve: TextureResolver): Texturing & { readonly alpha: number } {
+function biomeLook(biome: BiomeKind, resolve: TextureResolver): Texturing & { readonly alpha: number } {
     const style = BIOME_STYLES[biome];
     const role = BIOME_TEXTURE[biome];
     if (role === null) {
@@ -135,13 +138,29 @@ function biomeFilled(biome: BiomeKind, outline: number[], feather: boolean, reso
     return { outline, fill: BIOME_STYLES[biome].fill, feather, ...biomeLook(biome, resolve) };
 }
 
-/** Fill descriptor for a texture role: a biome as a biome, any other role (a pack material) by its texture, or grain. */
-function roleFilled(role: string, outline: number[], feather: boolean, resolve: TextureResolver): Filled {
+/**
+ * How a texture role is drawn: a biome as a biome, any other role (a pack
+ * material) in its texture, untinted, or grain. Shared by room floors,
+ * painted ground in a texture of its own, and splat-map blending.
+ */
+export function roleLook(role: string, resolve: TextureResolver): Texturing & { readonly alpha: number } {
     if (isBiomeKind(role)) {
-        return biomeFilled(role, outline, feather, resolve);
+        return biomeLook(role, resolve);
     }
-    const { texture, tint } = texturing(resolve, [role], NO_TINT, 'grain', ROLE_FALLBACK);
-    return { outline, fill: ROLE_FALLBACK, alpha: TEXTURE_ALPHA, texture, tint, feather };
+    return { ...texturing(resolve, [role], NO_TINT, 'grain', ROLE_FALLBACK), alpha: TEXTURE_ALPHA };
+}
+
+/** Fill descriptor for a texture role (see {@link roleLook}). */
+function roleFilled(role: string, outline: number[], feather: boolean, resolve: TextureResolver): Filled {
+    return { outline, fill: isBiomeKind(role) ? BIOME_STYLES[role].fill : ROLE_FALLBACK, feather, ...roleLook(role, resolve) };
+}
+
+/** Painted ground: in its own texture where the set has it, else its biome's. */
+function groundFilled(ground: { readonly biome: BiomeKind } & Textured, outline: number[], resolve: TextureResolver): Filled {
+    const own = ground.texture !== null && resolve(ground.texture) !== null ? ground.texture : null;
+    return own === null
+        ? biomeFilled(ground.biome, outline, true, resolve)
+        : { ...roleFilled(own, outline, true, resolve), fill: BIOME_STYLES[ground.biome].fill };
 }
 
 /** A path's ribbon outline at `halfWidths`, ending square across at full width: a road's carriageway, a river's banks. */
@@ -182,11 +201,11 @@ function outlineAndStyle(feature: Feature, resolve: TextureResolver): Filled {
         return NOT_DRAWN;
     }
     if (feature.type === 'region') {
-        return biomeFilled(feature.biome, regionOutline(feature.points), true, resolve);
+        return groundFilled(feature, regionOutline(feature.points), resolve);
     }
     if (feature.type === 'stroke') {
         // What a round brush leaves along the pointer's path: rounded at both ends.
-        return biomeFilled(feature.biome, brushOutline(feature.points, feature.radius, RIBBON_SAMPLES), true, resolve);
+        return groundFilled(feature, brushOutline(feature.points, feature.radius, RIBBON_SAMPLES), resolve);
     }
     if (feature.type === 'room') {
         // The exact polygon with a crisp edge: a room's walls are straight and cover its boundary.
@@ -258,13 +277,13 @@ export class GraphicsFeatureRenderer implements FeatureRenderer {
         this.extras.delete(id);
     }
 
+    /** A brush stroke paints as it is dragged, in its own look; any other shape shows as a highlight while drawn or edited. */
     preview(feature: Feature): void {
-        const { outline } = outlineAndStyle(feature, this.resolve);
-        if (outline.length >= 6) {
-            this.surface.fill(PREVIEW_ID, outline, PREVIEW_STYLE.fill, PREVIEW_STYLE.alpha, false);
-        } else {
-            this.surface.remove(PREVIEW_ID);
-        }
+        const look = outlineAndStyle(feature, this.resolve);
+        this.draw(
+            PREVIEW_ID,
+            feature.type === 'stroke' ? look : { ...look, fill: PREVIEW_STYLE.fill, alpha: PREVIEW_STYLE.alpha, texture: null, feather: false },
+        );
     }
 
     remove(id: string): void {

@@ -7,6 +7,10 @@ function mount(story: { readonly args?: Partial<stories.PaintArgs> }): HTMLEleme
     const el = stories.mountPaintPanel({
         choices: story.args?.choices ?? base?.choices ?? [],
         biome: story.args?.biome ?? base?.biome ?? 'grassland',
+        textures: story.args?.textures ?? base?.textures ?? [],
+        texture: story.args?.texture ?? base?.texture ?? null,
+        sets: story.args?.sets ?? base?.sets ?? [],
+        set: story.args?.set ?? base?.set ?? '',
         radius: story.args?.radius ?? base?.radius ?? 25,
         movementCost: story.args?.movementCost ?? base?.movementCost ?? 1,
         mode: story.args?.mode ?? base?.mode ?? 'shapes',
@@ -39,9 +43,9 @@ describe('paint panel', () => {
         document.body.replaceChildren();
     });
 
-    it('offers every texture as a labelled swatch group, the chosen one pressed', () => {
+    it('offers every ground as a labelled swatch group, the chosen one pressed', () => {
         const root = mount(stories.Grassland);
-        expect(root.querySelector('[role="group"]')?.getAttribute('aria-label')).toBe('Texture');
+        expect(root.querySelector('[role="group"]')?.getAttribute('aria-label')).toBe('Ground');
         expect(swatch(root, 'Grassland').getAttribute('aria-pressed')).toBe('true');
         expect(swatch(root, 'Water').getAttribute('aria-pressed')).toBe('false');
         expect(size(root).value).toBe('25');
@@ -56,7 +60,43 @@ describe('paint panel', () => {
         expect(chip('Water')?.style.backgroundColor).not.toBe('');
     });
 
-    it('picks a texture and sets the brush size, reverting a size it refuses', () => {
+    it('draws the ground in its own texture or any of the set’s, named in the section title', () => {
+        const root = mount(stories.Grassland);
+        const summary = (): string | null | undefined => root.querySelector('summary')?.textContent;
+        expect(summary()).toBe("Texture: The ground's own");
+        expect(swatch(root, "The ground's own").getAttribute('aria-pressed')).toBe('true');
+        // The ground's own shows as its biome's swatch does.
+        expect(swatch(root, "The ground's own").querySelector('span')?.style.backgroundImage).toBe(
+            swatch(root, 'Grassland').querySelector('span')?.style.backgroundImage,
+        );
+        swatch(root, 'Cobbled street').click();
+        expect(summary()).toBe('Texture: Cobbled street');
+        expect(swatch(root, 'Cobbled street').getAttribute('aria-pressed')).toBe('true');
+        expect(swatch(root, "The ground's own").getAttribute('aria-pressed')).toBe('false');
+        swatch(root, "The ground's own").click();
+        expect(summary()).toBe("Texture: The ground's own");
+        expect(mount(stories.CobbledGround).querySelector('summary')?.textContent).toBe('Texture: Cobbled street');
+    });
+
+    it('chooses among the packs’ texture sets, offering the choice only when there is one to make', () => {
+        const root = mount(stories.Grassland);
+        const set = (): HTMLSelectElement | null => root.querySelector<HTMLSelectElement>('#zc-paint-set');
+        expect([...(set()?.options ?? [])].map((o) => o.textContent)).toEqual(['Painted (hand-painted style)', 'Poly Haven (CC0)']);
+        const picker = set();
+        if (picker) {
+            picker.value = 'assets:polyhaven';
+            picker.dispatchEvent(new Event('change'));
+        }
+        expect(set()?.value).toBe('assets:polyhaven');
+        expect(mount(stories.NoTextureSet).querySelector('#zc-paint-set')).toBeNull();
+    });
+
+    it('shows the ground’s own texture as a plain tile when its ground is not among the choices', () => {
+        const root = mount({ args: { choices: [] } });
+        expect(swatch(root, "The ground's own").querySelector('span')?.style.backgroundColor).toBe('transparent');
+    });
+
+    it('picks a ground and sets the brush size, reverting a size it refuses', () => {
         const root = mount(stories.Grassland);
         swatch(root, 'Lava').click();
         expect(swatch(root, 'Lava').getAttribute('aria-pressed')).toBe('true');
@@ -84,7 +124,7 @@ describe('paint panel', () => {
     it('switches between laying ground and blending texture, blending with a strength in place of a cost', () => {
         const root = mount(stories.Grassland);
         const mode = root.querySelector<HTMLSelectElement>('#zc-paint-mode');
-        expect([...(mode?.options ?? [])].map((o) => o.textContent)).toEqual(['Areas and strokes', 'Blend', 'Unblend']);
+        expect([...(mode?.options ?? [])].map((o) => o.textContent)).toEqual(['Paint ground', 'Blend', 'Unblend']);
         const labels = (): (string | null)[] => [...root.querySelectorAll('label')].map((label) => label.textContent);
         expect(labels()).toContain('Movement cost (×)');
         if (mode) {
@@ -121,12 +161,14 @@ describe('paint panel', () => {
     });
 
     it('renders every story', () => {
-        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.NoTextureSet]) {
-            expect(mount(story).querySelectorAll('button')).toHaveLength(6);
+        // Six grounds, the ground's own texture and the set's five.
+        for (const story of [stories.Grassland, stories.WaterWithAWideBrush, stories.DifficultMarsh, stories.CobbledGround]) {
+            expect(mount(story).querySelectorAll('button')).toHaveLength(12);
         }
-        expect(mount(stories.BakedBlend).querySelectorAll('button')).toHaveLength(7);
+        expect(mount(stories.NoTextureSet).querySelectorAll('button')).toHaveLength(7);
+        expect(mount(stories.BakedBlend).querySelectorAll('button')).toHaveLength(13);
         for (const story of [stories.BlendingSand, stories.BlendOnEveryLevel]) {
-            expect(mount(story).querySelectorAll('button')).toHaveLength(8);
+            expect(mount(story).querySelectorAll('button')).toHaveLength(14);
         }
     });
 });

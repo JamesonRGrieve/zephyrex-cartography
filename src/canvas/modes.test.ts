@@ -12,7 +12,7 @@ describe('modeForTool', () => {
             kind: 'brush',
             brush: { type: 'room', floor: 'floor.stone', wall: 'wall.brick', wallKind: 'window', ceiling: false },
         });
-        expect(modeForTool('paint', true, CHOICES)).toEqual({ kind: 'brush', brush: { type: 'region', biome: 'lava' } });
+        expect(modeForTool('paint', true, CHOICES)).toEqual({ kind: 'brush', brush: { type: 'stroke', biome: 'lava' } });
     });
 
     it('maps the interaction tools to their own modes', () => {

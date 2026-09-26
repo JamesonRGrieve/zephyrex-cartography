@@ -5,11 +5,16 @@ import type { BiomeKind } from '../tools/biome';
 import { parseSizePx } from '../tools/size-input';
 import { DEFAULT_STRENGTH, type PaintMode, parseStrength, type SplatState } from '../tools/splat';
 import { parseCostInput } from '../tools/terrain-cost';
-import { renderPaintPanel, type PaintChoice, type PaintLabels } from './paint-panel-view';
+import type { TextureSwatch } from '../tools/texture';
+import { renderPaintPanel, type PaintChoice, type PaintLabels, type TextureSetChoice } from './paint-panel-view';
 
 export interface PaintArgs {
     readonly choices: readonly PaintChoice[];
     readonly biome: BiomeKind;
+    readonly textures: readonly TextureSwatch[];
+    readonly texture: string | null;
+    readonly sets: readonly TextureSetChoice[];
+    readonly set: string;
     readonly radius: number;
     readonly movementCost: number;
     readonly mode: PaintMode;
@@ -19,11 +24,14 @@ export interface PaintArgs {
 }
 
 const LABELS: PaintLabels = {
-    texture: 'Texture',
+    ground: 'Ground',
+    texture: (shown) => `Texture: ${shown}`,
+    ownTexture: "The ground's own",
+    textureSet: 'Texture set',
     size: 'Brush size (px)',
     movementCost: 'Movement cost (×)',
     mode: 'Brush',
-    modes: { shapes: 'Areas and strokes', blend: 'Blend', unblend: 'Unblend' },
+    modes: { shapes: 'Paint ground', blend: 'Blend', unblend: 'Unblend' },
     strength: 'Strength (0.05–1)',
     bake: { tile: 'Bake into a tile', background: "Bake into the level's background" },
     unbake: 'Unbake to edit',
@@ -35,7 +43,16 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
     windowEl.className = 'zephyrex-cartography zc-story-window';
     const root = document.createElement('div');
     windowEl.append(root);
-    let state = { biome: args.biome, radius: args.radius, movementCost: args.movementCost, mode: args.mode, strength: args.strength, splat: args.splat };
+    let state = {
+        biome: args.biome,
+        texture: args.texture,
+        set: args.set,
+        radius: args.radius,
+        movementCost: args.movementCost,
+        mode: args.mode,
+        strength: args.strength,
+        splat: args.splat,
+    };
     const choose = (next: Partial<typeof state>): void => {
         state = { ...state, ...next };
         render();
@@ -51,23 +68,34 @@ export function mountPaintPanel(args: PaintArgs): HTMLElement {
             return value !== null;
         };
     function render(): void {
-        renderPaintPanel(root, { choices: args.choices, backgroundBakeable: args.backgroundBakeable, ...state }, LABELS, {
-            pick: (biome) => {
-                choose({ biome });
+        renderPaintPanel(
+            root,
+            { choices: args.choices, textures: args.textures, sets: args.sets, backgroundBakeable: args.backgroundBakeable, ...state },
+            LABELS,
+            {
+                pick: (biome) => {
+                    choose({ biome });
+                },
+                pickTexture: (texture) => {
+                    choose({ texture });
+                },
+                chooseSet: (set) => {
+                    choose({ set });
+                },
+                setSize: accept(parseSizePx, (radius) => ({ radius })),
+                setMovementCost: accept(parseCostInput, (movementCost) => ({ movementCost })),
+                setMode: (mode) => {
+                    choose({ mode });
+                },
+                setStrength: accept(parseStrength, (strength) => ({ strength })),
+                bake: (into) => {
+                    choose({ splat: into });
+                },
+                unbake: () => {
+                    choose({ splat: 'live' });
+                },
             },
-            setSize: accept(parseSizePx, (radius) => ({ radius })),
-            setMovementCost: accept(parseCostInput, (movementCost) => ({ movementCost })),
-            setMode: (mode) => {
-                choose({ mode });
-            },
-            setStrength: accept(parseStrength, (strength) => ({ strength })),
-            bake: (into) => {
-                choose({ splat: into });
-            },
-            unbake: () => {
-                choose({ splat: 'live' });
-            },
-        });
+        );
     }
     render();
     return windowEl;
@@ -88,6 +116,20 @@ const TEXTURED: readonly PaintChoice[] = [
     { biome: 'snow', label: 'Snow', image: null, colour: '#dfe8ee' },
 ];
 
+/** The active set's textures, as the panel lists them. */
+const SET_TEXTURES: readonly TextureSwatch[] = [
+    { role: 'floor.cobbled-street', label: 'Cobbled street', image: tile('#77716a') },
+    { role: 'forest', label: 'Forest', image: tile('#2f4a24') },
+    { role: 'grassland', label: 'Grassland', image: tile('#5a7b3c') },
+    { role: 'floor.jungle-floor', label: 'Jungle floor', image: tile('#3f5a2a') },
+    { role: 'floor.white-marble', label: 'White marble', image: null },
+];
+
+const SETS: readonly TextureSetChoice[] = [
+    { key: 'assets:painted', label: 'Painted (hand-painted style)' },
+    { key: 'assets:polyhaven', label: 'Poly Haven (CC0)' },
+];
+
 const meta: Meta<PaintArgs> = {
     title: 'Terrain/Paint Panel',
     excludeStories: ['mountPaintPanel'],
@@ -95,6 +137,10 @@ const meta: Meta<PaintArgs> = {
     args: {
         choices: TEXTURED,
         biome: 'grassland',
+        textures: SET_TEXTURES,
+        texture: null,
+        sets: SETS,
+        set: 'assets:painted',
         radius: 25,
         movementCost: 1,
         mode: 'shapes',
@@ -132,5 +178,13 @@ export const BlendOnEveryLevel: Story = {
 };
 
 export const NoTextureSet: Story = {
-    args: { choices: TEXTURED.map((choice) => ({ ...choice, image: null })), biome: 'sand' },
+    args: { choices: TEXTURED.map((choice) => ({ ...choice, image: null })), biome: 'sand', textures: [], sets: [], set: '' },
+};
+
+/** Grassland drawn in a cobbled street from the active set, its texture section open. */
+export const CobbledGround: Story = {
+    args: { texture: 'floor.cobbled-street' },
+    play: ({ canvasElement }) => {
+        canvasElement.querySelector('details')?.setAttribute('open', '');
+    },
 };

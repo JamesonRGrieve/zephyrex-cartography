@@ -53,8 +53,10 @@ interface DrawState {
     mode: Mode;
     /** A control point being dragged: moved, or (Shift) its path width set by distance from `anchor`. */
     drag: { id: string; index: number; kind: 'move' | 'width'; anchor: Point } | null;
-    down: Point | null;
+    /** A brush stroke is being painted (the pointer is down with the paint tool laying ground). */
     painting: boolean;
+    /** The paint brush's outline, following the pointer while the paint tool is in hand. */
+    cursor: PIXI.Graphics;
     /** A blend stroke is under way (the pointer is down with the paint tool blending). */
     blending: boolean;
     /** The link tool: the switch picked and its drawn links. */
@@ -87,15 +89,22 @@ const generator = registerGeneratorRuntime(() => state?.controller ?? null, mate
 
 // A new brush size is the next stroke's; a new texture is picked up at once by a paint tool in hand.
 const paint = registerPaintRuntime(
-    packs.previews,
+    {
+        previews: packs.previews,
+        roles: packs.textureRoles,
+        sets: packs.textureSets,
+        active: packs.activeTextureSet,
+        choose: packs.chooseTextureSet,
+    },
     (settings) => {
         if (!state) {
             return;
         }
         state.controller.brushRadius = settings.radius;
         state.controller.movementCost = settings.movementCost;
+        state.controller.paintTexture = settings.texture;
         const { mode } = state;
-        if (mode.kind === 'brush' && mode.brush.type === 'region' && mode.brush.biome !== settings.biome) {
+        if (mode.kind === 'brush' && mode.brush.type === 'stroke' && mode.brush.biome !== settings.biome) {
             enterMode(state, toolMode('paint', true));
         }
     },
@@ -122,11 +131,12 @@ const paths = registerPathRuntime(packs.textureRoles, (settings) => {
 
 registerApi(() => state?.controller ?? null);
 
-// Newly loaded packs or another texture set re-render the layer.
+// Newly loaded packs or another texture set re-render the layer, and the paint panel's textures.
 packs.onChange(() => {
     if (canvas?.ready === true) {
         setupDrawLayer();
     }
+    paint.refresh();
 });
 
 /** Shared across canvases so a stamp variant's silhouette is traced once per session. */
@@ -138,8 +148,8 @@ const EDIT_PICK_TOL = 10;
 /** Scene-px radius within which a click grabs a room wall segment in door mode. */
 const WALL_PICK_TOL = 16;
 
-/** Drag distance (scene px) past which a biome click becomes a freehand paint stroke. */
-const PAINT_THRESHOLD = 8;
+/** The paint brush outline: a light ring (screen px) inside a dark one, readable on any ground. */
+const CURSOR_RING = { width: 1.5, light: 0xffffff, dark: 0x000000, alpha: 0.9 } as const;
 
 /** Pointer button ids. */
 const PRIMARY_BUTTON = 0;
@@ -180,15 +190,16 @@ function enterMode(st: DrawState, mode: Mode): void {
     capturePointer(st.container, mode.kind !== 'idle');
     st.mode = mode;
     st.drag = null;
-    st.down = null;
     st.painting = false;
+    st.cursor.visible = false;
     // A blend stroke cut short by a tool change still lands as one undo step.
     if (st.blending) {
         st.blending = false;
         void st.controller.endBlend();
     }
     st.controller.cancel();
-    if (mode.kind === 'brush') {
+    // A clicked shape starts now; a paint stroke starts with its press.
+    if (mode.kind === 'brush' && mode.brush.type !== 'stroke') {
         st.controller.begin(mode.brush, 'click');
     }
     // Link lines show only while the link tool is in hand.
@@ -311,35 +322,66 @@ async function placeOrOpen(
 
 /** A press with a drawing brush in hand. */
 function brushDown(st: DrawState, brush: Brush, pt: Point, button: number): void {
+    if (brush.type === 'stroke') {
+        paintDown(st, brush.biome, pt, button);
+        return;
+    }
     if (button === SECONDARY_BUTTON) {
         void commitAndContinue(st, brush);
-        return;
-    }
-    if (brush.type === 'region' && paint.current().mode !== 'shapes') {
-        // Blending: the whole press is one stroke into the level's splat map.
-        st.blending = true;
-        blendAt(st, brush.biome, pt);
-        return;
-    }
-    if (brush.type === 'region') {
-        // A click drops a region vertex; a drag paints a freehand stroke (decided on move).
-        st.down = pt;
-        st.painting = false;
         return;
     }
     st.controller.addPoint(pt);
 }
 
-/** One dab of the blend brush at `pt`, as the paint panel sets it. */
+/**
+ * A press with the paint brush: the ground under the brush is painted at
+ * once, and the whole press is one stroke — laid as ground, or blended into
+ * the level's splat map. The right button only pans.
+ */
+function paintDown(st: DrawState, biome: BiomeKind, pt: Point, button: number): void {
+    if (button !== PRIMARY_BUTTON) {
+        return;
+    }
+    if (paint.current().mode !== 'shapes') {
+        st.blending = true;
+        blendAt(st, biome, pt);
+        return;
+    }
+    st.controller.cancel();
+    st.controller.begin({ type: 'stroke', biome }, 'freehand');
+    st.controller.addPoint(pt);
+    st.painting = true;
+}
+
+/** Draw the paint brush's outline at `pt`, the size the paint panel sets, above everything the layer draws. */
+function showCursor(st: DrawState, pt: Point): void {
+    const { cursor } = st;
+    const screenPx = 1 / (canvas?.stage?.scale.x ?? 1);
+    const radius = paint.current().radius;
+    cursor.clear();
+    cursor.lineStyle(CURSOR_RING.width * 2 * screenPx, CURSOR_RING.dark, CURSOR_RING.alpha).drawCircle(pt.x, pt.y, radius);
+    cursor.lineStyle(CURSOR_RING.width * screenPx, CURSOR_RING.light, CURSOR_RING.alpha).drawCircle(pt.x, pt.y, radius);
+    cursor.visible = true;
+    // Re-adding moves it above any fill drawn since.
+    st.container.addChild(cursor);
+}
+
+/** One dab of the blend brush at `pt`, as the paint panel sets it: its texture, else the ground's own. */
 function blendAt(st: DrawState, biome: BiomeKind, pt: Point): void {
-    const { radius, strength, mode } = paint.current();
-    st.controller.blend({ at: pt, role: biome, radius, strength, erase: mode === 'unblend' });
+    const { radius, strength, mode, texture } = paint.current();
+    st.controller.blend({ at: pt, role: texture ?? biome, radius, strength, erase: mode === 'unblend' });
 }
 
 function onPointerMove(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent): void {
     const pt = localPoint(pointerEvent, st.container);
-    if (st.blending && st.mode.kind === 'brush' && st.mode.brush.type === 'region') {
-        blendAt(st, st.mode.brush.biome, pt);
+    const mode = st.mode;
+    if (mode.kind === 'brush' && mode.brush.type === 'stroke') {
+        showCursor(st, pt);
+        if (st.blending) {
+            blendAt(st, mode.brush.biome, pt);
+        } else if (st.painting) {
+            st.controller.addPoint(pt);
+        }
         return;
     }
     if (st.drag?.kind === 'width') {
@@ -348,20 +390,6 @@ function onPointerMove(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent):
     }
     if (st.drag) {
         st.controller.previewVertexMove(st.drag.id, st.drag.index, pt);
-        return;
-    }
-    const mode = st.mode;
-    if (!st.down || mode.kind !== 'brush' || mode.brush.type !== 'region') {
-        return;
-    }
-    if (!st.painting && distance(st.down, pt) > PAINT_THRESHOLD) {
-        st.controller.cancel();
-        st.controller.begin({ type: 'stroke', biome: mode.brush.biome }, 'freehand');
-        st.controller.addPoint(st.down);
-        st.painting = true;
-    }
-    if (st.painting) {
-        st.controller.addPoint(pt);
     }
 }
 
@@ -383,20 +411,10 @@ function onPointerUp(st: DrawState, pointerEvent: PIXI.FederatedPointerEvent): v
         st.controller.clearPreview();
         return;
     }
-    if (!st.down) {
-        return;
-    }
-    const mode = st.mode;
     if (st.painting) {
-        void st.controller.commit();
-        if (mode.kind === 'brush') {
-            st.controller.begin(mode.brush, 'click');
-        }
         st.painting = false;
-    } else {
-        st.controller.addPoint(st.down);
+        void st.controller.commit();
     }
-    st.down = null;
 }
 
 /** (Re)build the draw layer on the current canvas with the active texture pack. */
@@ -411,14 +429,15 @@ function setupDrawLayer(): void {
 
     // Particles need the scene's levels and grid, which the controller they draw for holds.
     let built: CartographyController | null = null;
-    const renderer = withParticles(new GraphicsFeatureRenderer(createPixiSurface(container), packs.textures()), canvas.level?.id ?? null, () =>
+    const gridSize = canvas.grid?.size ?? 0;
+    const renderer = withParticles(new GraphicsFeatureRenderer(createPixiSurface(container, gridSize), packs.textures()), canvas.level?.id ?? null, () =>
         built ? { levels: built.levels, gridDistance: built.gridDistance } : null,
     );
     const makeId = (): string => foundry.utils.randomID();
     const controller = new CartographyController({
         renderer,
         splats: createSplatStore(activeScene),
-        splatRenderer: createSplatRenderer(container, packs.textures()),
+        splatRenderer: createSplatRenderer(container, packs.textures(), gridSize),
         store: new FoundrySceneStore(activeScene),
         sink: new FoundryDocumentSink(activeScene, { makeId, modifyBatch, regionName, lightName, soundName }),
         levels: createLevelStore(activeScene),
@@ -428,11 +447,11 @@ function setupDrawLayer(): void {
         silhouettes,
         makeId,
     });
-    const gridSize = canvas.grid?.size ?? 0;
     controller.grid = gridSize > 0 ? { size: gridSize, originX: 0, originY: 0 } : null;
     controller.gridDistance = canvas.scene?.grid.distance ?? 0;
     controller.brushRadius = paint.current().radius;
     controller.movementCost = paint.current().movementCost;
+    controller.paintTexture = paint.current().texture;
     applyPathSettings(controller, paths.current());
     built = controller;
     controller.load();
@@ -449,8 +468,8 @@ function setupDrawLayer(): void {
         container,
         mode: IDLE,
         drag: null,
-        down: null,
         painting: false,
+        cursor: Object.assign(new PIXI.Graphics(), { eventMode: 'none' as const, visible: false }),
         blending: false,
         linker: createSwitchLinker(controller, container),
     };
@@ -469,8 +488,14 @@ function setupDrawLayer(): void {
     container.on('pointermove', (pointerEvent: PIXI.FederatedPointerEvent) => {
         onPointerMove(st, pointerEvent);
     });
-    container.on('pointerup', (pointerEvent: PIXI.FederatedPointerEvent) => {
-        onPointerUp(st, pointerEvent);
+    // A press released off the layer still ends its stroke.
+    for (const released of ['pointerup', 'pointerupoutside'] as const) {
+        container.on(released, (pointerEvent: PIXI.FederatedPointerEvent) => {
+            onPointerUp(st, pointerEvent);
+        });
+    }
+    container.on('pointerout', () => {
+        st.cursor.visible = false;
     });
 }
 

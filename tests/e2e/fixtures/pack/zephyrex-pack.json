@@ -383,5 +383,15 @@
             ]
         }
     ],
-    "textureSets": []
+    "textureSets": [
+        {
+            "id": "e2e",
+            "name": "E2E textures",
+            "license": "AGPL-3.0-or-later",
+            "textures": {
+                "floor.e2e-cobbles": "textures/cobbles.svg",
+                "floor.e2e-moss": "textures/moss.svg"
+            }
+        }
+    ]
 }

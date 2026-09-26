@@ -161,9 +161,25 @@ function endCap({ left, right }: Rail, facing: 1 | -1, radius: number): number[]
 /**
  * The closed outline `[x, y, …]` a round brush of `radius` leaves dragged along
  * `centerline` (smoothed as a ribbon): the ribbon, rounded off by a half
- * circle at each end. Fewer than two points leave nothing.
+ * circle at each end. A brush pressed without moving (one point, or points
+ * all in one place) leaves its round dab; no points leave nothing.
  */
 export function brushOutline(centerline: readonly Point[], radius: number, samplesPerSegment: number): number[] {
+    const [pressed] = centerline;
+    if (pressed === undefined) {
+        return [];
+    }
+    if (centerline.every((p) => p.x === pressed.x && p.y === pressed.y)) {
+        // Two half circles facing apart, and the two points where they meet.
+        return [
+            pressed.x,
+            pressed.y + radius,
+            ...capArc(pressed, { x: 1, y: 0 }, radius),
+            pressed.x,
+            pressed.y - radius,
+            ...capArc(pressed, { x: -1, y: 0 }, radius),
+        ];
+    }
     const geo = buildRibbon(
         centerline,
         centerline.map(() => radius),

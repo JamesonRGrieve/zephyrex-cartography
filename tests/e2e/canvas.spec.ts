@@ -6,7 +6,7 @@
  * screenshot of the real canvas.
  */
 import { expect, frameScene, test } from './lib/foundry';
-import { dragScene, drawShape, holdView, MODULE_ID, tuckPanels, useTool } from './lib/pointer';
+import { dragScene, drawShape, holdView, MODULE_ID, type Point, tuckPanels, useTool } from './lib/pointer';
 
 test('a painted stroke is a round brush’s swath: its ground reaches a brush radius past both ends, no wider', async ({ world }) => {
     await useTool(world, 'paint', { panel: true });
@@ -44,6 +44,44 @@ test('a painted stroke is a round brush’s swath: its ground reaches a brush ra
     expect(box?.bottom).toBeLessThanOrEqual(1052);
     await frameScene(world);
     await expect(world.locator('#board')).toHaveScreenshot('round-brush-stroke.png');
+});
+
+test('overlapping strokes of one texture meet seamlessly: every fill tiles from the scene’s origin, two grid squares a tile', async ({ world }) => {
+    await useTool(world, 'paint', { panel: true });
+    const panel = world.locator(`#${MODULE_ID}-paint`);
+    await panel.getByRole('button', { name: 'Forest' }).click();
+    await panel.getByLabel('Brush size (px)').fill('120');
+    await panel.getByLabel('Brush size (px)').press('Enter');
+    await tuckPanels(world);
+    await holdView(world);
+    await dragScene(world, { x: 500, y: 700 }, [
+        { x: 900, y: 760 },
+        { x: 1300, y: 700 },
+    ]);
+    await dragScene(world, { x: 700, y: 900 }, [
+        { x: 900, y: 700 },
+        { x: 1100, y: 500 },
+    ]);
+    const tiling = async (): Promise<{ textureOrigin: Point; span: number }[]> =>
+        world.evaluate(() => {
+            const layer = canvas?.stage?.children.at(-1);
+            const sprites = (layer?.children ?? []).flatMap((child) =>
+                child instanceof PIXI.Container ? child.children.filter((grandchild) => grandchild instanceof PIXI.TilingSprite) : [],
+            );
+            return sprites.map((sprite) => ({
+                // Where the texture's own origin falls in the scene.
+                textureOrigin: { x: sprite.x + sprite.tilePosition.x, y: sprite.y + sprite.tilePosition.y },
+                span: sprite.tileScale.x * sprite.texture.baseTexture.width,
+            }));
+        });
+    await expect.poll(async () => (await tiling()).length).toBe(2);
+    const gridSize = await world.evaluate(() => canvas?.grid?.size ?? 0);
+    for (const { textureOrigin, span } of await tiling()) {
+        expect(textureOrigin).toEqual({ x: 0, y: 0 });
+        expect(span).toBeCloseTo(gridSize * 2);
+    }
+    await frameScene(world);
+    await expect(world.locator('#board')).toHaveScreenshot('overlapping-strokes.png');
 });
 
 test('a river ends square at its full width, as a road does', async ({ world }) => {

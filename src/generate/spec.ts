@@ -161,11 +161,20 @@ const areaSpawn = z
         "Tokens to spawn into the area's Scene Region, for an encounter or reinforcements: the GM spawns them from the area effects panel or the module API.",
     );
 
+const groundTexture = z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+        "A texture role from the active set to draw the ground in instead of its biome's (`floor.cobbled-street`, another biome's), which still says what the ground is. A role the set lacks draws as the biome.",
+    );
+
 const regionSpec = z
     .object({
         type: z.literal('region'),
         key: featureKey,
         biome,
+        texture: groundTexture,
         points: z.array(point).min(3).describe('Boundary control points.'),
         movementCost,
         effects: areaEffects,
@@ -181,7 +190,8 @@ const strokeSpec = z
         type: z.literal('stroke'),
         key: featureKey,
         biome,
-        points: z.array(point).min(2).describe('Centerline.'),
+        texture: groundTexture,
+        points: z.array(point).min(1).describe('Centerline; one point is a round dab.'),
         radius: positive.optional().describe('Half-width of the swath (default: the brush default).'),
         movementCost,
         effects: areaEffects,

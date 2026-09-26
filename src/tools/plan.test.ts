@@ -54,12 +54,12 @@ describe('planDocuments', () => {
     });
 
     it('plans nothing for terrain regions', () => {
-        const region = makeRegion('g', 'grassland', square);
+        const region = makeRegion('g', 'grassland', square, null);
         expect(region ? planDocuments(region) : null).toEqual(NO_PLAN);
     });
 
     it('gives painted ground with effects its region, the effects after any movement cost', () => {
-        const region = makeRegion('g', 'marsh', square);
+        const region = makeRegion('g', 'marsh', square, null);
         const dark = { kind: 'darkness', mode: 'darken', modifier: 0.5 } as const;
         const plan = region ? planDocuments({ ...region, effects: [dark] }) : null;
         expect(plan?.regions).toEqual([expect.objectContaining({ label: { kind: 'terrain', biome: 'marsh' }, behaviour: null, effects: [dark] })]);

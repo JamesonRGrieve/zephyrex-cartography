@@ -37,11 +37,16 @@ describe('room nesting', () => {
     });
 
     it('draws nested rooms after their containers, keeping everything else in place', () => {
-        const lake = makeRegion('lake', 'water', [
-            { x: 0, y: 0 },
-            { x: 1, y: 0 },
-            { x: 0, y: 1 },
-        ]);
+        const lake = makeRegion(
+            'lake',
+            'water',
+            [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+            ],
+            null,
+        );
         if (!lake) {
             throw new Error('fixture');
         }

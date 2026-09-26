@@ -245,6 +245,7 @@ describe('CartographyController', () => {
                 type: 'region',
                 id: 'a',
                 biome: 'sand',
+                texture: null,
                 points: [
                     { x: 0, y: 0 },
                     { x: 5, y: 0 },

@@ -341,6 +341,8 @@ export class CartographyController {
     brushRadius = DEFAULT_BRUSH_RADIUS;
     /** Movement cost of newly painted areas and strokes (1: ordinary ground). */
     movementCost = NORMAL_COST;
+    /** The texture newly painted strokes are drawn in, or null for their biome's own. */
+    paintTexture: string | null = null;
     /** Scene grid for snapping room vertices; null disables snapping. */
     grid: Grid | null = null;
     /** The kind of Foundry walls newly drawn paths put along their centerline, or null for none. */
@@ -1989,13 +1991,13 @@ export class CartographyController {
             return makePath(id, this.brush.kind, pts, this.halfWidth, this.pathWalls, this.riverLook);
         }
         if (this.brush.type === 'region') {
-            const region = makeRegion(id, this.brush.biome, pts);
+            const region = makeRegion(id, this.brush.biome, pts, this.paintTexture);
             return region && { ...region, movementCost: storedCost(this.movementCost) };
         }
         if (this.brush.type === 'room') {
             return makeRoom(id, this.brush.floor, pts, this.brush.wall ?? null, this.brush.wallKind, this.brush.ceiling);
         }
-        const stroke = makeStroke(id, this.brush.biome, pts, this.brushRadius);
+        const stroke = makeStroke(id, this.brush.biome, pts, this.brushRadius, this.paintTexture);
         return stroke && { ...stroke, movementCost: storedCost(this.movementCost) };
     }
 

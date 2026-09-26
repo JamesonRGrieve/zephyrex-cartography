@@ -83,16 +83,29 @@ describe('brushOutline', () => {
         expect(back).toBeGreaterThan(tip);
     });
 
-    it('rounds no end that faces no way (a stroke that never moved)', () => {
+    it('leaves a round dab where the brush was pressed without moving', () => {
         const still: Point[] = [
             { x: 5, y: 5 },
             { x: 5, y: 5 },
         ];
-        // No direction means no cap arc: nothing reaches out to the brush's radius.
-        expect(pointsOf(brushOutline(still, 10, 4)).every((p) => p.x === 5 && p.y === 5)).toBe(true);
+        for (const stroke of [still, still.slice(0, 1)]) {
+            const points = pointsOf(brushOutline(stroke, 10, 4));
+            expect(points.length).toBeGreaterThan(8);
+            for (const p of points) {
+                expect(Math.hypot(p.x - 5, p.y - 5)).toBeCloseTo(10);
+            }
+            // Round the whole way: it reaches the radius on every side.
+            expect(Math.min(...points.map((p) => p.x))).toBeCloseTo(-5);
+            expect(Math.max(...points.map((p) => p.x))).toBeCloseTo(15);
+        }
     });
 
-    it('leaves nothing for fewer than two points', () => {
-        expect(brushOutline([{ x: 0, y: 0 }], 10, 4)).toEqual([]);
+    it('rounds no end that has no width', () => {
+        // A brush of no size leaves only its centreline: no end cap reaches out.
+        expect(pointsOf(brushOutline(line, 0, 4)).every((p) => p.y === 0 && p.x >= 0 && p.x <= 100)).toBe(true);
+    });
+
+    it('leaves nothing for no points', () => {
+        expect(brushOutline([], 10, 4)).toEqual([]);
     });
 });

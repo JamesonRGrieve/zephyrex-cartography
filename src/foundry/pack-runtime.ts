@@ -61,6 +61,11 @@ export interface PackRuntime {
     readonly previews: () => TextureResolver;
     /** Every texture role the chosen texture set provides (biomes, `road`, `floor.*`, `wall.*`). */
     readonly textureRoles: () => string[];
+    /** The texture sets the loaded packs provide, and the key of the one in use (none loaded: ''). */
+    readonly textureSets: () => readonly TextureSetRef[];
+    readonly activeTextureSet: () => string;
+    /** Use another texture set for all terrain (the world setting, so every client follows). */
+    readonly chooseTextureSet: (key: string) => Promise<void>;
     /** Run `listener` whenever the loaded packs or the chosen texture set change. */
     readonly onChange: (listener: () => void) => void;
 }
@@ -307,6 +312,11 @@ export function registerPackRuntime(controller: () => CartographyController | nu
         textures: () => textureResolver(activeSet(), patternImage),
         previews: () => previewResolver(activeSet(), patternImage),
         textureRoles: () => Object.keys(activeSet()?.textures ?? {}),
+        textureSets: () => textureSets,
+        activeTextureSet: () => activeSet()?.key ?? '',
+        chooseTextureSet: async (key) => {
+            await game.settings?.set(MODULE_ID, TEXTURE_SET_SETTING, key);
+        },
         onChange: (listener) => {
             listeners.push(listener);
         },

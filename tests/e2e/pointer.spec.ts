@@ -16,7 +16,10 @@ async function wallCount(page: Page): Promise<number> {
 }
 
 /** The feature under scene point `at`, as the controller sees it. */
-async function featureAt(page: Page, at: Point): Promise<{ type: string; halfWidths: readonly number[]; biome: string | null; radius: number | null } | null> {
+async function featureAt(
+    page: Page,
+    at: Point,
+): Promise<{ type: string; halfWidths: readonly number[]; biome: string | null; radius: number | null; texture: string | null } | null> {
     return page.evaluate((point) => {
         const controller = game.modules?.get('zephyrex-cartography').api.controller();
         const id = controller?.hitTest(point) ?? null;
@@ -29,6 +32,7 @@ async function featureAt(page: Page, at: Point): Promise<{ type: string; halfWid
             halfWidths: feature.type === 'path' ? feature.halfWidths : [],
             biome: feature.type === 'region' || feature.type === 'stroke' ? feature.biome : null,
             radius: feature.type === 'stroke' ? feature.radius : null,
+            texture: feature.type === 'region' || feature.type === 'stroke' ? feature.texture : null,
         };
     }, at);
 }
@@ -131,7 +135,7 @@ test('the layer takes the pointer only while one of its tools is active', async 
     expect(await ours()).toBe(false);
 });
 
-test('the paint tool paints the texture and brush size picked in its panel: an area by clicks, a stroke by dragging', async ({ world }) => {
+test('the paint tool is a round brush in the texture and size picked in its panel: a click leaves a dab, a drag a stroke', async ({ world }) => {
     await useTool(world, 'paint', { panel: true });
     const panel = world.locator(`#${MODULE_ID}-paint`);
     await expect(panel).toBeVisible();
@@ -141,14 +145,95 @@ test('the paint tool paints the texture and brush size picked in its panel: an a
     await panel.getByLabel('Brush size (px)').press('Enter');
     await tuckPanels(world);
     await holdView(world);
-    await drawShape(world, SQUARE);
+    await clickScene(world, { x: 450, y: 450 });
     await dragScene(world, { x: 1000, y: 300 }, [
         { x: 1100, y: 320 },
         { x: 1200, y: 300 },
         { x: 1300, y: 340 },
     ]);
-    await expect.poll(async () => featureAt(world, { x: 450, y: 450 })).toMatchObject({ type: 'region', biome: 'forest' });
+    // The click is a round dab of the brush's size: painted 50 px from where it landed (inside its 60), not 80.
+    await expect.poll(async () => featureAt(world, { x: 450, y: 450 })).toMatchObject({ type: 'stroke', biome: 'forest', radius: 60 });
+    expect(await featureAt(world, { x: 450, y: 500 })).toMatchObject({ type: 'stroke' });
+    expect(await featureAt(world, { x: 450, y: 530 })).toBeNull();
     await expect.poll(async () => featureAt(world, { x: 1100, y: 320 })).toMatchObject({ type: 'stroke', biome: 'forest', radius: 60 });
+});
+
+test('the paint tool paints and blends in any texture of the active set, picked in its panel', async ({ world }) => {
+    await useTool(world, 'paint', { panel: true });
+    const panel = world.locator(`#${MODULE_ID}-paint`);
+    await panel.getByRole('button', { name: 'Grassland' }).click();
+    await panel.getByText("Texture: The ground's own").click();
+    await panel.getByRole('button', { name: 'E2e cobbles' }).click();
+    await expect(panel.getByText('Texture: E2e cobbles')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'E2e cobbles' })).toHaveAttribute('aria-pressed', 'true');
+    await tuckPanels(world);
+    await holdView(world);
+    await dragScene(world, { x: 500, y: 500 }, [
+        { x: 700, y: 520 },
+        { x: 900, y: 500 },
+    ]);
+    // Grassland ground, drawn in the cobbles.
+    await expect.poll(async () => featureAt(world, { x: 700, y: 510 })).toMatchObject({ type: 'stroke', biome: 'grassland', texture: 'floor.e2e-cobbles' });
+    const drawnIn = await world.evaluate(() => {
+        const layer = canvas?.stage?.children.at(-1);
+        return (layer?.children ?? []).flatMap((child) =>
+            child instanceof PIXI.Container
+                ? child.children.flatMap((grandchild) => (grandchild instanceof PIXI.TilingSprite ? [grandchild.texture.baseTexture.cacheId] : []))
+                : [],
+        );
+    });
+    expect(drawnIn).toEqual([expect.stringContaining('cobbles.svg')]);
+    // Blending lays the same texture into the level's splat map. The panel comes back from where it was tucked.
+    await world.evaluate(async (id) => {
+        const app = foundry.applications.instances.get(id);
+        await app?.maximize();
+        app?.setPosition({ left: 100, top: 100 });
+    }, `${MODULE_ID}-paint`);
+    await panel.getByLabel('Brush', { exact: true }).selectOption('blend');
+    await tuckPanels(world);
+    await clickScene(world, { x: 1200, y: 900 });
+    await expect
+        .poll(async () => world.evaluate(() => game.modules?.get('zephyrex-cartography').api.controller()?.splatLayer()?.roles ?? []))
+        .toContain('floor.e2e-cobbles');
+});
+
+test('the paint brush shows its size on the map, and paints as it is dragged, before the stroke ends', async ({ world }) => {
+    await useTool(world, 'paint', { panel: true });
+    const panel = world.locator(`#${MODULE_ID}-paint`);
+    await panel.getByLabel('Brush size (px)').fill('80');
+    await panel.getByLabel('Brush size (px)').press('Enter');
+    await tuckPanels(world);
+    await holdView(world);
+    // What the draw layer shows: its textured fills, and the brush outline drawn last, above them.
+    const shown = async (): Promise<{ textured: number; ring: { width: number; visible: boolean } | null; committed: boolean }> =>
+        world.evaluate(() => {
+            const layer = canvas?.stage?.children.at(-1);
+            const children = layer?.children ?? [];
+            const last = children.at(-1);
+            const ring = last instanceof PIXI.Graphics ? { width: last.getLocalBounds().width, visible: last.visible } : null;
+            const textured = children.filter(
+                (child) => child instanceof PIXI.Container && child.children.some((grandchild) => grandchild instanceof PIXI.TilingSprite),
+            ).length;
+            // A committed stroke is a feature the controller can pick; the one being painted is not yet.
+            const committed = (game.modules?.get('zephyrex-cartography').api.controller()?.hitTest({ x: 800, y: 810 }) ?? null) !== null;
+            return { textured, ring, committed };
+        });
+    const start = await clientPoint(world, { x: 600, y: 800 });
+    await world.mouse.move(start.x, start.y);
+    // The outline is the brush's diameter across, give or take its line.
+    const hovering = await shown();
+    expect(hovering.ring?.visible).toBe(true);
+    expect(hovering.ring?.width).toBeGreaterThan(160);
+    expect(hovering.ring?.width).toBeLessThan(170);
+    await world.mouse.down();
+    const midway = await clientPoint(world, { x: 1000, y: 820 });
+    await world.mouse.move(midway.x, midway.y, { steps: 6 });
+    // Mid-drag: the ground is already painted in its texture, and nothing is committed yet.
+    const painting = await shown();
+    expect(painting.committed).toBe(false);
+    expect(painting.textured).toBeGreaterThan(0);
+    await world.mouse.up();
+    await expect.poll(async () => (await shown()).committed).toBe(true);
 });
 
 test('the paint tool blends texture into the level’s splat map, saved as an exact mask and undone as one stroke', async ({ world }) => {

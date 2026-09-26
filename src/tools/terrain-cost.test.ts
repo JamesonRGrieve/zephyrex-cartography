@@ -26,7 +26,7 @@ describe('terrain movement cost', () => {
     });
 
     it('mirrors difficult ground as a Modify Movement Cost region even when terrain is not mirrored', () => {
-        const region = makeRegion('r', 'marsh', SQUARE);
+        const region = makeRegion('r', 'marsh', SQUARE, null);
         const muddy = region && { ...region, movementCost: 2 };
         expect(muddy ? planDocuments(muddy).regions : []).toEqual([expect.objectContaining({ behaviour: { kind: 'terrain', difficulties: { walk: 2 } } })]);
         expect(region ? planDocuments(region).regions : ['x']).toEqual([]);

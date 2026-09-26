@@ -9,10 +9,41 @@ import {
     isCompressedTexture,
     pickTextureSet,
     previewResolver,
+    roleLabel,
     shownImage,
+    TEXTURE_TILE_SQUARES,
     textureResolver,
     textureSetChoices,
+    textureSwatches,
+    tileSpan,
 } from './texture';
+
+describe('texture choices', () => {
+    it('reads a role as a person would', () => {
+        expect(roleLabel('floor.cobbled-street')).toBe('Cobbled street');
+        expect(roleLabel('grassland')).toBe('Grassland');
+        expect(roleLabel('wall.')).toBe('');
+    });
+
+    it('lists every texture of the set by label, with the image a panel can show', () => {
+        const previews = (role: string): string | null => (role === 'floor.marble' ? null : `${role}.png`);
+        expect(textureSwatches(['sand', 'floor.marble', 'floor.cobbled-street'], previews)).toEqual([
+            { role: 'floor.cobbled-street', label: 'Cobbled street', image: 'floor.cobbled-street.png' },
+            { role: 'floor.marble', label: 'Marble', image: null },
+            { role: 'sand', label: 'Sand', image: 'sand.png' },
+        ]);
+        // Two roles reading alike keep a stable order.
+        expect(textureSwatches(['wall.stone', 'floor.stone'], previews).map((s) => s.role)).toEqual(['floor.stone', 'wall.stone']);
+    });
+});
+
+describe('tileSpan', () => {
+    it('tiles a texture every few grid squares whatever its own size, or at its own size with no grid', () => {
+        expect(tileSpan(100, 1024)).toBe(100 * TEXTURE_TILE_SQUARES);
+        expect(tileSpan(100, 512)).toBe(100 * TEXTURE_TILE_SQUARES);
+        expect(tileSpan(0, 512)).toBe(512);
+    });
+});
 
 const sets = [
     { key: 'a:photo', name: 'Photo (CC0)', textures: { grassland: 'modules/a/grass.jpg', road: 'modules/a/road.jpg' } },

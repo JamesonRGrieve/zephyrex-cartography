@@ -99,7 +99,10 @@ export const I18N = {
     },
     paint: {
         title: key('Paint.Title'),
+        ground: key('Paint.Ground'),
         texture: key('Paint.Texture'),
+        ownTexture: key('Paint.OwnTexture'),
+        textureSet: key('Paint.TextureSet'),
         size: key('Paint.Size'),
         movementCost: key('Paint.MovementCost'),
         mode: key('Paint.Mode'),

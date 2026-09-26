@@ -49,6 +49,7 @@ const lake: RegionFeature = {
     type: 'region',
     id: 'b',
     biome: 'water',
+    texture: null,
     points: [
         { x: 0, y: 0 },
         { x: 10, y: 0 },
@@ -62,6 +63,7 @@ const swath: Feature = {
     type: 'stroke',
     id: 'sw',
     biome: 'forest',
+    texture: null,
     points: [
         { x: 0, y: 0 },
         { x: 40, y: 0 },
@@ -222,6 +224,31 @@ describe('GraphicsFeatureRenderer', () => {
         gr.set('a', road);
         expect(s.filled.map((f) => f.id)).toEqual(['m']);
         expect(s.textured.map((t) => t.textureFile)).toEqual(['road.png']);
+    });
+
+    it('draws painted ground in a texture of its own where the set has it, else in its biome’s', () => {
+        const s = new FakeSurface();
+        const gr = new GraphicsFeatureRenderer(s, (role) => (role === 'floor.cobbles' || role === 'forest' ? `${role}.jpg` : null));
+        gr.set('cobbled', { ...swath, texture: 'floor.cobbles' });
+        gr.set('missing', { ...swath, texture: 'floor.gone' });
+        gr.set('meadow', { ...lake, biome: 'forest', texture: 'floor.cobbles' });
+        expect(s.textured.map((t) => [t.id, t.textureFile, t.tint, t.feather])).toEqual([
+            ['cobbled', 'floor.cobbles.jpg', 0xffffff, true],
+            ['missing', 'forest.jpg', 0xffffff, true],
+            ['meadow', 'floor.cobbles.jpg', 0xffffff, true],
+        ]);
+    });
+
+    it('previews a brush stroke as it will be painted, and any other shape as a flat highlight', () => {
+        const s = new FakeSurface();
+        const gr = new GraphicsFeatureRenderer(s, RESOLVE);
+        gr.preview(swath);
+        expect(s.textured).toEqual([expect.objectContaining({ id: '__preview__', textureFile: 'forest.jpg', feather: true })]);
+        gr.preview(meadow);
+        expect(s.filled).toEqual([expect.objectContaining({ id: '__preview__', feather: false })]);
+        gr.preview({ ...swath, points: [] });
+        gr.clearPreview();
+        expect(s.removed).toEqual(['__preview__', '__preview__']);
     });
 
     it('clears the surface', () => {

@@ -4,22 +4,33 @@ import { makeRegion, parseRegion, regionOutline } from './region';
 
 describe('makeRegion', () => {
     it('builds a region from >= 3 points', () => {
-        const r = makeRegion('id', 'water', [
-            { x: 0, y: 0 },
-            { x: 10, y: 0 },
-            { x: 5, y: 10 },
-        ]);
+        const r = makeRegion(
+            'id',
+            'water',
+            [
+                { x: 0, y: 0 },
+                { x: 10, y: 0 },
+                { x: 5, y: 10 },
+            ],
+            'floor.calm-sea',
+        );
         expect(r?.type).toBe('region');
         expect(r?.biome).toBe('water');
+        expect(r?.texture).toBe('floor.calm-sea');
         expect(r?.points).toHaveLength(3);
     });
 
     it('returns null for fewer than three points', () => {
         expect(
-            makeRegion('id', 'water', [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-            ]),
+            makeRegion(
+                'id',
+                'water',
+                [
+                    { x: 0, y: 0 },
+                    { x: 1, y: 1 },
+                ],
+                null,
+            ),
         ).toBeNull();
     });
 });
@@ -37,6 +48,9 @@ describe('parseRegion', () => {
             ],
         });
         expect(r?.biome).toBe('forest');
+        // A region saved before texture choices draws in its biome's own.
+        expect(r?.texture).toBeNull();
+        expect(parseRegion({ ...r, texture: 'floor.moss' })?.texture).toBe('floor.moss');
     });
 
     it('rejects non-regions and unknown biomes', () => {

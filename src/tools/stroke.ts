@@ -9,31 +9,32 @@ import type { Point } from '../geometry/spline';
 import { parseAreaFields, type Affected } from './area-effects';
 import { isBiomeKind, type BiomeKind } from './biome';
 import { NEW_FEATURE, parseFeatureCommon, type FeatureCommon } from './feature-common';
-import { isPoint, isRecord, numberOr } from './guards';
+import { isPoint, isRecord, numberOr, stringOrNull } from './guards';
 import type { Costed } from './terrain-cost';
+import type { Textured } from './texture';
 
 /** Default brush radius (scene px) for a freshly painted terrain stroke. */
 export const DEFAULT_BRUSH_RADIUS = 25;
 
-/** A painted biome swath; its `points` are the painted centerline. */
-export interface StrokeFeature extends FeatureCommon, Costed, Affected {
+/** A painted biome swath; its `points` are the painted centerline, one point for a dab the brush left without moving. */
+export interface StrokeFeature extends FeatureCommon, Costed, Affected, Textured {
     readonly type: 'stroke';
     readonly biome: BiomeKind;
     /** Half-width (scene px) of the painted swath. */
     readonly radius: number;
 }
 
-/** Build a committed brush stroke from a painted point stream, or null if too short. */
-export function makeStroke(id: string, biome: BiomeKind, points: readonly Point[], radius: number): StrokeFeature | null {
-    if (points.length < 2) {
+/** Build a committed brush stroke from a painted point stream, or null if it has no points; `texture` null draws the biome's own. */
+export function makeStroke(id: string, biome: BiomeKind, points: readonly Point[], radius: number, texture: string | null): StrokeFeature | null {
+    if (points.length === 0) {
         return null;
     }
-    return { type: 'stroke', id, biome, points: points.map((p) => ({ x: p.x, y: p.y })), radius, ...NEW_FEATURE };
+    return { type: 'stroke', id, biome, texture, points: points.map((p) => ({ x: p.x, y: p.y })), radius, ...NEW_FEATURE };
 }
 
-/** Rebuild a stroke with new centerline points (edit ops), or null if < 2. */
+/** Rebuild a stroke with new centerline points (edit ops), or null if none are left. */
 export function withStrokePoints(stroke: StrokeFeature, points: readonly Point[]): StrokeFeature | null {
-    if (points.length < 2) {
+    if (points.length === 0) {
         return null;
     }
     return { ...stroke, points: points.map((p) => ({ x: p.x, y: p.y })) };
@@ -48,6 +49,6 @@ export function parseStroke(v: unknown): StrokeFeature | null {
         return null;
     }
     const points = Array.isArray(v['points']) ? v['points'].filter(isPoint) : [];
-    const stroke = makeStroke(v['id'], v['biome'], points, numberOr(v['radius'], DEFAULT_BRUSH_RADIUS));
+    const stroke = makeStroke(v['id'], v['biome'], points, numberOr(v['radius'], DEFAULT_BRUSH_RADIUS), stringOrNull(v['texture']));
     return stroke && { ...stroke, ...parseAreaFields(v), ...parseFeatureCommon(v) };
 }

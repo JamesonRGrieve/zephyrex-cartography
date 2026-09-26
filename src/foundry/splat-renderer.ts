@@ -2,19 +2,18 @@
 /**
  * {@link SplatRenderer} in PIXI: each splat map is one quad over its scene
  * bounds, drawn by a small shader that blends its four channel textures by
- * the mask's weights, per pixel. Each texture tiles at its own size in scene
- * pixels and takes its biome's tint; where the weights sum below full, the
+ * the mask's weights, per pixel. Each texture tiles from the scene's origin at
+ * the same grid-relative size as painted terrain, and takes its biome's tint; where the weights sum below full, the
  * map below shows through. A brush stroke re-uploads only the mask.
  */
 import type { SplatRenderer } from '../canvas/controller';
-import { biomeLook } from '../canvas/renderer';
-import { isBiomeKind } from '../tools/biome';
+import { roleLook } from '../canvas/renderer';
 import { MAX_SPLAT_LAYERS, type SplatLayer } from '../tools/splat';
-import type { TextureResolver } from '../tools/texture';
+import { tileSpan, type TextureResolver } from '../tools/texture';
 import { canvasTexture } from './pixi-surface';
 
 const VERTEX = `
-precision mediump float;
+precision highp float;
 attribute vec2 aVertexPosition;
 attribute vec2 aUv;
 uniform mat3 translationMatrix;
@@ -27,8 +26,10 @@ void main() {
     gl_Position = vec4((projectionMatrix * translationMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);
 }`;
 
+// Scene coordinates run to many thousands of px; a medium-precision float rounds them to whole texels and pixelates the
+// tiling, so the fragment stage works in high precision.
 const FRAGMENT = `
-precision mediump float;
+precision highp float;
 varying vec2 vUv;
 varying vec2 vScene;
 uniform sampler2D uMask;
@@ -109,19 +110,24 @@ interface ChannelUniforms {
     readonly uAlpha: number[];
 }
 
-/** Each texture's tile size in scene px: its own size once loaded. */
-function tileSizes(textures: readonly PIXI.Texture[]): number[] {
-    return textures.flatMap((texture) => (texture.baseTexture.valid ? [texture.baseTexture.width, texture.baseTexture.height] : [PENDING_TILE, PENDING_TILE]));
+/** Each texture's tile size in scene px, as painted terrain tiles it, once it has loaded. */
+function tileSizes(textures: readonly PIXI.Texture[], gridSize: number): number[] {
+    return textures.flatMap((texture) => {
+        const base = texture.baseTexture;
+        return base.valid ? [tileSpan(gridSize, base.width), tileSpan(gridSize, base.height)] : [PENDING_TILE, PENDING_TILE];
+    });
 }
 
 /** Each channel's texture, tile size, tint and alpha for `layer`'s roles; an unused channel draws nothing. */
-function channelTextures(layer: SplatLayer, resolve: TextureResolver): { readonly textures: PIXI.Texture[]; readonly uniforms: ChannelUniforms } {
-    const looks = layer.roles.map((role) => (role !== null && isBiomeKind(role) ? biomeLook(role, resolve) : null));
+function channelTextures(
+    layer: SplatLayer,
+    resolve: TextureResolver,
+    gridSize: number,
+): { readonly textures: PIXI.Texture[]; readonly uniforms: ChannelUniforms } {
+    const looks = layer.roles.map((role) => (role === null ? null : roleLook(role, resolve)));
+    // canvasTexture's sampler wraps, so tiles meet without the seam a fract() of the coordinate leaves under linear
+    // filtering.
     const textures = looks.map((look) => (look && look.texture !== null ? canvasTexture(look.texture) : PIXI.Texture.WHITE));
-    // The sampler wraps, so tiles meet without the seam a fract() of the coordinate leaves under linear filtering.
-    for (const texture of textures.filter((t) => t !== PIXI.Texture.WHITE)) {
-        texture.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
-    }
     return {
         textures,
         uniforms: {
@@ -129,14 +135,15 @@ function channelTextures(layer: SplatLayer, resolve: TextureResolver): { readonl
             uTex1: textures[1],
             uTex2: textures[2],
             uTex3: textures[3],
-            uTile: tileSizes(textures),
+            uTile: tileSizes(textures, gridSize),
             uTint: looks.flatMap((look) => rgb(look?.tint ?? 0)),
             uAlpha: looks.map((look) => (look ? 1 : 0)),
         },
     };
 }
 
-export function createSplatRenderer(container: PIXI.Container, resolve: TextureResolver): SplatRenderer {
+/** Draw splat maps into `container` on a grid of `gridSize` px (0: none). */
+export function createSplatRenderer(container: PIXI.Container, resolve: TextureResolver, gridSize: number): SplatRenderer {
     const drawn = new Map<string, Drawn>();
     const program = PIXI.Program.from(VERTEX, FRAGMENT);
 
@@ -162,12 +169,12 @@ export function createSplatRenderer(container: PIXI.Container, resolve: TextureR
                 alphaMode: PIXI.ALPHA_MODES.NO_PREMULTIPLIED_ALPHA,
                 scaleMode: PIXI.SCALE_MODES.LINEAR,
             });
-            const channels = channelTextures(layer, resolve);
+            const channels = channelTextures(layer, resolve, gridSize);
             const uniforms = { uMask: new PIXI.Texture(mask), ...channels.uniforms };
             // A texture still loading tiles at a stand-in size until it arrives.
             for (const texture of channels.textures.filter((t) => !t.baseTexture.valid)) {
                 texture.baseTexture.once('loaded', () => {
-                    uniforms.uTile = tileSizes(channels.textures);
+                    uniforms.uTile = tileSizes(channels.textures, gridSize);
                 });
             }
             const mesh = new PIXI.Mesh(geometry, new PIXI.Shader(program, uniforms));

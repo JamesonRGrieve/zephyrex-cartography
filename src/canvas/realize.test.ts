@@ -130,6 +130,7 @@ describe('realizeSpec', () => {
                     {
                         type: 'stroke',
                         biome: 'sand',
+                        texture: 'floor.cobbled-street',
                         points: [
                             { x: 0, y: 0 },
                             { x: 1, y: 1 },
@@ -143,6 +144,9 @@ describe('realizeSpec', () => {
         expect(region?.points[1]).toEqual({ x: 1200, y: 500 });
         expect(path?.type === 'path' ? path.halfWidths : null).toEqual([50, 50]);
         expect(stroke?.type === 'stroke' ? stroke.radius : null).toBe(25);
+        // Ground takes a texture of its own; without one it draws in its biome's.
+        expect(stroke?.type === 'stroke' ? stroke.texture : null).toBe('floor.cobbled-street');
+        expect(region?.type === 'region' ? region.texture : 'none').toBeNull();
 
         const px = makeHarness();
         await realizeSpec(

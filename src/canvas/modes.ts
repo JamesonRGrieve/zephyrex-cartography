@@ -44,7 +44,8 @@ function brushFor(toolName: string, choices: ToolChoices): Brush | null {
         return { type: 'room', ...choices.room };
     }
     if (toolName === 'paint') {
-        return { type: 'region', biome: choices.paint };
+        // A round brush: a press paints, and dragging paints on along the pointer.
+        return { type: 'stroke', biome: choices.paint };
     }
     return null;
 }

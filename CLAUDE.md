@@ -47,14 +47,17 @@ happens to sit inside the `dh-campaign` directory, but that campaign vault and i
 
 ## Code-quality bar — the full gate
 
-`pnpm gate` runs the whole gate serially (CI uses it); `.husky/pre-commit` fans
-the same set out in parallel. Both must be green before a commit. Every ratchet
+`pnpm gate` runs the whole gate serially (CI uses it) and must be green
+before a PR. `.husky/pre-commit` fans out everything but the e2e suite in
+parallel and must be green before a commit; the e2e suite is a PR and manual
+check, never a commit gate (operator decision, 2026-09-25). Every ratchet
 is a **one-way valve**: a metric may improve, never regress, and a rule that
 reaches zero **graduates to a hard error** (and, for ESLint, flips
 `warn`→`error` in `.eslintrc.json`). Baselines are committed alongside the change
 that moves them.
 
-Gate members (all wired into `gate` + pre-commit + CI):
+Gate members (all wired into `gate` + CI, and all but the e2e suite into
+pre-commit):
 
 - **prettier** `--check` (zero diff), **stylelint**, **biome** (`biome:ratchet`, 0 diagnostics)
 - **tsc** `--noEmit` (main + `tsconfig.test.json`), **strict:ratchet**, **test:typecheck:ratchet**
@@ -77,6 +80,8 @@ Gate members (all wired into `gate` + pre-commit + CI):
   Foundry v14 server** (see "E2E suite" below). No test may fail; the passed
   count and the source coverage the suite reaches (`.e2e-baseline`) may not
   fall. Skipped with a banner where no Foundry release is available (CI).
+  Not in the pre-commit hook: run it by hand (`pnpm test:e2e`) or through
+  `pnpm gate` before a PR.
 - **test:storybook**: Storybook builds, and Playwright renders **every
   story** in its `index.json` in a real browser. Each must mount with no page
   or console errors or failed loads, and match its committed screenshot
@@ -215,7 +220,26 @@ that type's own control group, after Foundry's tools
   panel's choices are what the tool draws next. The **paint tool** is one
   tool for every terrain texture: its panel is a swatch grid of the biomes
   (each shown in the active set's texture, or its flat colour) and a brush
-  size. Clicking points paints an area, dragging paints a stroke.
+  size.
+  - It is a **round brush**: its outline, the brush's size, follows the
+    pointer on the map (drawn above everything the layer draws, a
+    screen-constant light ring inside a dark one).
+  - A press paints at once: a click leaves a round dab (a one-point
+    stroke), and a drag paints on along the pointer, drawn in its real
+    texture as it goes. Release commits the stroke (one undo step), also
+    when released off the layer.
+  - Polygon areas (`region`) are built from the scene spec and the
+    generator, not by the paint tool.
+  - **Texture.** Painted ground (strokes and regions) has a biome, which
+    says what the ground is (its terrain region, colour and cost), and a
+    `texture`: any role of the active set (a pack's `floor.*` variant,
+    another biome's), or null for the biome's own. A role the active set
+    lacks draws as the biome's own. The paint panel's Texture section
+    (titled with the texture in use) picks it from every texture the set
+    has, and picks the texture set itself (the world `textureSet`
+    setting) when the packs offer more than one. Blending lays the chosen
+    texture into the splat map too, since channel roles are any texture.
+    The scene spec's regions and strokes take `texture`.
 - **Roads and rivers.** Their panel sets the next path's width. Water,
   lava, poison and acid are all the **river tool**: the panel picks the
   liquid (which resets the shade and bed to that liquid's own), its shade,
@@ -228,6 +252,16 @@ that type's own control group, after Foundry's tools
   a material, a bed, a liquid) is drawn in a seamless procedural pattern
   (`tools/procedural.ts`: ripples for liquids, grain for the rest) tinted in
   its colour.
+- **Texture tiling.** Every textured fill, painted ground and splat blends
+  alike, tiles from the **scene's origin**, never its own corner, so
+  overlapping fills of one texture meet without a seam. A tile spans
+  `TEXTURE_TILE_SQUARES` (2) grid squares whatever the image's own size
+  (`tileSpan`; its own size on a gridless scene), which keeps full-detail
+  photos sharp. Terrain textures are mipmapped (PIXI mipmaps only
+  power-of-two images by default) and wrap. A feathered fill blurs only its
+  **mask's** edge (rendered to a texture); blurring the fill would smear the
+  texture itself. The splat shader runs in high precision: medium precision
+  rounds large scene coordinates to whole texels.
 - **Names.** Tools in a native group are named `zephyrex-<tool>`, so they
   never clash with Foundry's own (Walls has `doors`).
 - **Inert native layers.** The tools set none of `interaction`, `creation`
@@ -248,8 +282,9 @@ that type's own control group, after Foundry's tools
 **Terrain & paths [done]:** click + freehand paths (Catmull-Rom, RDP), variable
 width ribbons ending square at full width (roads and rivers alike), 13-biome
 regions, freehand brush strokes shaped as a round brush leaves them (the
-swath rounded off at both ends; their terrain region matches), feathered
-edges, tiled textures from selectable packs, control-point editing, eraser,
+swath rounded off at both ends, a single point a round dab; their terrain
+region matches), feathered edges, scene-anchored tiled textures from
+selectable packs, control-point editing, eraser,
 undo/redo, z-order, wall emission along paths.
 
 **Structures [done]:** grid-snapped rooms with floors; perimeter walls as native
@@ -950,7 +985,9 @@ option**: a splat map, as in Dungeondraft and Inkarnate.
   - A whole stroke is one undo step, which restores the mask as it was.
   - `foundry/splat-renderer.ts` draws each layer as one quad beneath the
     painted terrain. Its shader blends the four channel textures, each
-    tiled by repeat wrap at its own size and tinted like its biome.
+    tiled by repeat wrap at the painted terrain's tile size (see Texture
+    tiling) and drawn as painted ground draws that texture (a biome's
+    tinted like its biome, a pack material untinted).
   - `tests/e2e/pointer.spec.ts` reads the saved PNG back in Foundry and
     screenshots the blend.
   - **[done] Masks in the scene spec.** The spec's `splats` give a level
