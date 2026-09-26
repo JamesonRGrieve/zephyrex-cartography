@@ -4,7 +4,7 @@
 if [ -z "${BASH_VERSION:-}" ]; then exec bash "$0" "$@"; fi
 
 #
-# pre-commit — maximally parallelized full gate.
+# pre-commit — maximally parallelized gate, all of `pnpm gate` but the e2e suite.
 #
 # Phase 1 (serial):   lint-staged writes back auto-fixes; every ratchet reads
 #                     source, so it must finish first.
@@ -103,13 +103,12 @@ wait_all
 [ "$FAILED" = "0" ] || exit 1
 
 # ---------------------------------------------------------------------------
-# Phase 3: build, size, then the e2e suite against that build. It boots a
-# Foundry server and a browser, so it runs after the parallel analyses have
-# released their memory rather than alongside them (the fan-out plus e2e can
-# exhaust RAM, and a killed job fails with an empty log).
+# Phase 3: build, then the bundle size check against that build. The e2e suite
+# is not a commit gate: it boots a real Foundry server for tens of minutes, so
+# it runs by hand (`pnpm test:e2e`) and in `pnpm gate` before a PR.
 # ---------------------------------------------------------------------------
-echo "[pre-commit] phase 3: build + e2e"
-run_bg "build-e2e"      bash -c 'pnpm -s build && pnpm -s size-limit && pnpm -s test:e2e && pnpm -s e2e:ratchet'
+echo "[pre-commit] phase 3: build + size"
+run_bg "build-size"     bash -c 'pnpm -s build && pnpm -s size-limit'
 wait_all
 [ "$FAILED" = "0" ] || exit 1
 
