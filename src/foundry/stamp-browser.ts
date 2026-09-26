@@ -32,6 +32,8 @@ export interface StampBrowser {
 }
 
 const BROWSER_WIDTH = 820;
+/** Fixed, so the category list, grid and details scroll inside the window instead of it growing off screen. */
+const BROWSER_HEIGHT = 640;
 
 export function createStampBrowser(deps: StampBrowserDeps): StampBrowser {
     let state: BrowserState = INITIAL_BROWSER;
@@ -46,7 +48,7 @@ export function createStampBrowser(deps: StampBrowserDeps): StampBrowser {
             },
         });
     };
-    const browserWindow = createViewWindow({ id: 'stamp-browser', title: deps.title, width: BROWSER_WIDTH, render });
+    const browserWindow = createViewWindow({ id: 'stamp-browser', title: deps.title, width: BROWSER_WIDTH, height: BROWSER_HEIGHT, render });
     return {
         open: browserWindow.open,
         armed: (): ArmedStamp | null => {

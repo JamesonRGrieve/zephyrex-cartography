@@ -38,6 +38,15 @@ describe('reduceBrowser', () => {
         expect(reduceBrowser(s, { type: 'clearTags' }).tags).toEqual([]);
     });
 
+    it('toggles settings on and off', () => {
+        const s = apply(
+            { type: 'toggleSetting', setting: 'fantasy' },
+            { type: 'toggleSetting', setting: 'modern' },
+            { type: 'toggleSetting', setting: 'fantasy' },
+        );
+        expect(s.settings).toEqual(['modern']);
+    });
+
     it('selects a stamp and remembers its chosen variant', () => {
         const s = apply({ type: 'select', key: 'pack:lamp' }, { type: 'variant', key: 'pack:door', index: 1 });
         expect(s.selected).toBe('pack:door');
@@ -79,6 +88,43 @@ describe('browserView', () => {
         const view = browserView(catalog, apply({ type: 'category', category: 'Lighting' }, { type: 'toggleTag', tag: 'lamp' }));
         expect(view.categories.find((c) => c.name === 'Lighting')).toMatchObject({ active: true, tags: [{ tag: 'lamp', active: true }] });
         expect(view.activeTags).toEqual(['lamp']);
+    });
+
+    it('filters by setting across every category, and keeps setting tags out of category sub-tags', () => {
+        const tagged = catalogStamps([
+            { id: 'sword', name: 'Sword', category: 'Weapons', tags: ['blade', 'setting-fantasy'], scale: 'interior', perspective: 'top-down', variants },
+            {
+                id: 'rifle',
+                name: 'Rifle',
+                category: 'Weapons',
+                tags: ['gun', 'setting-modern', 'setting-grimdark'],
+                scale: 'interior',
+                perspective: 'top-down',
+                variants,
+            },
+            { id: 'rock', name: 'Rock', category: 'Structural', tags: ['stone', 'setting-generic'], scale: 'interior', perspective: 'top-down', variants },
+            { id: 'box', name: 'Box', category: 'Storage', tags: ['crate'], scale: 'exterior', perspective: 'top-down', variants },
+        ]);
+        const view = (state: BrowserState) => browserView(tagged, state);
+        const all = view(INITIAL_BROWSER);
+        expect(all.settings).toEqual([
+            { setting: 'fantasy', count: 1, active: false },
+            { setting: 'generic', count: 1, active: false },
+            { setting: 'grimdark', count: 1, active: false },
+            { setting: 'modern', count: 1, active: false },
+        ]);
+        expect(all.categories.flatMap((c) => c.tags.map((t) => t.tag)).some((t) => t.startsWith('setting-'))).toBe(false);
+        expect(all.cards).toHaveLength(4);
+
+        // Checked settings are OR'd: a stamp shows if it suits any of them.
+        const some = view(apply({ type: 'toggleSetting', setting: 'fantasy' }, { type: 'toggleSetting', setting: 'grimdark' }));
+        expect(some.cards.map((c) => c.stamp.id)).toEqual(['sword', 'rifle']);
+        expect(some.inScale).toBe(2);
+        expect(some.categories.map((c) => [c.name, c.count])).toEqual([['Weapons', 2]]);
+        expect(some.settings.filter((s) => s.active).map((s) => s.setting)).toEqual(['fantasy', 'grimdark']);
+
+        // The setting list follows the scale band.
+        expect(view(apply({ type: 'scale', scale: 'exterior' })).settings).toEqual([]);
     });
 
     it('shows each card at its chosen or default variant, and the selection', () => {

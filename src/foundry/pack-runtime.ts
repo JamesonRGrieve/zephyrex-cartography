@@ -71,6 +71,7 @@ function browserLabels(): BrowserLabels {
         search: localize(b.search),
         scale: localize(b.scale),
         perspective: localize(b.perspective),
+        settings: localize(b.settings),
         any: localize(b.any),
         all: localize(b.all),
         rotate: localize(b.rotate),

@@ -268,6 +268,7 @@ export const I18N = {
         search: key('Browser.Search'),
         scale: key('Browser.Scale'),
         perspective: key('Browser.Perspective'),
+        settings: key('Browser.Settings'),
         any: key('Browser.Any'),
         all: key('Browser.All'),
         rotate: key('Browser.Rotate'),

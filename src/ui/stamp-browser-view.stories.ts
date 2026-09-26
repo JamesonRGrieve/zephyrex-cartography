@@ -20,6 +20,7 @@ const LABELS: BrowserLabels = {
     search: 'Search stamps',
     scale: 'Scale',
     perspective: 'Perspective',
+    settings: 'Settings',
     any: 'Any',
     all: 'All',
     rotate: 'Rotation',
@@ -72,6 +73,10 @@ export const AllStamps: Story = {};
 
 export const FilteredByCategory: Story = {
     args: { state: { ...INITIAL_BROWSER, category: 'Lighting', tags: ['lamp'] } },
+};
+
+export const FilteredBySetting: Story = {
+    args: { state: { ...INITIAL_BROWSER, settings: ['modern'] } },
 };
 
 export const SelectedWithVariants: Story = {

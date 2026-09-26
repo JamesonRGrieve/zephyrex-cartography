@@ -17,6 +17,8 @@ export interface BrowserLabels {
     readonly search: string;
     readonly scale: string;
     readonly perspective: string;
+    /** Legend of the setting checkboxes. */
+    readonly settings: string;
     readonly any: string;
     readonly all: string;
     readonly rotate: string;
@@ -104,6 +106,32 @@ function filterBar(view: BrowserView, labels: BrowserLabels, handlers: BrowserHa
         rotate,
     );
     return bar;
+}
+
+/** The setting filter: one labelled checkbox per setting, applying across every category. */
+function settingsBar(view: BrowserView, labels: BrowserLabels, handlers: BrowserHandlers): HTMLElement | null {
+    if (view.settings.length === 0) {
+        return null;
+    }
+    const group = el('fieldset', 'tw-flex tw-flex-wrap tw-items-center tw-gap-3 tw-px-2 tw-py-0 tw-m-0 tw-border-0');
+    group.append(el('legend', 'tw-sr-only', labels.settings));
+    group.append(el('span', 'tw-text-xs', labels.settings));
+    for (const entry of view.settings) {
+        const id = `zc-stamp-setting-${entry.setting}`;
+        const label = el('label', 'tw-flex tw-items-center tw-gap-1 tw-text-xs');
+        label.htmlFor = id;
+        const box = el('input', '');
+        box.type = 'checkbox';
+        box.id = id;
+        box.checked = entry.active;
+        focusKey(box, id);
+        box.addEventListener('change', () => {
+            handlers.dispatch({ type: 'toggleSetting', setting: entry.setting });
+        });
+        label.append(box, `${entry.setting} (${entry.count})`);
+        group.append(label);
+    }
+    return group;
 }
 
 function tagBar(view: BrowserView, labels: BrowserLabels, handlers: BrowserHandlers): HTMLElement | null {
@@ -256,6 +284,6 @@ export function renderBrowser(root: HTMLElement, view: BrowserView, labels: Brow
     const tags = tagBar(view, labels, handlers);
     replacePreservingFocus(
         root,
-        [filterBar(view, labels, handlers), tags, body, statusLine].filter((node): node is HTMLElement => node !== null),
+        [filterBar(view, labels, handlers), settingsBar(view, labels, handlers), tags, body, statusLine].filter((node): node is HTMLElement => node !== null),
     );
 }

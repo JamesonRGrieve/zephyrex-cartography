@@ -256,7 +256,7 @@
         "Settings": {
             "TextureSet": {
                 "Name": "Terrain texture set",
-                "Hint": "Which asset-pack texture set fills biome regions, brush strokes, room floors and roads. Terrain without a texture in the set uses a flat colour."
+                "Hint": "Which asset-pack texture set fills biome regions, brush strokes, room floors and roads. Terrain without a texture in the set draws a procedural pattern in its colour."
             },
             "StampSnap": {
                 "Name": "Snap placed stamps to the grid",
@@ -276,6 +276,7 @@
             "Search": "Search stamps",
             "Scale": "Scale",
             "Perspective": "Perspective",
+            "Settings": "Settings",
             "Any": "Any",
             "All": "All",
             "Rotate": "Rotation",

@@ -8,6 +8,7 @@ const labels: BrowserLabels = {
     search: 'Search',
     scale: 'Scale',
     perspective: 'Perspective',
+    settings: 'Settings',
     any: 'Any',
     all: 'All',
     rotate: 'Rotate',
@@ -27,7 +28,7 @@ const catalog = catalogStamps([
         id: 'lamp',
         name: '<b>Lamp</b>',
         category: 'Lighting',
-        tags: ['lamp', 'brass'],
+        tags: ['lamp', 'brass', 'setting-fantasy'],
         scale: 'interior',
         perspective: 'top-down',
         variants: [
@@ -39,7 +40,7 @@ const catalog = catalogStamps([
         id: 'door',
         name: 'Door',
         category: 'Doors',
-        tags: ['brass'],
+        tags: ['brass', 'setting-modern'],
         scale: 'interior',
         perspective: 'top-down',
         variants: [{ state: 'shut', image: 'd.png', width: 10, height: 10 }],
@@ -141,6 +142,28 @@ describe('renderBrowser', () => {
         expect(button(m.root, 'lamp (2)').getAttribute('aria-pressed')).toBe('true');
         button(m.root, 'Clear').click();
         expect(m.state.tags).toEqual([]);
+    });
+
+    it('filters by setting with labelled checkboxes that apply across categories', () => {
+        const m = mount();
+        const box = (setting: string): HTMLInputElement => {
+            const found = m.root.querySelector<HTMLInputElement>(`#zc-stamp-setting-${setting}`);
+            if (!found) {
+                throw new Error(`no ${setting} checkbox`);
+            }
+            return found;
+        };
+        expect(m.root.querySelector('fieldset legend')?.textContent).toBe('Settings');
+        expect(m.root.querySelector('label[for="zc-stamp-setting-fantasy"]')?.textContent).toBe('fantasy (1)');
+        box('fantasy').click();
+        expect(m.state.settings).toEqual(['fantasy']);
+        expect(box('fantasy').checked).toBe(true);
+        expect(m.root.querySelectorAll('[data-stamp-key]')).toHaveLength(1);
+        box('modern').click();
+        expect(m.root.querySelectorAll('[data-stamp-key]')).toHaveLength(2);
+        // Setting tags are never listed as a category's sub-tags.
+        button(m.root, 'Lighting (1)').click();
+        expect(m.root.textContent).not.toContain('setting-');
     });
 
     it('filters by scale and search, keeping focus and caret in the search box', () => {

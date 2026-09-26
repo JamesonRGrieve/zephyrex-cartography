@@ -12,6 +12,11 @@ export interface ViewWindowOptions {
     readonly id: string;
     readonly title: () => string;
     readonly width: number;
+    /**
+     * A fixed opening height, for a view whose own columns scroll (the stamp
+     * browser). Omitted, the window is as tall as what it shows.
+     */
+    readonly height?: number;
     /** Render the view into `root`, replacing what is there. */
     readonly render: (root: HTMLElement) => void;
 }
@@ -30,7 +35,8 @@ export interface ViewWindow {
 
 export function createViewWindow(options: ViewWindowOptions): ViewWindow {
     const root = document.createElement('div');
-    root.className = 'tw-flex tw-flex-col tw-h-full tw-gap-2';
+    // min-h-0 lets a fixed-height window's content shrink so its inner columns scroll.
+    root.className = 'tw-flex tw-flex-col tw-h-full tw-min-h-0 tw-gap-2';
 
     class ViewApplication extends foundry.applications.api.ApplicationV2 {
         static override DEFAULT_OPTIONS = {
@@ -38,7 +44,7 @@ export function createViewWindow(options: ViewWindowOptions): ViewWindow {
             classes: [MODULE_ID],
             window: { title: options.title(), resizable: true },
             // As tall as what it shows, so nothing opens hidden below the fold; the stylesheet keeps it on screen.
-            position: { width: options.width, height: 'auto' as const },
+            position: { width: options.width, height: options.height ?? ('auto' as const) },
         };
 
         protected override _renderHTML(): HTMLElement {
